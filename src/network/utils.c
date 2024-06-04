@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "definitions.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +50,7 @@ size_t decode_string(const u8* buf, char** outp) {
 
     out[length] = 0;
 
-    for (size_t i = 0; i < length; i++) {
+    for (int i = 0; i < length; i++) {
         out[i] = buf[total];
         total++;
     }

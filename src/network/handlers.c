@@ -12,9 +12,12 @@ void pkt_handle_handshake(Packet* pkt, Connection* conn) {
 }
 
 void pkt_handle_status(Packet* pkt, Connection* conn) {
+    (void)pkt;
+    (void)conn;
     printf("Status request\n");
 }
 
 void pkt_handle_ping(Packet* pkt, Connection* conn) {
-    
+    (void)pkt;
+    (void)conn;
 }

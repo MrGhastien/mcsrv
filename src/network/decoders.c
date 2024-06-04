@@ -10,6 +10,7 @@ void pkt_decode_dummy(Packet* packet, const Connection* conn, u8* raw) {
 }
 
 void pkt_decode_handshake(Packet* packet, const Connection* conn, u8* raw) {
+    (void)conn;
     PacketHandshake* hshake = malloc(sizeof(PacketHandshake));
     if (!hshake)
         return;

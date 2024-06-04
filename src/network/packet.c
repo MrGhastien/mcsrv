@@ -22,7 +22,7 @@ static size_t read_varint(const Connection* conn, int* out) {
             break;
 
         if (position >= 32)
-            return -1;
+            return FAIL;
     }
 
     if (status == -1) {
@@ -37,7 +37,7 @@ static size_t read_varint(const Connection* conn, int* out) {
 Packet* packet_read(const Connection* conn) {
     int length;
     int id;
-    if (read_varint(conn, &length) == -1)
+    if (read_varint(conn, &length) == FAIL)
         return NULL;
 
     u8* buf = malloc(sizeof *buf * length);
@@ -47,7 +47,7 @@ Packet* packet_read(const Connection* conn) {
     socket_readbytes(conn->sockfd, buf, length);
 
     size_t id_size = decode_varint(buf, &id);
-    if (id_size == -1)
+    if (id_size == FAIL)
         return NULL;
 
     Packet* pkt = malloc(sizeof *pkt);
@@ -75,4 +75,14 @@ Packet* packet_read(const Connection* conn) {
     free(buf);
 
     return pkt;
+}
+
+void packet_write(const Packet* pkt, const Connection* conn, pkt_encoder encoder) {
+    Arena arena = arena_create();
+
+    encoder(pkt, conn, &arena);
+
+    send(conn->sockfd, arena.block, arena.length, 0);
+
+    arena_destroy(&arena);
 }
