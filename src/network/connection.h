@@ -9,6 +9,7 @@ enum State {
     STATE_STATUS,
     STATE_LOGIN,
     STATE_PLAY,
+    _STATE_COUNT
 };
 
 typedef struct {

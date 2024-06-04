@@ -2,7 +2,7 @@
 #define PACKET_H
 
 #include "definitions.h"
-#include "context.h"
+#include "connection.h"
 #include <stddef.h>
 
 enum PacketType {
@@ -15,9 +15,7 @@ typedef struct {
     int id;
     size_t total_length;
     size_t payload_length;
-    size_t read;
-    void* decoded;
-    u8 raw[];
+    void* payload;
 } Packet;
 
 typedef struct {
@@ -28,9 +26,9 @@ typedef struct {
 } PacketHandshake;
 
 typedef void (*pkt_acceptor)(Packet* pkt, Connection* conn);
-typedef void (*pkt_decoder)(Packet* pkt, const Connection* conn);
+typedef void (*pkt_decoder)(Packet* pkt, const Connection* conn, u8* raw);
 
-pkt_acceptor get_pkt_handler(const Connection* conn);
+pkt_acceptor get_pkt_handler(Packet* pkt, Connection* conn);
 pkt_decoder get_pkt_decoder(Packet* pkt, const Connection* conn);
 
 Packet* packet_read(const Connection* conn);
