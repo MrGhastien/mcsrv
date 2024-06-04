@@ -21,35 +21,36 @@ static void on_packet_recv(Connection* conn) {
     }
 
     pkt_acceptor handler = get_pkt_handler(packet, conn);
-    if(handler)
+    if (handler)
         handler(packet, conn);
 
     puts("====");
     free(packet);
 }
 
-int main(int argc, char** argv) {
-
+static int net_init(char* host, int port, int* out_serverfd, int* out_epollfd) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    *out_serverfd = sockfd;
     if (sockfd == -1) {
         perror("Could not create socket");
         return 1;
     }
 
     int option = 1;
+    // Let the socket reuse the address, to avoid errors when quickly rerunning the server
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof option);
 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof addr);
-    addr.sin_family = AF_INET;
-    if (!inet_aton("0.0.0.0", &addr.sin_addr)) {
+    struct sockaddr_in saddr;
+    memset(&saddr, 0, sizeof saddr);
+    saddr.sin_family = AF_INET;
+    if (!inet_aton(host, &saddr.sin_addr)) {
         perror("Invalid bind address");
         return 2;
     }
 
-    addr.sin_port = htons(25565);
+    saddr.sin_port = htons(port);
 
-    if (bind(sockfd, (struct sockaddr*)&addr, sizeof addr) == -1) {
+    if (bind(sockfd, (struct sockaddr*)&saddr, sizeof saddr) == -1) {
         perror("Could not bind address");
         return 3;
     }
@@ -60,52 +61,72 @@ int main(int argc, char** argv) {
     }
 
     int epollfd = epoll_create1(0);
+    *out_epollfd = epollfd;
     if (epollfd == -1) {
         perror("Failed to create epoll instance");
         return 1;
     }
 
     struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.u64 = 0};
-
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event_in) == -1) {
         perror("Failed to create epoll instance");
         return 1;
     }
+    printf("Listening on %s:%i.\n", host, port);
+    return 0;
+}
 
-    struct epoll_event events[10];
+static int accept_connection(int serverfd, int epollfd) {
     struct sockaddr_in peer_addr;
     socklen_t peer_addr_length = sizeof peer_addr;
-    size_t eventCount = 0;
+    int peerfd = accept(serverfd, (struct sockaddr*)&peer_addr, &peer_addr_length);
+    if (peerfd == -1) {
+        perror("Invalid connection received");
+        return 1;
+    }
+
+    Connection* conn = malloc(sizeof(Connection));
+    if (!conn) {
+        perror("Failed to allocate memory to register connection");
+        return 1;
+    }
+    conn->compression = FALSE;
+    conn->sockfd = peerfd;
+    conn->state = STATE_HANDSHAKE;
+    struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.ptr = conn};
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
+        perror("Failed to handle connection");
+        return 1;
+    }
+    char addr_str[16];
+    inet_ntop(AF_INET, &peer_addr.sin_addr, addr_str, 16);
+    printf("Accepted connection from %s:%i.\n", addr_str, peer_addr.sin_port);
+    return 0;
+}
+
+int net_handle(char* host, int port) {
+
+    int epollfd;
+    int serverfd;
+
+    int ret = net_init(host, port, &serverfd, &epollfd);
+    if (ret)
+        return ret;
+
+    struct epoll_event events[10];
+    int eventCount = 0;
 
     while ((eventCount = epoll_wait(epollfd, events, 10, -1)) != -1) {
-        for (size_t i = 0; i < eventCount; i++) {
+        for (int i = 0; i < eventCount; i++) {
             struct epoll_event* e = &events[i];
-            if (e->data.u64 == 0) {
-                int peerfd = accept(sockfd, (struct sockaddr*)&peer_addr, &peer_addr_length);
-                if (peerfd == -1) {
-                    perror("Invalid connection received");
-                    return 7;
-                }
-
-                Connection* conn = malloc(sizeof(Connection));
-                if (!conn) {
-                    perror("Failed to allocate memory to register connection");
-                    return 1;
-                }
-                conn->compression = FALSE;
-                conn->sockfd = peerfd;
-                conn->state = STATE_HANDSHAKE;
-                event_in.data.ptr = conn;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
-                    perror("Failed to handle connection");
-                    return 8;
-                }
-            } else
+            if (e->data.u64 == 0)
+                accept_connection(serverfd, epollfd);
+            else
                 on_packet_recv(e->data.ptr);
         }
     }
 
-    close(sockfd);
+    close(serverfd);
 
     return 0;
 }
