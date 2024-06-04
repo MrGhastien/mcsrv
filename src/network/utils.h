@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "definitions.h"
+#include "../definitions.h"
 
 #define CONTINUE_BIT 0x80
 #define SEGMENT_BITS 0x7F

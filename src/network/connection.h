@@ -1,7 +1,7 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include "definitions.h"
+#include "../definitions.h"
 
 enum State {
     STATE_CLOSED = -1,
