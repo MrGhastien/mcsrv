@@ -4,6 +4,7 @@
 typedef unsigned char u8;
 typedef unsigned char bool;
 typedef unsigned short u16;
+typedef unsigned long int u64;
 
 #define FALSE (bool)0
 #define TRUE (bool)1
