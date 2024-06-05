@@ -34,3 +34,10 @@ void* arena_allocate(Arena* arena, size_t bytes) {
     arena->length = final_length;
     return ptr;
 }
+
+void arena_free(Arena* arena, size_t bytes) {
+    if (bytes >= arena->length)
+        arena_destroy(arena);
+    else
+        arena->length -= bytes;
+}

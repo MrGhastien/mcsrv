@@ -14,5 +14,6 @@ Arena arena_create();
 void arena_destroy(Arena* arena);
 
 void* arena_allocate(Arena* arena, size_t bytes);
+void arena_free(Arena* arena, size_t bytes);
 
 #endif /* ! LINALLOC_H */
