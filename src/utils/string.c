@@ -30,7 +30,7 @@ string str_create_with_buffer(const char* cstr, size_t length) {
     return str_init(cstr, length, NULL);
 }
 
-string str_create_with_arena(const char* cstr, Arena* arena) {
+string str_alloc(const char* cstr, Arena* arena) {
     return str_init(cstr, strlen(cstr), arena);
 }
 
@@ -49,4 +49,15 @@ void str_set(string* str, const char* cstr) {
         arena_allocate(str->arena, len - str->length);
 
     memcpy(str->base, cstr, len + 1);
+}
+
+void str_copy(string* dst, const string* src) {
+    size_t len = src->length;
+
+    if (len < dst->length)
+        arena_free(dst->arena, dst->length - len);
+    else
+        arena_allocate(dst->arena, len - dst->length);
+
+    memcpy(dst->base, src->base, len + 1);
 }
