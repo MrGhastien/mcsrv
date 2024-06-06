@@ -34,13 +34,13 @@ static size_t read_varint(const Connection* conn, int* out) {
     return size;
 }
 
-Packet* packet_read(const Connection* conn) {
+Packet* packet_read(Connection* conn) {
     int length;
     int id;
     if (read_varint(conn, &length) == FAIL)
         return NULL;
 
-    u8* buf = malloc(sizeof *buf * length);
+    u8* buf = arena_allocate(&conn->arena, length);
     if (!buf)
         return NULL;
 
@@ -50,39 +50,43 @@ Packet* packet_read(const Connection* conn) {
     if (id_size == FAIL)
         return NULL;
 
-    Packet* pkt = malloc(sizeof *pkt);
-    if (!pkt)
-        return NULL;
+    Packet pkt;
 
-    pkt->total_length = length;
-    pkt->payload_length = length - id_size;
-    pkt->id = id;
+    pkt.total_length = length;
+    pkt.payload_length = length - id_size;
+    pkt.id = id;
 
-    pkt_decoder decoder = get_pkt_decoder(pkt, conn);
+    pkt_decoder decoder = get_pkt_decoder(&pkt, conn);
     if(decoder)
-        decoder(pkt, conn, buf + id_size);
+        decoder(&pkt, conn, buf + id_size);
+
 
     puts("====");
-    printf("Received packet:\nSize: %zu\nID: %i\n", pkt->total_length, pkt->id);
+    printf("Received packet:\nSize: %zu\nID: %i\n", pkt.total_length, pkt.id);
 
     putchar('[');
-    for (size_t i = 0; i < pkt->payload_length; i++) {
+    for (size_t i = 0; i < pkt.payload_length; i++) {
         printf("%02x ", buf[i + id_size]);
     }
     putchar(']');
     putchar('\n');
 
-    free(buf);
+    arena_free(&conn->arena, length);
 
-    return pkt;
+    Packet* out = arena_allocate(&conn->arena, sizeof *out);
+    if (!out)
+        return NULL;
+
+    
+
+    return out;
 }
 
-void packet_write(const Packet* pkt, const Connection* conn, pkt_encoder encoder) {
-    Arena arena = arena_create();
+void packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder) {
+    Arena* arena = &conn->arena;
 
-    encoder(pkt, conn, &arena);
+    encoder(pkt, conn);
 
-    send(conn->sockfd, arena.block, arena.length, 0);
+    send(conn->sockfd, arena->block, arena->length, 0);
 
-    arena_destroy(&arena);
 }

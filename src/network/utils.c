@@ -38,24 +38,15 @@ size_t decode_varint(const u8* buf, int* out) {
     return i;
 }
 
-size_t decode_string(const u8* buf, char** outp) {
+size_t decode_string(const u8* buf, Arena* arena, string* out_str) {
     int length;
     size_t total = decode_varint(buf, &length);
     if (total <= 0)
         return -1;
 
-    char* out = malloc(sizeof **outp * (length + 1));
-    if (!out)
-        return -1;
+    *out_str = str_init((const char*)&buf[total], length, arena);
 
-    out[length] = 0;
-
-    for (int i = 0; i < length; i++) {
-        out[i] = buf[total];
-        total++;
-    }
-    *outp = out;
-    return total;
+    return total + out_str->length;
 }
 
 size_t decode_u16(const u8* buf, u16* out) {

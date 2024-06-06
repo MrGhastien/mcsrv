@@ -2,6 +2,7 @@
 #define CONTEXT_H
 
 #include "../definitions.h"
+#include "../memory/arena.h"
 
 enum State {
     STATE_CLOSED = -1,
@@ -13,6 +14,7 @@ enum State {
 };
 
 typedef struct {
+    Arena arena;
     bool compression;
     enum State state;
     int sockfd;

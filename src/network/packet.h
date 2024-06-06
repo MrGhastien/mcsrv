@@ -4,6 +4,7 @@
 #include "../definitions.h"
 #include "connection.h"
 #include "../memory/arena.h"
+#include "../utils/string.h"
 #include <stddef.h>
 
 enum PacketType {
@@ -21,19 +22,19 @@ typedef struct {
 
 typedef struct {
     int protocol_version;
-    char* srv_addr;
+    string srv_addr;
     u16 srv_port;
     int next_state;
 } PacketHandshake;
 
 typedef void (*pkt_acceptor)(Packet* pkt, Connection* conn);
-typedef void (*pkt_decoder)(Packet* pkt, const Connection* conn, u8* raw);
-typedef void (*pkt_encoder)(const Packet* pkt, const Connection* conn, Arena* arena);
+typedef void (*pkt_decoder)(Packet* pkt, Connection* conn, u8* raw);
+typedef void (*pkt_encoder)(const Packet* pkt, Connection* conn);
 
 pkt_acceptor get_pkt_handler(Packet* pkt, Connection* conn);
-pkt_decoder get_pkt_decoder(Packet* pkt, const Connection* conn);
+pkt_decoder get_pkt_decoder(Packet* pkt, Connection* conn);
 
-Packet* packet_read(const Connection* conn);
-void packet_write(const Packet* pkt, const Connection* conn, pkt_encoder encoder);
+Packet* packet_read(Connection* conn);
+void packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder);
 
 #endif /* ! PACKET_H */
