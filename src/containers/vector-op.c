@@ -5,42 +5,21 @@
 #include "../containers/vector.h"
 #include "../utils/bitwise.h"
 
-static bool ensure_capacity(Vector* vector, size_t capacity) {
-    if (vector->capacity >= capacity)
-        return TRUE;
-
-    size_t new_capacity = vector->capacity;
-    while (new_capacity < capacity)
-        new_capacity <<= 1;
-
-    void* new_array = realloc(vector->array, new_capacity * vector->stride);
-    if (!new_array)
-        return FALSE;
-
-    vector->array = new_array;
-    vector->capacity = new_capacity;
-    return TRUE;
-}
-
 void vector_add(Vector* vector, void* element) {
-    size_t size = vector->size;
-
-    if (!ensure_capacity(vector, size + 1))
-        return;
-
     size_t stride = vector->stride;
 
-    memcpy(offset(vector->array, size * stride), element, stride);
+    void* dst = arena_allocate(vector->arena, vector->stride);
+
+    memcpy(dst, element, stride);
     vector->size++;
 }
 
 void vector_insert(Vector* vector, void* element, size_t idx) {
     size_t size = vector->size;
 
-    if (!ensure_capacity(vector, size + 1))
-        return;
-
     size_t stride = vector->stride;
+
+    arena_allocate(vector->arena, vector->stride);
 
     void* target_addr = offset(vector->array, idx * stride);
     void* next_addr = offset(vector->array, (idx + 1) * stride);
@@ -50,12 +29,9 @@ void vector_insert(Vector* vector, void* element, size_t idx) {
 }
 
 void* vector_reserve(Vector* vector) {
-    size_t size = vector->size;
-    if (!ensure_capacity(vector, size + 1))
-        return NULL;
-
+    void* ptr = arena_allocate(vector->arena, vector->stride);
     vector->size++;
-    return vector_ref(vector, vector->size - 1);
+    return ptr;
 }
 
 bool vector_remove(Vector* vector, size_t idx, void* out) {
@@ -71,6 +47,7 @@ bool vector_remove(Vector* vector, size_t idx, void* out) {
         memcpy(out, address, stride);
 
     memmove(address, offset(address, stride), (size - idx - 1) * stride);
+    arena_free(vector->arena, vector->stride);
     vector->size--;
     return TRUE;
 }

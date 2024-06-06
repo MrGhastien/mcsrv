@@ -1,18 +1,22 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <stdbool.h>
+#include "../memory/arena.h"
+#include "../definitions.h"
+
 #include <stddef.h>
 
 typedef struct vector
 {
+    Arena* arena;
     void *array;
-    size_t capacity;
     size_t size;
     size_t stride;
+    bool external_arena;
 } Vector;
 
 void vector_init(Vector *vector, size_t initial_capacity, size_t stride);
+void vector_init_with_arena(Vector *vector, Arena* arena, size_t initial_capacity, size_t stride);
 
 void vector_empty(Vector *vector);
 void vector_clear(Vector *vector);
