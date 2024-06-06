@@ -7,7 +7,6 @@
 #define MAX_LOAD_FACTOR 0.75
 #define MIN_LOAD_FACTOR 0.25
 #define MIN_CAPACITY 4
-#define DEFAULT_CAP 4
 
 // Hash function used in sdbm
 static unsigned long hash(const char* str) {
@@ -20,35 +19,16 @@ static unsigned long hash(const char* str) {
     return hash;
 }
 
-void dict_init(Dict* map, size_t key_stride, size_t value_stride) {
-    map->capacity = DEFAULT_CAP;
-    map->size = 0;
-    map->arena = malloc(sizeof(Arena));
-    if (!map->arena)
-        return;
-    *map->arena = arena_create();
-    size_t total_stride = sizeof(u64) + key_stride + value_stride;
-    map->base = arena_allocate(map->arena, total_stride * map->capacity);
-    map->key_stride = key_stride;
-    map->value_stride = value_stride;
-}
-
-static void free_elem(const Dict* dict, void* key, void* value, void* data) {
-    (void)dict;
-    (void)value;
-    (void)data;
-    free(key);
-}
-
-void dict_destroy(Dict* map) {
-    dict_foreach(map, &free_elem, NULL);
-    arena_destroy(map->arena);
-    if (map->external_arena)
-        free(map->arena);
-}
 
 static struct node get_node_base(Dict* dict, size_t idx, void* base, size_t capacity) {
     struct node node;
+    if(idx >= capacity) {
+        node.hash = 0;
+        node.hashp = 0;
+        node.key = 0;
+        node.value = 0;
+        return node;
+    }
     size_t total_stride = sizeof(u64) + dict->key_stride + dict->value_stride;
 
     void* ptr = offset(base, idx * total_stride);
@@ -132,7 +112,7 @@ static void shrink(Dict* map) {
         resize(map, map->capacity >> 1);
 }
 
-void dict_put(Dict* map, void* key, void* value) {
+void dict_put(Dict* map, const void* key, const void* value) {
     if (key == NULL)
         return;
 
@@ -217,17 +197,4 @@ void dict_foreach(Dict* map, action action, void* data) {
             j--;
         }
     }
-}
-
-static void deep_free(const Dict* dict, void* key, void* value, void* data) {
-    (void)dict;
-    (void)value;
-    (void)data;
-    void** p = value;
-    free(*p);
-}
-
-void dict_deep_destroy(Dict* map) {
-    dict_foreach(map, &deep_free, NULL);
-    dict_destroy(map);
 }

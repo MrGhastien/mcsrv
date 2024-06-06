@@ -24,19 +24,11 @@ typedef struct map {
 } Dict;
 
 void dict_init(Dict* map, size_t key_stride, size_t value_stride);
-void dict_init_with_arena(Dict* map, Arena* arena, size_t stride);
+void dict_init_with_arena(Dict* map, Arena* arena, size_t key_stride, size_t value_stride);
 void dict_clear(Dict* map);
 void dict_destroy(Dict* map);
-void dict_deep_destroy(Dict* map);
 
-#define dict_put_imm(map, key, value, type)                                                                            \
-    {                                                                                                                  \
-        assert(sizeof(type) == (map)->stride);                                                                         \
-        type holder = value;                                                                                           \
-        dict_put(map, key, &holder);                                                                                   \
-    }
-
-void dict_put(Dict* map, void* key, void* value);
+void dict_put(Dict* map, const void* key, const void* value);
 bool dict_remove(Dict* map, void* key, void* outValue);
 
 bool dict_get(Dict* map, void* key, void* outValue);
