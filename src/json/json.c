@@ -11,14 +11,14 @@ static JSONNode* json_node_create(JSON* json, enum JSONType type) {
     switch (type) {
     case JSON_OBJECT:
         node->data.obj = arena_allocate(arena, sizeof(Dict));
-        dict_init(node->data.obj, sizeof(JSONNode));
+        dict_init_with_arena(node->data.obj, arena, sizeof(string), sizeof(JSONNode*));
         break;
     case JSON_ARRAY:
         node->data.array = arena_allocate(arena, sizeof(Vector));
-        vector_init(node->data.array, 2, sizeof(JSONNode));
+        vector_init_with_arena(node->data.array, arena, 2, sizeof(JSONNode*));
         break;
     case JSON_STRING:
-        node->data.string = str_create("");
+        node->data.string = str_create_with_arena("", arena);
         break;
     case JSON_BOOL:
     case JSON_FLOAT:
@@ -37,7 +37,10 @@ void json_create(JSON* out_json) {
     json_node_create(out_json, JSON_OBJECT);
 }
 
-static void foreach_destroy(char* key, void* value, void* data) {
+static void foreach_destroy(const Dict* dict, void* key, void* value, void* data) {
+    (void)dict;
+    (void)key;
+    (void)data;
     json_node_destroy(value);
 }
 
@@ -65,9 +68,10 @@ void json_destroy(JSON* json) {
     arena_destroy(&json->arena);
 }
 
-void json_node_put(JSON* json, JSONNode* obj, const string* name, enum JSONType type) {
+JSONNode* json_node_put(JSON* json, JSONNode* obj, const string* name, enum JSONType type) {
     JSONNode* node = json_node_create(json, type);
     Dict* dict = obj->data.obj;
 
-    dict_put_imm(dict, name, node, JSONNode*);
+    dict_put(dict, name, node);
+    return node;
 }
