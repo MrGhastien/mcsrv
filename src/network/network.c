@@ -20,6 +20,7 @@ static void on_packet_recv(Connection* conn) {
         close(conn->sockfd);
 
         arena_restore(&conn->arena);
+        return;
     }
 
     pkt_acceptor handler = get_pkt_handler(packet, conn);

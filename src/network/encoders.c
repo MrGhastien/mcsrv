@@ -30,3 +30,11 @@ void pkt_encode_status(const Packet* pkt, Connection* conn, Arena* arena) {
     PacketStatusResponse* payload = pkt->payload;
     encode_string(&payload->data, arena);
 }
+
+void pkt_encode_ping(const Packet *pkt, Connection *conn, Arena *arena) {
+    (void)conn;
+    PacketPing* pong = pkt->payload;
+
+    u64* ptr = arena_allocate(arena, sizeof *ptr);
+    *ptr = pong->num;
+}

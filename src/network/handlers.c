@@ -58,6 +58,7 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     json_set_bool(nodes[0], FALSE);
 
     json_stringify(&json, &response.data, &conn->arena);
+    printf("%s", response.data.base);
     Packet out_pkt = {
         .id = 0x0,
         .payload = &response
@@ -68,4 +69,14 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
 void pkt_handle_ping(Packet* pkt, Connection* conn) {
     (void)pkt;
     (void)conn;
+    PacketPing* ping = pkt->payload;
+    PacketPing pong = {
+        .num = ping->num
+    };
+    Packet response = {
+        .id = PKT_PING,
+        .payload = &pong
+    };
+
+    packet_write(&response, conn, &pkt_encode_ping);
 }

@@ -1,7 +1,10 @@
 #include "decoders.h"
+#include "packet.h"
 #include "utils.h"
+#include "../utils/bitwise.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <byteswap.h>
 
 void pkt_decode_dummy(Packet* packet, Connection* conn, u8* raw) {
     (void)packet;
@@ -29,4 +32,11 @@ void pkt_decode_handshake(Packet* packet, Connection* conn, u8* raw) {
     }
 
     packet->payload = hshake;
+}
+
+void pkt_decode_ping(Packet *packet, Connection *conn, u8 *raw) {
+    PacketPing* ping = arena_allocate(&conn->arena, sizeof *ping);
+
+    ping->num = ((u64*)raw)[0];
+    packet->payload = ping;
 }

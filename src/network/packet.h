@@ -31,6 +31,10 @@ typedef struct {
     string data;
 } PacketStatusResponse;
 
+typedef struct {
+    long num;
+} PacketPing;
+
 typedef void (*pkt_acceptor)(Packet* pkt, Connection* conn);
 typedef void (*pkt_decoder)(Packet* pkt, Connection* conn, u8* raw);
 typedef void (*pkt_encoder)(const Packet* pkt, Connection* conn, Arena* buffer_arena);

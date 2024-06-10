@@ -39,7 +39,7 @@ size_t decode_varint(const u8* buf, int* out) {
 }
 
 size_t decode_string(const u8* buf, Arena* arena, string* out_str) {
-    int length;
+    int length = 0;
     size_t total = decode_varint(buf, &length);
     if (total <= 0)
         return -1;

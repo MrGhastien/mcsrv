@@ -88,4 +88,5 @@ void packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder) {
 
     send(conn->sockfd, buffer_arena.block, buffer_arena.length, 0);
 
+    arena_destroy(&buffer_arena);
 }
