@@ -1,0 +1,85 @@
+#+TITLE: Minecraft Cerver Specification
+
+
+* Memory Allocation
+** Arenas
+An ~Arena~ is a linear allocator meant to make memory managment easy. Arenas are created with a fixed capacity, and callers can allocate portions of an arena's memory block.
+
+Destroying an arena means freeing all its associated memory at once.
+
+*** Allocation
+Memory allocation is done using the ~arena_allocate~ and ~arena_callocate~ functions.
+Similarly to ~malloc~, ~arena_allocate~ will allocate ~bytes~ bytes in the ~arena~.
+~arena_callocate(arena: Arena*, bytes: size_t)~ will allocate ~bytes~ bytes in the ~arena~ and set them to 0.
+Trying to allocate more memory than available will fail, returning a ~null~ pointer to the caller.
+
+Prototype:
+**** ~arena_allocate~
+Allocates ~bytes~ bytes in the arena ~arena~.
+Parameters:
+- arena: Arena* -> A pointer to the arena to allocate memory from. May /*not*/ be null.
+- bytes: size_t -> The number of bytes to allocate.
+Returns: void* -> A pointer to the allocated memory, or ~NULL~ if the allocation failed.
+
+**** ~arena_callocate~
+Allocates ~bytes~ bytes in the arena ~arena~, setting them to 0.
+Parameters:
+- arena: Arena* -> A pointer to the arena to allocate memory from. May /*not*/ be null.
+- bytes: size_t -> The number of bytes to allocate.
+Returns: void* -> A pointer to the cleared allocated memory, or ~NULL~ if the allocation failed.
+
+*** Freeing
+To free memory from an arena, use the ~arena_free~ function.
+
+One can also free memory up to a saved point.
+To save a point, call ~arena_save~. The current allocated memory length is saved in the arena.
+When you have finished using the memory, you can release it using ~arena_restore~. This will free all memory allocated after the last ~arena_save~ call.
+
+**** ~arena_free~
+Frees ~bytes~ bytes from the arena ~arena~.
+Parameters:
+- arena: Arena* -> A pointer to the arena to allocate memory from. May /*not*/ be null.
+- bytes: size_t -> The number of bytes to allocate.
+
+**** ~arena_save~
+Saves a point in the arena at the current position.
+Parameters:
+- arena: Arena* -> A pointer to the arena. May /*not*/ be null.
+
+**** ~arena_restore~
+Frees all memory allocated up to the last saved point.
+Parameters:
+- arena: Arena* -> A pointer to the arena. May /*not*/ be null.
+
+* Strings
+** Types of string
+- Constant strings
+- Dynamic strings allocated in an ~Arena~
+- Truly dynamic strings using ~malloc~
+
+*** Constant strings
+Constants strings do not need any dynamic memory allocation. They reuse a basic C string as their buffer.
+These strings are best used with C's string literals.
+
+Their capacity is set to 0, meaning their buffer cannot be extended or resized. Moreover, all of the string's data (characters + attributes) is immutable.
+
+While this is not enforced, use of the ~const~ modifier is greatly encouraged to make the compiler issue a warning when using a mutating string function.
+
+Parameters:
+- ~cstr: const char*~ A immutable NULL-terminated buffer of characters.
+
+Returns: The created constant string.
+
+*** Pseudo-Dynamic strings
+Pseudo-dynamic strings are allocated using an ~Arena~. The internal buffer is allocated only once and cannot be resized.
+This is meant for ease of use with Arenas.
+
+The string can still be modified, but large strings will be truncated to the internal buffer's capacity.
+
+*** Truly dynamic strings
+Truly dynamic strings are allocated with libC's ~malloc~. The string is very similar to a dynamic array / vector containing characters, and thus its buffer can be resized.
+
+*** Problems
+**** No way to create a truly dynamic string using an arena
+Creating a truly dynamic string using an arena simply displaces the problem to the arena.
+The arena is not dynamic, and if it were, continuity would not be garanteed for allocated memory.
