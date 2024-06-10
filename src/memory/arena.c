@@ -1,46 +1,44 @@
 #include "arena.h"
 #include "../utils/bitwise.h"
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define DEFAULT_CAP 64
 
-Arena arena_create() {
-    Arena res = {.block = malloc(DEFAULT_CAP), .capacity = DEFAULT_CAP, .length = 0};
+Arena arena_create(size_t size) {
+    Arena res = {.block = malloc(size), .capacity = size, .length = 0};
     if (!res.block)
         res.capacity = 0;
+
+#ifdef DEBUG
+    printf("Create arena %p of %zu bytes.\n", res.block, res.capacity);
+#endif
+
     return res;
 }
 
 void arena_destroy(Arena* arena) {
     free(arena->block);
-}
-
-static void ensure_capacity(Arena* arena, size_t capacity) {
-    if (capacity <= arena->capacity)
-        return;
-    size_t new_cap = ceil_two_pow(capacity);
-    void* new_block = realloc(arena->block, new_cap);
-    if (!new_block)
-        return;
-
-    arena->block = new_block;
-    arena->capacity = new_cap;
-}
-
-void arena_reserve(Arena* arena, size_t bytes) {
-    ensure_capacity(arena, bytes);
+#ifdef DEBUG
+    printf("Destroyed arena %p (%zu / %zu).\n", arena->block, arena->length, arena->capacity);
+#endif
+    arena->block = NULL;
 }
 
 void* arena_allocate(Arena* arena, size_t bytes) {
-    if (bytes == 0)
-        return offset(arena->block, arena->length);
-
-    size_t final_length = arena->length + bytes;
-    ensure_capacity(arena, final_length);
+    size_t remaining = arena->capacity - arena->length;
+    if (bytes > remaining) {
+#ifdef DEBUG
+        fprintf(stderr, "Tried to allocate %zu bytes, but only %zu are available.\n", bytes,
+                arena->capacity - arena->length);
+#endif
+        return NULL;
+    }
 
     void* ptr = offset(arena->block, arena->length);
-    arena->length = final_length;
+    arena->length += bytes;
+#ifdef DEBUG
+    printf("Allocated %zu bytes from %p (%zu/%zu).\n", bytes, arena->block, arena->length, arena->capacity);
+#endif
     return ptr;
 }
 
@@ -50,17 +48,27 @@ void* arena_callocate(Arena* arena, size_t bytes) {
 }
 
 void arena_free(Arena* arena, size_t bytes) {
-    if (bytes >= arena->length)
-        arena_destroy(arena);
-    else
-        arena->length -= bytes;
+    if (bytes > arena->length)
+        bytes = arena->length;
+    arena->length -= bytes;
+#ifdef DEBUG
+    printf("Free %zu bytes from %p (%zu/%zu).\n", bytes, arena->block, arena->length, arena->capacity);
+#endif
 }
 
-void arena_free_ptr(Arena *arena, void *ptr) {
-    void* end = offset(arena->block, arena->length);
-    if(ptr >= end)
+void arena_free_ptr(Arena* arena, void* ptr) {
+    if (ptr < arena->block || ptr >= offset(arena->block, arena->length))
         return;
-    size_t to_free = end - ptr;
+    arena->length = ptr - arena->block;
+}
 
-    arena_free(arena, to_free);
+void arena_save(Arena* arena) {
+    arena->saved_length = arena->length;
+}
+
+void arena_restore(Arena* arena) {
+    if (arena->length >= arena->saved_length)
+        arena_free(arena, arena->length - arena->saved_length);
+
+    arena->saved_length = arena->capacity;
 }

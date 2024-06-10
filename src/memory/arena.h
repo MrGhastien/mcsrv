@@ -1,20 +1,21 @@
-#ifndef LINALLOC_H
-#define LINALLOC_H
+#ifndef ARENA_H
+#define ARENA_H
 
-#include "../definitions.h"
 #include <stddef.h>
 
 /**
-   A simple linear allocator.
+   Simple linear allocator.
+
+   The allocated memory is contiguous, but is limited.
  */
-typedef struct linalloc {
+typedef struct arena {
     void* block;
     size_t capacity;
     size_t length;
+    size_t saved_length;
 } Arena;
 
-Arena arena_create();
-void arena_reserve(Arena* arena, size_t bytes);
+Arena arena_create(size_t size);
 void arena_destroy(Arena* arena);
 
 void* arena_allocate(Arena* arena, size_t bytes);
@@ -22,4 +23,7 @@ void* arena_callocate(Arena* arena, size_t bytes);
 void arena_free(Arena* arena, size_t bytes);
 void arena_free_ptr(Arena* arena, void* ptr);
 
-#endif /* ! LINALLOC_H */
+void arena_save(Arena* arena);
+void arena_restore(Arena* arena);
+
+#endif /* ! ARENA_H */
