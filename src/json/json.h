@@ -67,12 +67,12 @@ JSONNode* json_node_put(JSON* json, JSONNode* obj, const char* name, enum JSONTy
  */
 JSONNode* json_node_add(JSON* json, JSONNode* array, enum JSONType type);
 
-void json_set_str(JSON* json, JSONNode* node, const string* value);
-void json_set_cstr(JSON* json, JSONNode* node, const char* value);
-void json_set_int(JSON* json, JSONNode* node, long value);
-void json_set_double(JSON* json, JSONNode* node, double value);
-void json_set_bool(JSON* json, JSONNode* node, bool value);
+void json_set_str(JSONNode* node, const string* value);
+void json_set_cstr(JSONNode* node, const char* value);
+void json_set_int(JSONNode* node, long value);
+void json_set_double(JSONNode* node, double value);
+void json_set_bool(JSONNode* node, bool value);
 
-void json_stringify(JSON* json, string* out);
+void json_stringify(JSON* json, string* out, Arena* arena);
 
 #endif /* ! JSON_H */
