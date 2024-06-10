@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O0 -g -Wall -Wextra -Wreturn-type -Werror -DDEBUG #-fsanitize=address
+CFLAGS = -Wall -Wextra -Wreturn-type -Werror #-fsanitize=address
 #LDFLAGS = -fsanitize=address
 
 SRC_DIR = ./src
@@ -46,7 +46,11 @@ TARGET = mcsrv
 
 .PHONY: all clean
 
-all: $(TARGET)
+debug: CFLAGS += -DDEBUG -O0 -g
+debug: $(TARGET)
+
+release: CFLAGS += -O2
+release: $(TARGET)
 
 $(TARGET): $(OBJS) $(HDRS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
