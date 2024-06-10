@@ -3,6 +3,6 @@
 
 #include "packet.h"
 
-void pkt_encode_status(const Packet* pkt, Connection* conn);
+void pkt_encode_status(const Packet* pkt, Connection* conn, Arena* arena);
 
 #endif /* ! ENCODERS_H */

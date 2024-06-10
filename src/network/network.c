@@ -13,16 +13,13 @@
 #include "utils.h"
 
 static void on_packet_recv(Connection* conn) {
+    arena_save(&conn->arena);
     Packet* packet = packet_read(conn);
     if (!packet) {
         fprintf(stderr, "Received invalid packet.\nClosing connection.\n");
         close(conn->sockfd);
 
-        arena_free_ptr(&conn->arena, packet);
-        if (conn->arena.length > 0) {
-            fprintf(stderr, "Memory leak of %zu bytes.\n", conn->arena.length);
-        }
-        return;
+        arena_restore(&conn->arena);
     }
 
     pkt_acceptor handler = get_pkt_handler(packet, conn);
@@ -30,10 +27,7 @@ static void on_packet_recv(Connection* conn) {
         handler(packet, conn);
 
     puts("====");
-    arena_free_ptr(&conn->arena, packet);
-    if (conn->arena.length > 0) {
-        fprintf(stderr, "Memory leak of %zu bytes.\n", conn->arena.length);
-    }
+    arena_restore(&conn->arena);
 }
 
 static int net_init(char* host, int port, int* out_serverfd, int* out_epollfd) {
@@ -101,7 +95,7 @@ static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
     conn->compression = FALSE;
     conn->sockfd = peerfd;
     conn->state = STATE_HANDSHAKE;
-    conn->arena = arena_create();
+    conn->arena = arena_create(1 << 16);
     struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.ptr = conn};
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
         perror("Failed to handle connection");
@@ -115,7 +109,7 @@ static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
 
 int net_handle(char* host, int port) {
 
-    Arena conn_arena = arena_create();
+    Arena conn_arena = arena_create(4096);
 
     int epollfd;
     int serverfd;

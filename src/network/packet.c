@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 
+#define PKT_MAX_SIZE 2097151UL
+
 static size_t read_varint(const Connection* conn, int* out) {
     int res = 0;
     int status;
@@ -40,7 +42,8 @@ Packet* packet_read(Connection* conn) {
     if (read_varint(conn, &length) == FAIL)
         return NULL;
 
-    u8* buf = arena_allocate(&conn->arena, length);
+    Arena buf_arena = arena_create(length);
+    u8* buf = arena_allocate(&buf_arena, length);
     if (!buf)
         return NULL;
 
@@ -50,43 +53,39 @@ Packet* packet_read(Connection* conn) {
     if (id_size == FAIL)
         return NULL;
 
-    Packet pkt;
+    Packet* pkt = arena_allocate(&conn->arena, sizeof *pkt);
+    if (!pkt)
+        return NULL;
 
-    pkt.total_length = length;
-    pkt.payload_length = length - id_size;
-    pkt.id = id;
+    pkt->total_length = length;
+    pkt->payload_length = length - id_size;
+    pkt->id = id;
 
-    pkt_decoder decoder = get_pkt_decoder(&pkt, conn);
+    pkt_decoder decoder = get_pkt_decoder(pkt, conn);
     if(decoder)
-        decoder(&pkt, conn, buf + id_size);
+        decoder(pkt, conn, buf + id_size);
 
 
     puts("====");
-    printf("Received packet:\nSize: %zu\nID: %i\n", pkt.total_length, pkt.id);
+    printf("Received packet:\nSize: %zu\nID: %i\n", pkt->total_length, pkt->id);
 
     putchar('[');
-    for (size_t i = 0; i < pkt.payload_length; i++) {
+    for (size_t i = 0; i < pkt->payload_length; i++) {
         printf("%02x ", buf[i + id_size]);
     }
     putchar(']');
     putchar('\n');
 
-    arena_free(&conn->arena, length);
+    arena_destroy(&buf_arena);
 
-    Packet* out = arena_allocate(&conn->arena, sizeof *out);
-    if (!out)
-        return NULL;
-
-    
-
-    return out;
+    return pkt;
 }
 
 void packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder) {
-    Arena* arena = &conn->arena;
+    Arena buffer_arena = arena_create(PKT_MAX_SIZE);
 
-    encoder(pkt, conn);
+    encoder(pkt, conn, &buffer_arena);
 
-    send(conn->sockfd, arena->block, arena->length, 0);
+    send(conn->sockfd, buffer_arena.block, buffer_arena.length, 0);
 
 }

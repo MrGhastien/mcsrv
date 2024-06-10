@@ -1,7 +1,7 @@
 #include "connection.h"
 #include "packet.h"
 #include "decoders.h"
-#include "handler.h"
+#include "handlers.h"
 
 static pkt_acceptor handler_table[][_STATE_COUNT] = {
     [STATE_HANDSHAKE] = {[PKT_HANDSHAKE] = &pkt_handle_handshake},
@@ -17,6 +17,6 @@ pkt_acceptor get_pkt_handler(Packet* pkt, Connection* conn) {
     return handler_table[conn->state][pkt->id];
 }
 
-pkt_decoder get_pkt_decoder(Packet* pkt, const Connection* conn) {
+pkt_decoder get_pkt_decoder(Packet* pkt, Connection* conn) {
     return decoder_table[conn->state][pkt->id];
 }

@@ -44,7 +44,7 @@ size_t decode_string(const u8* buf, Arena* arena, string* out_str) {
     if (total <= 0)
         return -1;
 
-    *out_str = str_init((const char*)&buf[total], length, arena);
+    *out_str = str_init((const char*)&buf[total], length, length, arena);
 
     return total + out_str->length;
 }
