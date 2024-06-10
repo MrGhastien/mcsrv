@@ -8,24 +8,25 @@
 
 typedef struct vector
 {
-    Arena* arena;
     void *array;
+    size_t capacity;
     size_t size;
     size_t stride;
-    bool external_arena;
+    bool fixed;
 } Vector;
 
 void vector_init(Vector *vector, size_t initial_capacity, size_t stride);
-void vector_init_with_arena(Vector *vector, Arena* arena, size_t initial_capacity, size_t stride);
+void vector_init_fixed(Vector *vector, Arena* arena, size_t initial_capacity, size_t stride);
 
-void vector_empty(Vector *vector);
+void vector_destroy(Vector *vector);
+void vector_destroy_with_arena(Vector *vector, Arena* arena);
 void vector_clear(Vector *vector);
 
 /**
  * Free all elements stored inside the vector.
  * /!\\ The elements must be malloc'd pointers. /!\\
  */
-void vector_deep_empty(Vector *vector);
+void vector_deep_destroy(Vector *vector);
 void vector_deep_clear(Vector *vector);
 
 #define vector_add_imm(vector, elem, type)                                     \
