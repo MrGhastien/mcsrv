@@ -7,7 +7,7 @@
 int socket_readbytes(int sockfd, void* restrict buf, size_t byte_count) {
     size_t total_read = 0;
     while (byte_count > 0) {
-        size_t immediate_read = recv(sockfd, buf + total_read, byte_count, 0);
+        ssize_t immediate_read = recv(sockfd, buf + total_read, byte_count, 0);
         if (immediate_read <= 0)
             return immediate_read;
         byte_count -= immediate_read;

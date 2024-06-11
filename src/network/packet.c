@@ -47,7 +47,8 @@ Packet* packet_read(Connection* conn) {
     if (!buf)
         return NULL;
 
-    socket_readbytes(conn->sockfd, buf, length);
+    if(socket_readbytes(conn->sockfd, buf, length) <= 0)
+        return NULL;
 
     size_t id_size = decode_varint(buf, &id);
     if (id_size == FAIL)

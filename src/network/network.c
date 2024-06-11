@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -86,6 +87,11 @@ static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
     if (peerfd == -1) {
         perror("Invalid connection received");
         return 1;
+    }
+    int flags = fcntl(peerfd, F_GETFL, 0);
+    if (fcntl(peerfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+            perror("Could not set socket to non-blocking mode");
+            return 1;
     }
 
     Connection* conn = arena_allocate(conn_arena, sizeof(Connection));
