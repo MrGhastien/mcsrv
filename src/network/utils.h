@@ -15,6 +15,9 @@ size_t decode_varint(const u8* buf, int* out);
 size_t decode_string(const u8* buf, Arena* arena, string* out_str);
 size_t decode_u16(const u8* buf, u16* out);
 
+size_t encode_varint(int in, u8* out);
+void encode_varint_arena(int n, Arena* arena);
+
 void printd_string(const u8* buf);
 
 #endif /* ! UTILS_H */

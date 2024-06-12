@@ -4,17 +4,6 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 
-int socket_readbytes(int sockfd, void* restrict buf, size_t byte_count) {
-    size_t total_read = 0;
-    while (byte_count > 0) {
-        ssize_t immediate_read = recv(sockfd, buf + total_read, byte_count, 0);
-        if (immediate_read <= 0)
-            return immediate_read;
-        byte_count -= immediate_read;
-        total_read += immediate_read;
-    }
-    return total_read;
-}
 
 size_t decode_varint(const u8* buf, int* out) {
     int res = 0;
@@ -52,4 +41,33 @@ size_t decode_string(const u8* buf, Arena* arena, string* out_str) {
 size_t decode_u16(const u8* buf, u16* out) {
     *out = (buf[0] << 8) | buf[1];
     return 2;
+}
+
+
+size_t encode_varint(int n, u8* out) {
+    size_t i = 0;
+    while (TRUE) {
+        out[i] = n & SEGMENT_BITS;
+        if (n & ~SEGMENT_BITS)
+            out[i] |= CONTINUE_BIT;
+        else
+            return i + 1;
+
+        n >>= 7;
+        i++;
+    }
+    return 0;
+}
+
+void encode_varint_arena(int n, Arena* arena) {
+    while (TRUE) {
+        u8* byte = arena_allocate(arena, sizeof *byte);
+        *byte = n & SEGMENT_BITS;
+        if (n & ~SEGMENT_BITS)
+            *byte |= CONTINUE_BIT;
+        else
+            return;
+
+        n >>= 7;
+    }
 }

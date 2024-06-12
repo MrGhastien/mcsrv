@@ -11,25 +11,41 @@
 
 #include "connection.h"
 #include "packet.h"
-#include "utils.h"
 
-static void on_packet_recv(Connection* conn) {
-    arena_save(&conn->arena);
-    Packet* packet = packet_read(conn);
-    if (!packet) {
-        fprintf(stderr, "Received invalid packet.\nClosing connection.\n");
-        close(conn->sockfd);
+static enum IOCode on_packet_recv(Connection* conn) {
+    enum IOCode code;
+    if (!conn_is_resuming_read(conn)) {
+        arena_save(&conn->arena);
+    }
+    code = packet_read(conn);
+    if (code != IOC_OK) {
+        if (code == IOC_ERROR) {
+            fprintf(stderr, "Received invalid packet.\nClosing connection.\n");
+            close(conn->sockfd);
 
-        arena_restore(&conn->arena);
-        return;
+            arena_restore(&conn->arena);
+            conn_reset_buffer(conn, NULL, 0);
+        }
+        return code;
     }
 
-    pkt_acceptor handler = get_pkt_handler(packet, conn);
+
+    Packet pkt;
+    if(!packet_decode(conn, &pkt))
+        return IOC_ERROR;
+
+    conn_reset_buffer(conn, NULL, 0);
+
+    pkt_acceptor handler = get_pkt_handler(&pkt, conn);
     if (handler)
-        handler(packet, conn);
+        handler(&pkt, conn);
 
     puts("====");
     arena_restore(&conn->arena);
+    conn_reset_buffer(conn, NULL, 0);
+    conn->size_read = FALSE;
+
+    return IOC_OK;
 }
 
 static int net_init(char* host, int port, int* out_serverfd, int* out_epollfd) {
@@ -90,8 +106,8 @@ static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
     }
     int flags = fcntl(peerfd, F_GETFL, 0);
     if (fcntl(peerfd, F_SETFL, flags | O_NONBLOCK) == -1) {
-            perror("Could not set socket to non-blocking mode");
-            return 1;
+        perror("Could not set socket to non-blocking mode");
+        return 1;
     }
 
     Connection* conn = arena_allocate(conn_arena, sizeof(Connection));
@@ -103,6 +119,10 @@ static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
     conn->sockfd = peerfd;
     conn->state = STATE_HANDSHAKE;
     conn->arena = arena_create(1 << 16);
+
+    conn_reset_buffer(conn, NULL, 0);
+    conn->size_read = FALSE;
+    
     struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.ptr = conn};
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
         perror("Failed to handle connection");

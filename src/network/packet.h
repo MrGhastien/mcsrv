@@ -13,8 +13,8 @@ enum PacketType {
     PKT_PING = 0x1,
 };
 
-typedef struct {
-    int id;
+typedef struct pkt {
+    enum PacketType id;
     size_t total_length;
     size_t payload_length;
     void* payload;
@@ -42,7 +42,11 @@ typedef void (*pkt_encoder)(const Packet* pkt, Connection* conn, Arena* buffer_a
 pkt_acceptor get_pkt_handler(Packet* pkt, Connection* conn);
 pkt_decoder get_pkt_decoder(Packet* pkt, Connection* conn);
 
-Packet* packet_read(Connection* conn);
-void packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder);
+/**
+   Read and decode a packet from the given connection.
+ */
+enum IOCode packet_read(Connection* conn);
+bool packet_decode(Connection* conn, Packet* out_pkt);
+enum IOCode packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder);
 
 #endif /* ! PACKET_H */

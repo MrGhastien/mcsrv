@@ -5,21 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 
-static void encode_varint(int n, Arena* arena) {
-    while (TRUE) {
-        u8* byte = arena_allocate(arena, sizeof *byte);
-        *byte = n & SEGMENT_BITS;
-        if (n & ~SEGMENT_BITS)
-            *byte |= CONTINUE_BIT;
-        else
-            return;
-
-        n >>= 7;
-    }
-}
-
 static void encode_string(const string* str, Arena* arena) {
-    encode_varint(str->length, arena);
+    encode_varint_arena(str->length, arena);
 
     void* ptr = arena_allocate(arena, str->length);
     memcpy(ptr, str->base, str->length);

@@ -38,14 +38,14 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     json_set_int(nodes[1], 69);
 
     nodes[1] = json_node_put(&json, nodes[0], "online", JSON_INT);
-    json_set_int(nodes[1], 1);
+    json_set_int(nodes[1], 0);
 
-    nodes[1] = json_node_put(&json, nodes[0], "sample", JSON_ARRAY);
-    nodes[2] = json_node_add(&json, nodes[1], JSON_OBJECT);
-    nodes[3] = json_node_put(&json, nodes[2], "name", JSON_STRING);
-    json_set_cstr(nodes[3], "EPIC_GAMR");
-    nodes[3] = json_node_put(&json, nodes[2], "id", JSON_STRING);
-    json_set_cstr(nodes[3], "4566e69f-c907-48ee-8d71-d7ba5aa00d20"); // Random UUID
+    //nodes[1] = json_node_put(&json, nodes[0], "sample", JSON_ARRAY);
+    /* nodes[2] = json_node_add(&json, nodes[1], JSON_OBJECT); */
+    /* nodes[3] = json_node_put(&json, nodes[2], "name", JSON_STRING); */
+    /* json_set_cstr(nodes[3], "EPIC_GAMR"); */
+    /* nodes[3] = json_node_put(&json, nodes[2], "id", JSON_STRING); */
+    /* json_set_cstr(nodes[3], "4566e69f-c907-48ee-8d71-d7ba5aa00d20"); // Random UUID */
 
     nodes[0] = json_node_put(&json, json.root, "description", JSON_OBJECT);
     nodes[1] = json_node_put(&json, nodes[0], "text", JSON_STRING);
@@ -58,9 +58,10 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     json_set_bool(nodes[0], FALSE);
 
     json_stringify(&json, &response.data, &conn->arena);
+    // response.data = str_create_const("{\n    \"version\": {\n        \"name\": \"1.19.4\",\n        \"protocol\": 762\n    },\n    \"players\": {\n        \"max\": 100,\n        \"online\": 5,\n        \"sample\": [\n            {\n                \"name\": \"thinkofdeath\",\n                \"id\": \"4566e69f-c907-48ee-8d71-d7ba5aa00d20\"\n            }\n        ]\n    },\n    \"description\": {\n        \"text\": \"Hello, world!\"\n    },\n    \"enforcesSecureChat\": false,\n    \"previewsChat\": false\n}");
     printf("%s", response.data.base);
     Packet out_pkt = {
-        .id = 0x0,
+        .id = PKT_STATUS,
         .payload = &response
     };
     packet_write(&out_pkt, conn, &pkt_encode_status);

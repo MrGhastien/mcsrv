@@ -2,6 +2,10 @@
 #include "packet.h"
 #include "decoders.h"
 #include "handlers.h"
+#include "../utils/bitwise.h"
+
+#include <errno.h>
+#include <sys/socket.h>
 
 static pkt_acceptor handler_table[][_STATE_COUNT] = {
     [STATE_HANDSHAKE] = {[PKT_HANDSHAKE] = &pkt_handle_handshake},
@@ -19,4 +23,29 @@ pkt_acceptor get_pkt_handler(Packet* pkt, Connection* conn) {
 
 pkt_decoder get_pkt_decoder(Packet* pkt, Connection* conn) {
     return decoder_table[conn->state][pkt->id];
+}
+
+
+void conn_reset_buffer(Connection* conn, void* new_buffer, size_t size) {
+    conn->bytes_read = 0;
+    conn->buffer_size = size;
+    conn->pkt_buffer = new_buffer;
+}
+
+bool conn_is_resuming_read(const Connection* conn) {
+    return conn->pkt_buffer != NULL;
+}
+
+enum IOCode conn_read_bytes(Connection* conn) {
+    size_t total_read = 0;
+    while (conn->bytes_read < conn->buffer_size) {
+        void* ptr = offset(conn->pkt_buffer, conn->bytes_read);
+        size_t remaining = conn->buffer_size - conn->bytes_read;
+        ssize_t immediate_read = recv(conn->sockfd, ptr, remaining, 0);
+        if (immediate_read < 0)
+            return errno == EAGAIN || errno == EWOULDBLOCK ? IOC_AGAIN : IOC_ERROR;
+
+        conn->bytes_read += immediate_read;
+    }
+    return total_read;
 }
