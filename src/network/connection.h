@@ -32,11 +32,16 @@ typedef struct {
     u8* pkt_buffer;
     size_t bytes_read;
     size_t buffer_size;
+
+    Arena send_arena;
 } Connection;
 
+Connection conn_create(int sockfd);
 void conn_reset_buffer(Connection* conn, void* new_buffer, size_t size);
 
 enum IOCode conn_read_bytes(Connection* conn);
 bool conn_is_resuming_read(const Connection* conn);
+
+enum IOCode conn_send_bytes(Connection* conn);
 
 #endif /* ! CONTEXT_H */

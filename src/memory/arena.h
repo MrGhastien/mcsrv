@@ -26,4 +26,7 @@ void arena_free_ptr(Arena* arena, void* ptr);
 void arena_save(Arena* arena);
 void arena_restore(Arena* arena);
 
+size_t arena_recent_length(Arena* arena);
+void* arena_recent_pos(Arena* arena);
+
 #endif /* ! ARENA_H */

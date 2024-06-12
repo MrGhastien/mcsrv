@@ -47,6 +47,6 @@ pkt_decoder get_pkt_decoder(Packet* pkt, Connection* conn);
  */
 enum IOCode packet_read(Connection* conn);
 bool packet_decode(Connection* conn, Packet* out_pkt);
-enum IOCode packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder);
+void packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder);
 
 #endif /* ! PACKET_H */

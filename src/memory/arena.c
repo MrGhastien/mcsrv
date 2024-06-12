@@ -72,3 +72,11 @@ void arena_restore(Arena* arena) {
 
     arena->saved_length = arena->capacity;
 }
+
+void* arena_recent_pos(Arena* arena) {
+    return offset(arena->block, arena->saved_length);
+}
+
+size_t arena_recent_length(Arena* arena) {
+    return arena->length - arena->saved_length;
+}

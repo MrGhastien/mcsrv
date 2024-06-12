@@ -3,6 +3,7 @@
 #include "utils.h"
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 
 #define PKT_MAX_SIZE 2097151UL
@@ -60,10 +61,11 @@ bool packet_decode(Connection* conn, Packet* out_pkt) {
 }
 
 enum IOCode packet_read(Connection* conn) {
+    Arena arena = conn->arena;
 
     if (!conn_is_resuming_read(conn)) {
         // New packet
-        void* buf = arena_allocate(&conn->arena, 4);
+        void* buf = arena_allocate(&arena, 4);
         conn_reset_buffer(conn, buf, 4);
         conn->size_read = FALSE;
     }
@@ -77,10 +79,9 @@ enum IOCode packet_read(Connection* conn) {
             return code;
 
         decode_varint(conn->pkt_buffer, &length);
-        arena_free(&conn->arena, 4);
         conn->size_read = TRUE;
 
-        u8* buf = arena_allocate(&conn->arena, length);
+        u8* buf = arena_allocate(&arena, length);
         if (!buf) {
             perror("Could not allocate memory for the packet paylaod buffer");
             return IOC_ERROR;
@@ -96,35 +97,27 @@ enum IOCode packet_read(Connection* conn) {
     return IOC_OK;
 }
 
-enum IOCode packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder) {
-    Arena buffer_arena = arena_create(PKT_MAX_SIZE);
-    if (!conn_is_resuming_read(conn)) {
-        encode_varint_arena(pkt->id, &buffer_arena);
-        encoder(pkt, conn, &buffer_arena);
-    }
+void packet_write(const Packet* pkt, Connection* conn, pkt_encoder encoder) {
+    Arena arena = conn->arena;
+    arena_save(&arena);
 
-    
-    u8 len_buf[4];
-    ssize_t sent = encode_varint(buffer_arena.length, len_buf);
+    encode_varint_arena(pkt->id, &arena);
+    encoder(pkt, conn, &arena);
 
-    puts("Sending:");
+    size_t length = arena_recent_length(&arena);
+    encode_varint_arena(length, &conn->send_arena);
+    void* data_ptr = arena_allocate(&conn->send_arena, length);
+
+    memcpy(data_ptr, arena_recent_pos(&arena), length);
+
+#ifdef DEBUG
+        puts("Sending:");
     putchar('[');
-    for (ssize_t i = 0; i < sent; i++) {
-        u8 byte = len_buf[i];
-        printf("%02x ", byte);
-    }
-    for (size_t i = 0; i < buffer_arena.length; i++) {
-        u8 byte = ((u8*)buffer_arena.block)[i];
+    for (size_t i = 0; i < conn->send_arena.length; i++) {
+        u8 byte = ((u8*)conn->send_arena.block)[i];
         printf("%02x ", byte);
     }
     putchar(']');
     putchar('\n');
-
-    sent = send(conn->sockfd, len_buf, sent, 0);
-    sent = send(conn->sockfd, buffer_arena.block, buffer_arena.length, 0);
-    if (sent == -1)
-        return errno == EWOULDBLOCK || errno == EAGAIN ? IOC_AGAIN : IOC_ERROR;
-
-    arena_destroy(&buffer_arena);
-    return IOC_OK;
+#endif
 }

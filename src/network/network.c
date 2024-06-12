@@ -1,5 +1,4 @@
 #include <arpa/inet.h>
-#include <asm-generic/socket.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -28,7 +27,6 @@ static enum IOCode on_packet_recv(Connection* conn) {
         }
         return code;
     }
-
 
     Packet pkt;
     if(!packet_decode(conn, &pkt))
@@ -115,14 +113,9 @@ static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
         perror("Failed to allocate memory to register connection");
         return 1;
     }
-    conn->compression = FALSE;
-    conn->sockfd = peerfd;
-    conn->state = STATE_HANDSHAKE;
-    conn->arena = arena_create(1 << 16);
 
-    conn_reset_buffer(conn, NULL, 0);
-    conn->size_read = FALSE;
-    
+    *conn = conn_create(peerfd);
+
     struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.ptr = conn};
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
         perror("Failed to handle connection");
@@ -153,8 +146,9 @@ int net_handle(char* host, int port) {
             struct epoll_event* e = &events[i];
             if (e->data.u64 == 0)
                 accept_connection(&conn_arena, serverfd, epollfd);
-            else
+            else {
                 on_packet_recv(e->data.ptr);
+            }
         }
     }
 
