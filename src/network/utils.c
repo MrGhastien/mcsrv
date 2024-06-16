@@ -1,9 +1,30 @@
 #include "utils.h"
+#include "utils/bitwise.h"
+#include "network.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
 #include <sys/socket.h>
 
+enum IOCode try_send(int sockfd, void* data, u64 size, u64* out_sent) {
+    u64 sent = 0;
+    enum IOCode code = IOC_OK;
+    while (sent < size) {
+        void* begin = offset(data, sent);
+        i64 res = send(sockfd, begin, size - sent, 0);
+
+        if (res == -1) {
+            code = errno == EAGAIN || errno == EWOULDBLOCK ? IOC_AGAIN : IOC_ERROR;
+            break;
+        } else if (res == 0) {
+            code = IOC_CLOSED;
+            break;
+        }
+
+        sent += res;
+    }
+    *out_sent = sent;
+    return code;
+}
 
 size_t decode_varint(const u8* buf, int* out) {
     int res = 0;
@@ -43,31 +64,16 @@ size_t decode_u16(const u8* buf, u16* out) {
     return 2;
 }
 
-
-size_t encode_varint(int n, u8* out) {
-    size_t i = 0;
-    while (TRUE) {
-        out[i] = n & SEGMENT_BITS;
+u64 encode_varint(int n, u8* buf) {
+    u64 i = 0;
+    while (i < VARINT_MAX_SIZE) {
+        buf[i] = n & SEGMENT_BITS;
         if (n & ~SEGMENT_BITS)
-            out[i] |= CONTINUE_BIT;
+            buf[i] |= CONTINUE_BIT;
         else
-            return i + 1;
-
-        n >>= 7;
+            break;
         i++;
-    }
-    return 0;
-}
-
-void encode_varint_arena(int n, Arena* arena) {
-    while (TRUE) {
-        u8* byte = arena_allocate(arena, sizeof *byte);
-        *byte = n & SEGMENT_BITS;
-        if (n & ~SEGMENT_BITS)
-            *byte |= CONTINUE_BIT;
-        else
-            return;
-
         n >>= 7;
     }
+    return i + 1;
 }

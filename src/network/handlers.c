@@ -1,20 +1,19 @@
+#include "json/json.h"
 #include "packet.h"
-#include "encoders.h"
-#include "../json/json.h"
+#include "sender.h"
 #include <stdio.h>
-#include <stdlib.h>
 
 void pkt_handle_handshake(Packet* pkt, Connection* conn) {
     PacketHandshake* shake = pkt->payload;
-    printf("Protocol version: %i\nServer address: '%s'", shake->protocol_version, shake->srv_addr.base);
-    printf("\nPort: %u\nNext state: %i\n", shake->srv_port, shake->next_state);
+    printf("  - Protocol version: %i\n  - Server address: '%s'", shake->protocol_version, shake->srv_addr.base);
+    printf("\n  - Port: %u\n  - Next state: %i\n", shake->srv_port, shake->next_state);
     conn->state = shake->next_state;
 }
 
 void pkt_handle_status(Packet* pkt, Connection* conn) {
     (void)pkt;
     (void)conn;
-    printf("Status request\n");
+    printf("  Status request\n");
     PacketStatusResponse response;
 
     JSON json;
@@ -40,7 +39,7 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     nodes[1] = json_node_put(&json, nodes[0], "online", JSON_INT);
     json_set_int(nodes[1], 0);
 
-    //nodes[1] = json_node_put(&json, nodes[0], "sample", JSON_ARRAY);
+    // nodes[1] = json_node_put(&json, nodes[0], "sample", JSON_ARRAY);
     /* nodes[2] = json_node_add(&json, nodes[1], JSON_OBJECT); */
     /* nodes[3] = json_node_put(&json, nodes[2], "name", JSON_STRING); */
     /* json_set_cstr(nodes[3], "EPIC_GAMR"); */
@@ -58,26 +57,17 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     json_set_bool(nodes[0], FALSE);
 
     json_stringify(&json, &response.data, &conn->arena);
-    // response.data = str_create_const("{\n    \"version\": {\n        \"name\": \"1.19.4\",\n        \"protocol\": 762\n    },\n    \"players\": {\n        \"max\": 100,\n        \"online\": 5,\n        \"sample\": [\n            {\n                \"name\": \"thinkofdeath\",\n                \"id\": \"4566e69f-c907-48ee-8d71-d7ba5aa00d20\"\n            }\n        ]\n    },\n    \"description\": {\n        \"text\": \"Hello, world!\"\n    },\n    \"enforcesSecureChat\": false,\n    \"previewsChat\": false\n}");
     printf("%s", response.data.base);
-    Packet out_pkt = {
-        .id = PKT_STATUS,
-        .payload = &response
-    };
-    packet_write(&out_pkt, conn, &pkt_encode_status);
+    Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
+    write_packet(&out_pkt, conn);
 }
 
 void pkt_handle_ping(Packet* pkt, Connection* conn) {
     (void)pkt;
     (void)conn;
     PacketPing* ping = pkt->payload;
-    PacketPing pong = {
-        .num = ping->num
-    };
-    Packet response = {
-        .id = PKT_PING,
-        .payload = &pong
-    };
+    PacketPing pong = {.num = ping->num};
+    Packet response = {.id = PKT_PING, .payload = &pong};
 
-    packet_write(&response, conn, &pkt_encode_ping);
+    write_packet(&response, conn);
 }

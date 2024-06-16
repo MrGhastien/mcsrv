@@ -3,6 +3,7 @@
 
 #include "../definitions.h"
 #include "../memory/arena.h"
+#include "bytebuffer.h"
 #include <sys/types.h>
 
 typedef struct pkt Packet;
@@ -16,27 +17,25 @@ enum State {
     _STATE_COUNT
 };
 
-enum IOCode {
-    IOC_OK,
-    IOC_ERROR,
-    IOC_AGAIN
-};
-
 typedef struct {
     Arena arena;
     bool compression;
     enum State state;
     int sockfd;
 
-    bool size_read;
+    // Current reading progress
+    bool has_read_size;
     u8* pkt_buffer;
-    size_t bytes_read;
-    size_t buffer_size;
+    u64 bytes_read;
+    u64 buffer_size;
 
-    Arena send_arena;
+    ByteBuffer send_buffer;
+
+    u64 table_index;
 } Connection;
 
-Connection conn_create(int sockfd);
+Connection conn_create(int sockfd, u64 table_index);
+
 void conn_reset_buffer(Connection* conn, void* new_buffer, size_t size);
 
 enum IOCode conn_read_bytes(Connection* conn);

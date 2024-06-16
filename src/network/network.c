@@ -1,54 +1,31 @@
+#include "network.h"
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include "connection.h"
-#include "packet.h"
+#include "receiver.h"
+#include "sender.h"
 
-static enum IOCode on_packet_recv(Connection* conn) {
-    enum IOCode code;
-    if (!conn_is_resuming_read(conn)) {
-        arena_save(&conn->arena);
-    }
-    code = packet_read(conn);
-    if (code != IOC_OK) {
-        if (code == IOC_ERROR) {
-            fprintf(stderr, "Received invalid packet.\nClosing connection.\n");
-            close(conn->sockfd);
+typedef struct net_ctx {
+    Arena* arena;
+    Connection* connections;
+    u64 max_connections;
+    u64 connection_count;
+    int serverfd;
+    int epollfd;
+} NetworkContext;
 
-            arena_restore(&conn->arena);
-            conn_reset_buffer(conn, NULL, 0);
-        }
-        return code;
-    }
+static NetworkContext ctx;
 
-    Packet pkt;
-    if(!packet_decode(conn, &pkt))
-        return IOC_ERROR;
-
-    conn_reset_buffer(conn, NULL, 0);
-
-    pkt_acceptor handler = get_pkt_handler(&pkt, conn);
-    if (handler)
-        handler(&pkt, conn);
-
-    puts("====");
-    arena_restore(&conn->arena);
-    conn_reset_buffer(conn, NULL, 0);
-    conn->size_read = FALSE;
-
-    return IOC_OK;
-}
-
-static int net_init(char* host, int port, int* out_serverfd, int* out_epollfd) {
+static int net_init(char* host, int port, Arena* arena, u64 max_connections) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    *out_serverfd = sockfd;
+    ctx.serverfd = sockfd;
     if (sockfd == -1) {
         perror("Could not create socket");
         return 1;
@@ -79,25 +56,35 @@ static int net_init(char* host, int port, int* out_serverfd, int* out_epollfd) {
     }
 
     int epollfd = epoll_create1(0);
-    *out_epollfd = epollfd;
+    ctx.epollfd = epollfd;
     if (epollfd == -1) {
         perror("Failed to create epoll instance");
         return 1;
     }
 
-    struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.u64 = 0};
+    struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.fd = -1};
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &event_in) == -1) {
         perror("Failed to create epoll instance");
         return 1;
     }
-    printf("Listening on %s:%i.\n", host, port);
+
+    ctx.arena = arena;
+    ctx.connections = arena_allocate(ctx.arena, sizeof(Connection) * max_connections);
+    ctx.max_connections = max_connections;
+    ctx.connection_count = 0;
+
+    for(u64 i = 0; i < max_connections; i++) {
+        ctx.connections[i].sockfd = -1;
+    }
+    
+    puts("Network sub-system initialized.");
     return 0;
 }
 
-static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
+static int accept_connection(void) {
     struct sockaddr_in peer_addr;
     socklen_t peer_addr_length = sizeof peer_addr;
-    int peerfd = accept(serverfd, (struct sockaddr*)&peer_addr, &peer_addr_length);
+    int peerfd = accept(ctx.serverfd, (struct sockaddr*)&peer_addr, &peer_addr_length);
     if (peerfd == -1) {
         perror("Invalid connection received");
         return 1;
@@ -108,51 +95,94 @@ static int accept_connection(Arena* conn_arena, int serverfd, int epollfd) {
         return 1;
     }
 
-    Connection* conn = arena_allocate(conn_arena, sizeof(Connection));
-    if (!conn) {
-        perror("Failed to allocate memory to register connection");
+    i64 idx = -1;
+    for(u64 i = 0; i < ctx.max_connections; i++) {
+        if(ctx.connections[i].sockfd == -1) {
+            idx = i;
+            break;
+        }
+    }
+    if(idx == -1) {
+        fputs("Max number of connections reached! Try again later.", stderr);
         return 1;
     }
 
-    *conn = conn_create(peerfd);
 
-    struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.ptr = conn};
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
+    struct epoll_event event_in = {.events = EPOLLIN | EPOLLOUT | EPOLLET, .data.u64 = idx};
+    if (epoll_ctl(ctx.epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
         perror("Failed to handle connection");
         return 1;
     }
+
+    ctx.connections[idx] = conn_create(peerfd, idx);
+
     char addr_str[16];
     inet_ntop(AF_INET, &peer_addr.sin_addr, addr_str, 16);
     printf("Accepted connection from %s:%i.\n", addr_str, peer_addr.sin_port);
     return 0;
 }
 
-int net_handle(char* host, int port) {
+void close_connection(Connection* conn) {
+    struct epoll_event placeholder;
+    close(conn->sockfd);
+    epoll_ctl(ctx.epollfd, EPOLL_CTL_DEL, conn->sockfd, &placeholder);
+    arena_destroy(&conn->arena);
+    conn->sockfd = -1;
+    ctx.connection_count--;
+}
 
-    Arena conn_arena = arena_create(4096);
+int net_handle(char* host, int port, u64 max_connections) {
 
-    int epollfd;
-    int serverfd;
+    Arena conn_arena = arena_create(40960);
 
-    int ret = net_init(host, port, &serverfd, &epollfd);
+    int ret = net_init(host, port, &conn_arena, max_connections);
     if (ret)
         return ret;
 
     struct epoll_event events[10];
     int eventCount = 0;
 
-    while ((eventCount = epoll_wait(epollfd, events, 10, -1)) != -1) {
+    printf("Listening on %s:%i.\n", host, port);
+    while ((eventCount = epoll_wait(ctx.epollfd, events, 10, -1)) != -1) {
         for (int i = 0; i < eventCount; i++) {
             struct epoll_event* e = &events[i];
-            if (e->data.u64 == 0)
-                accept_connection(&conn_arena, serverfd, epollfd);
+            if (e->data.fd == -1)
+                accept_connection();
             else {
-                on_packet_recv(e->data.ptr);
+                enum IOCode code = IOC_OK;
+                Connection* conn = &ctx.connections[e->data.u64];
+                if (e->events & EPOLLIN)
+                    code = receive_packet(conn);
+                switch (code) {
+                case IOC_CLOSED:
+                    puts("Peer closed connection.");
+                    close_connection(conn);
+                    break;
+                case IOC_ERROR:
+                    puts("Errored connection.");
+                    close_connection(conn);
+                    break;
+                default:
+                    break;
+                }
+
+                if (e->events & EPOLLOUT)
+                    sender_send(conn);
+
+                switch (code) {
+                case IOC_CLOSED:
+                case IOC_ERROR:
+                    close_connection(conn);
+                    break;
+                default:
+                    break;
+                }
             }
         }
     }
 
-    close(serverfd);
+    close(ctx.serverfd);
+    close(ctx.epollfd);
     arena_destroy(&conn_arena);
 
     return 0;
