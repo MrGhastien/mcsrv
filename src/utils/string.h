@@ -1,20 +1,21 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include "../definitions.h"
-#include "../memory/arena.h"
+#include "definitions.h"
+#include "memory/arena.h"
 #include <stddef.h>
 
 typedef struct str {
     char* base;
-    size_t length;
-    size_t capacity;
+    u64 length;
+    u64 capacity;
     bool fixed;
 } string;
 
 string str_init(const char* cstr, size_t length, size_t capacity, Arena* arena);
 string str_create(const char* cstr);
 string str_create_const(const char* cstr);
+string str_create_from(const string* str, Arena* arena);
 string str_alloc(size_t capacity, Arena* arena);
 
 void str_destroy(string* str);

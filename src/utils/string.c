@@ -5,27 +5,27 @@
 
 string str_init(const char* cstr, size_t length, size_t capacity, Arena* arena) {
     string str;
-    if(capacity == 0)
-        str.base = (char*)cstr;
+    if (capacity == 0)
+        str.base = (char*) cstr;
     else if (!arena)
         str.base = malloc(capacity);
     else
         str.base = arena_allocate(arena, capacity);
 
     if (!str.base) {
-        str.fixed = TRUE;
+        str.fixed    = TRUE;
         str.capacity = 0;
-        str.length = 0;
+        str.length   = 0;
         return str;
     }
 
-    str.fixed = capacity == 0 || arena != NULL;
-    str.length = length;
+    str.fixed    = capacity == 0 || arena != NULL;
+    str.length   = length;
     str.capacity = capacity;
 
-    if(!str_is_const(&str)) {
+    if (!str_is_const(&str)) {
         str.base[str.length] = 0;
-        if(cstr)
+        if (cstr)
             memcpy(str.base, cstr, length);
     }
     return str;
@@ -42,6 +42,10 @@ string str_create_const(const char* cstr) {
 
 string str_alloc(size_t capacity, Arena* arena) {
     return str_init(NULL, 0, capacity, arena);
+}
+
+string str_create_from(const string* str, Arena* arena) {
+    return str_init(str->base, str->length, str->capacity, arena);
 }
 
 bool str_is_const(const string* str) {
@@ -93,9 +97,9 @@ void str_append(string* str, const char* cstr) {
     if (!str->fixed && str->length + len >= str->capacity) {
         size_t new_cap = str->capacity + (str->capacity >> 1);
         char* new_base = realloc(str->base, new_cap);
-        if(new_base) {
+        if (new_base) {
             str->capacity = new_cap;
-            str->base = new_base;
+            str->base     = new_base;
         }
     }
 
@@ -115,9 +119,9 @@ void str_concat(string* lhs, const string* rhs) {
     if (!lhs->fixed && lhs->length + len >= lhs->capacity) {
         size_t new_cap = lhs->capacity + (lhs->capacity >> 1);
         char* new_base = realloc(lhs->base, new_cap);
-        if(new_base) {
+        if (new_base) {
             lhs->capacity = new_cap;
-            lhs->base = new_base;
+            lhs->base     = new_base;
         }
     }
 
