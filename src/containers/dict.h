@@ -28,10 +28,11 @@ void dict_init_fixed(Dict* map, Arena* arena, size_t capacity, size_t key_stride
 void dict_clear(Dict* map);
 void dict_destroy(Dict* map);
 
-void dict_put(Dict* map, const void* key, const void* value);
-bool dict_remove(Dict* map, void* key, void* outValue);
+i64 dict_put(Dict* map, const void* key, const void* value);
+i64 dict_remove(Dict* map, const void* key, void* outValue);
 
-bool dict_get(Dict* map, void* key, void* outValue);
+i64 dict_get(Dict* map, const void* key, void* outValue);
+void* dict_ref(Dict* dict, i64 idx);
 
 typedef void (*action)(const Dict* dict, size_t idx, void* key, void* value, void* data);
 void dict_foreach(Dict* map, action action, void* data);

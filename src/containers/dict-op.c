@@ -13,35 +13,57 @@ static u64 hash(const u8* data, size_t size) {
     u64 hash = 37;
     u8 b;
 
-    for(size_t i = 0; i < size; i++) {
-        b = data[i];
+    for (size_t i = 0; i < size; i++) {
+        b    = data[i];
         hash = b + (hash << 6) + (hash << 16) - hash;
     }
 
     return hash;
 }
 
-static struct node get_node_base(Dict* dict, size_t idx, void* base, size_t capacity) {
+static struct node get_node_base(const Dict* dict, size_t idx, void* base, size_t capacity) {
     struct node node;
     if (idx >= capacity) {
-        node.hash = 0;
+        node.hash  = 0;
         node.hashp = 0;
-        node.key = 0;
+        node.key   = 0;
         node.value = 0;
         return node;
     }
 
     size_t total_stride = sizeof(u64) + dict->key_stride + dict->value_stride;
-    void* ptr = offset(base, idx * total_stride);
-    node.hashp = ptr;
-    node.hash = *node.hashp;
-    node.key = offset(ptr, sizeof(u64));
-    node.value = offset(ptr, sizeof(u64) + dict->key_stride);
+    void* ptr           = offset(base, idx * total_stride);
+    node.hashp          = ptr;
+    node.hash           = *node.hashp;
+    node.key            = offset(ptr, sizeof(u64));
+    node.value          = offset(ptr, sizeof(u64) + dict->key_stride);
     return node;
 }
 
-static struct node get_node(Dict* dict, size_t idx) {
+static struct node get_node(const Dict* dict, size_t idx) {
     return get_node_base(dict, idx, dict->base, dict->capacity);
+}
+
+static size_t idx_iter(size_t cap, size_t idx) {
+    return (5 * idx + 1) % cap;
+}
+
+static i64 get_elem(const Dict* map, const void* key, struct node* out_node) {
+    u64 h         = hash(key, map->key_stride);
+    size_t idx    = h % map->capacity;
+    struct node n = get_node(map, idx);
+    size_t count  = 0;
+
+    while (n.hash == 0 || n.hash != h || memcmp(n.key, key, map->key_stride)) {
+        if (n.hash != 0)
+            count++;
+        if (count == map->size)
+            return FALSE;
+        idx = idx_iter(map->capacity, idx);
+        n   = get_node(map, idx);
+    }
+    *out_node = n;
+    return idx;
 }
 
 void dict_clear(Dict* map) {
@@ -51,14 +73,10 @@ void dict_clear(Dict* map) {
         if (node.key) {
             free(node.key);
             node.hash = 0;
-            node.key = NULL;
+            node.key  = NULL;
             j--;
         }
     }
-}
-
-static size_t idx_iter(size_t cap, size_t idx) {
-    return (5 * idx + 1) % cap;
 }
 
 static void rehash_nodes(Dict* map, void* old_base, void* new_base, size_t new_capacity) {
@@ -82,14 +100,14 @@ static void rehash_nodes(Dict* map, void* old_base, void* new_base, size_t new_c
 
 static void resize(Dict* map, size_t new_capacity) {
     size_t total_stride = sizeof(u64) + map->key_stride + map->value_stride;
-    void* new_base = calloc(new_capacity, total_stride);
-    void* old_base = map->base;
+    void* new_base      = calloc(new_capacity, total_stride);
+    void* old_base      = map->base;
 
     rehash_nodes(map, old_base, new_base, new_capacity);
 
     free(old_base);
     map->capacity = new_capacity;
-    map->base = new_base;
+    map->base     = new_base;
 }
 
 static void grow(Dict* map) {
@@ -101,12 +119,12 @@ static void shrink(Dict* map) {
         resize(map, map->capacity >> 1);
 }
 
-void dict_put(Dict* map, const void* key, const void* value) {
+i64 dict_put(Dict* map, const void* key, const void* value) {
     if (key == NULL)
-        return;
+        return -1;
 
-    u64 h = hash(key, map->key_stride);
-    size_t idx = h % map->capacity;
+    u64 h         = hash(key, map->key_stride);
+    size_t idx    = h % map->capacity;
     struct node n = get_node(map, idx);
 
     /*
@@ -123,8 +141,8 @@ void dict_put(Dict* map, const void* key, const void* value) {
      */
     bool same_key = memcmp(n.key, key, map->key_stride) == 0;
     while (n.hash != 0 && (n.hash != h || !same_key)) {
-        idx = idx_iter(map->capacity, idx);
-        n = get_node(map, idx);
+        idx      = idx_iter(map->capacity, idx);
+        n        = get_node(map, idx);
         same_key = memcmp(n.key, key, map->key_stride) == 0;
     }
 
@@ -137,25 +155,18 @@ void dict_put(Dict* map, const void* key, const void* value) {
 
     if (!map->fixed && map->size >= map->capacity * MAX_LOAD_FACTOR)
         grow(map);
+
+    return idx;
 }
 
-bool dict_remove(Dict* map, void* key, void* outValue) {
+i64 dict_remove(Dict* map, const void* key, void* outValue) {
     if (key == NULL || map->size == 0)
-        return FALSE;
+        return -1;
 
-    u64 h = hash(key, map->key_stride);
-    size_t idx = h % map->capacity;
-    struct node n = get_node(map, idx);
-    size_t count = 0;
-
-    while (n.hash == 0 || n.hash != h || memcmp(n.key, key, map->key_stride)) {
-        if (n.hash != 0)
-            count++;
-        if (count == map->size)
-            return FALSE;
-        idx = idx_iter(map->capacity, idx);
-        n = get_node(map, idx);
-    }
+    struct node n;
+    i64 idx = get_elem(map, key, &n);
+    if (idx == -1)
+        return -1;
 
     if (outValue) {
         memcpy(outValue, n.value, map->value_stride);
@@ -164,31 +175,32 @@ bool dict_remove(Dict* map, void* key, void* outValue) {
     map->size--;
     if (!map->fixed && map->size <= map->capacity * MIN_LOAD_FACTOR)
         shrink(map);
-    return TRUE;
+    return idx;
 }
 
-bool dict_get(Dict* map, void* key, void* outValue) {
+i64 dict_get(Dict* map, const void* key, void* outValue) {
     if (key == NULL || map->size == 0)
-        return FALSE;
+        return -1;
 
-    u64 h = hash(key, map->key_stride);
-    size_t idx = h % map->capacity;
-    struct node n = get_node(map, idx);
-    size_t c = 0;
-
-    while (n.hash == 0 || n.hash != h || memcmp(n.key, key, map->key_stride)) {
-        if (n.hash == 0)
-            c++;
-        if (c == map->size)
-            return FALSE;
-        idx = idx_iter(map->capacity, idx);
-        n = get_node(map, idx);
-    }
+    struct node n;
+    i64 idx = get_elem(map, key, &n);
+    if (idx == -1)
+        return -1;
 
     if (outValue)
         memcpy(outValue, n.value, map->value_stride);
 
-    return TRUE;
+    return idx;
+}
+
+void* dict_ref(Dict* dict, i64 idx) {
+    if (dict->size == 0 || idx < 0 || idx > (i64) dict->capacity)
+        return NULL;
+
+    struct node n = get_node(dict, idx);
+    if (n.hash == 0)
+        return NULL;
+    return n.value;
 }
 
 void dict_foreach(Dict* map, action action, void* data) {

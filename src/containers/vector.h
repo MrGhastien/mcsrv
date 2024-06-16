@@ -9,17 +9,16 @@
 typedef struct vector
 {
     void *array;
-    size_t capacity;
-    size_t size;
-    size_t stride;
+    u32 capacity;
+    u32 size;
+    u32 stride;
     bool fixed;
 } Vector;
 
 void vector_init(Vector *vector, size_t initial_capacity, size_t stride);
-void vector_init_fixed(Vector *vector, Arena* arena, size_t initial_capacity, size_t stride);
+void vector_init_fixed(Vector *vector, Arena* arena, size_t capacity, size_t stride);
 
 void vector_destroy(Vector *vector);
-void vector_destroy_with_arena(Vector *vector, Arena* arena);
 void vector_clear(Vector *vector);
 
 /**
