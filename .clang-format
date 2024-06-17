@@ -1,5 +1,14 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
-ColumnLimit: 120
-AllowShortFunctionsOnASingleLine: None
+ColumnLimit: 100
 PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+PackConstructorInitializers: NextLineOnly
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments: Consecutive
+BinPackArguments: false
+BinPackParameters: false
+SpaceAfterCStyleCast: true
+SpaceAroundPointerQualifiers: Default
