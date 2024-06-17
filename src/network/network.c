@@ -84,7 +84,7 @@ i32 net_init(char* host, i32 port, u64 max_connections) {
         ctx.connections[i].sockfd = -1;
     }
     
-    log_info("Network sub-system initialized.");
+    log_debug("Network sub-system initialized.");
     return 0;
 }
 

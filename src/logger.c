@@ -3,9 +3,10 @@
 #include <stdio.h>
 
 static char* names[_LOG_LEVEL_COUNT] = {
-    [LOG_LEVEL_ERROR] = "[ERROR",
-    [LOG_LEVEL_WARN]  = "[WARN] ",
-    [LOG_LEVEL_INFO]  = "[INFO] ",
+    [LOG_LEVEL_FATAL] = "[FATAL]",
+    [LOG_LEVEL_ERROR] = "[ERROR]",
+    [LOG_LEVEL_WARN]  = "[ WARN]",
+    [LOG_LEVEL_INFO]  = "[ INFO]",
 #ifdef DEBUG
     [LOG_LEVEL_DEBUG] = "[DEBUG]",
 #endif
@@ -15,6 +16,7 @@ static char* names[_LOG_LEVEL_COUNT] = {
 };
 
 static char* colors[_LOG_LEVEL_COUNT] = {
+    [LOG_LEVEL_FATAL] = "\x1b[91;1m",
     [LOG_LEVEL_ERROR] = "\x1b[31m",
     [LOG_LEVEL_WARN]  = "\x1b[33m",
     [LOG_LEVEL_INFO]  = "\x1b[0m",
@@ -27,11 +29,12 @@ static char* colors[_LOG_LEVEL_COUNT] = {
 };
 
 void _log_msg(enum LogLevel lvl, char* msg) {
-    if (lvl < LOG_LEVEL_ERROR || lvl >= _LOG_LEVEL_COUNT)
+    if (lvl < LOG_LEVEL_FATAL || lvl >= _LOG_LEVEL_COUNT)
         return;
 
     FILE* stream;
     switch (lvl) {
+    case LOG_LEVEL_FATAL:
     case LOG_LEVEL_ERROR:
         stream = stderr;
         break;
@@ -44,7 +47,7 @@ void _log_msg(enum LogLevel lvl, char* msg) {
 }
 
 void _log_msgf(enum LogLevel lvl, char* msg, ...) {
-    if (lvl < LOG_LEVEL_ERROR || lvl >= _LOG_LEVEL_COUNT)
+    if (lvl < LOG_LEVEL_FATAL || lvl >= _LOG_LEVEL_COUNT)
         return;
 
     va_list args;
@@ -52,6 +55,7 @@ void _log_msgf(enum LogLevel lvl, char* msg, ...) {
 
     FILE* stream;
     switch (lvl) {
+    case LOG_LEVEL_FATAL:
     case LOG_LEVEL_ERROR:
         stream = stderr;
         break;

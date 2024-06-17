@@ -23,7 +23,7 @@ void event_system_init(void) {
     arena = arena_create(1 << 20);
     dict_init_fixed(&events, &arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(Event));
 
-    log_info("Event subsystem initialized.");
+    log_debug("Event subsystem initialized.");
 }
 
 void event_system_cleanup(void) {

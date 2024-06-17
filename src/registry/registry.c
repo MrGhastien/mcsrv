@@ -20,7 +20,7 @@ void registry_system_init(void) {
     root.name = resid_default_cstr("root");
     dict_init_fixed(&root.entries, &arena, 100, sizeof(ResourceID), sizeof(Registry));
 
-    log_info("Registry subsystem initialized.");
+    log_debug("Registry subsystem initialized.");
 }
 
 void registry_system_cleanup(void) {
