@@ -5,6 +5,7 @@
 #include "resource/resource_id.h"
 
 void registry_system_init(void);
+void registry_system_cleanup(void);
 
 i64 registry_create(ResourceID name, u64 stride);
 

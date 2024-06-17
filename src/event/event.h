@@ -11,6 +11,7 @@ typedef struct event_info {
 typedef bool (*event_handler)(u32 code, EventInfo info);
 
 void event_system_init(void);
+void event_system_cleanup(void);
 
 void event_register_event(u32 code);
 void event_register_listener(u32 code, event_handler listener, void* data);

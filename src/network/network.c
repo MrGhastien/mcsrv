@@ -9,21 +9,26 @@
 #include <unistd.h>
 
 #include "connection.h"
+#include "logger.h"
+#include "memory/arena.h"
 #include "receiver.h"
 #include "sender.h"
+#include "utils/string.h"
 
 typedef struct net_ctx {
-    Arena* arena;
+    Arena arena;
     Connection* connections;
     u64 max_connections;
     u64 connection_count;
     int serverfd;
     int epollfd;
+    string host;
+    u32 port;
 } NetworkContext;
 
 static NetworkContext ctx;
 
-static int net_init(char* host, int port, Arena* arena, u64 max_connections) {
+i32 net_init(char* host, i32 port, u64 max_connections) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     ctx.serverfd = sockfd;
     if (sockfd == -1) {
@@ -68,20 +73,22 @@ static int net_init(char* host, int port, Arena* arena, u64 max_connections) {
         return 1;
     }
 
-    ctx.arena = arena;
-    ctx.connections = arena_allocate(ctx.arena, sizeof(Connection) * max_connections);
+    ctx.arena = arena_create(40960);
+    ctx.connections = arena_allocate(&ctx.arena, sizeof(Connection) * max_connections);
     ctx.max_connections = max_connections;
     ctx.connection_count = 0;
+    ctx.host = str_create_const(host);
+    ctx.port = port;
 
     for(u64 i = 0; i < max_connections; i++) {
         ctx.connections[i].sockfd = -1;
     }
     
-    puts("Network sub-system initialized.");
+    log_info("Network sub-system initialized.");
     return 0;
 }
 
-static int accept_connection(void) {
+static i32 accept_connection(void) {
     struct sockaddr_in peer_addr;
     socklen_t peer_addr_length = sizeof peer_addr;
     int peerfd = accept(ctx.serverfd, (struct sockaddr*)&peer_addr, &peer_addr_length);
@@ -118,7 +125,7 @@ static int accept_connection(void) {
 
     char addr_str[16];
     inet_ntop(AF_INET, &peer_addr.sin_addr, addr_str, 16);
-    printf("Accepted connection from %s:%i.\n", addr_str, peer_addr.sin_port);
+    log_infof("Accepted connection from %s:%i.", addr_str, peer_addr.sin_port);
     return 0;
 }
 
@@ -131,18 +138,11 @@ void close_connection(Connection* conn) {
     ctx.connection_count--;
 }
 
-int net_handle(char* host, int port, u64 max_connections) {
-
-    Arena conn_arena = arena_create(40960);
-
-    int ret = net_init(host, port, &conn_arena, max_connections);
-    if (ret)
-        return ret;
-
+int net_handle(void) {
     struct epoll_event events[10];
     int eventCount = 0;
 
-    printf("Listening on %s:%i.\n", host, port);
+    log_infof("Listening for connections on %s:%u...", ctx.host.base, ctx.port);
     while ((eventCount = epoll_wait(ctx.epollfd, events, 10, -1)) != -1) {
         for (int i = 0; i < eventCount; i++) {
             struct epoll_event* e = &events[i];
@@ -155,11 +155,11 @@ int net_handle(char* host, int port, u64 max_connections) {
                     code = receive_packet(conn);
                 switch (code) {
                 case IOC_CLOSED:
-                    puts("Peer closed connection.");
+                    log_warn("Peer closed connection.");
                     close_connection(conn);
                     break;
                 case IOC_ERROR:
-                    puts("Errored connection.");
+                    log_error("Errored connection.");
                     close_connection(conn);
                     break;
                 default:
@@ -180,10 +180,18 @@ int net_handle(char* host, int port, u64 max_connections) {
             }
         }
     }
+    return 0;
+}
+
+void net_cleanup(void) {
+
+    for(u32 i = 0; i < ctx.max_connections; i++) {
+        Connection* c = &ctx.connections[i];
+        if(c->sockfd >= 0) 
+            arena_destroy(&c->arena);
+    }
 
     close(ctx.serverfd);
     close(ctx.epollfd);
-    arena_destroy(&conn_arena);
-
-    return 0;
+    arena_destroy(&ctx.arena);
 }

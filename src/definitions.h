@@ -1,6 +1,12 @@
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
 
+#ifdef TRACE
+#ifndef DEBUG
+#error Macro "DEBUG" must be defined if "TRACE" is defined.
+#endif
+#endif
+
 typedef unsigned char u8;
 typedef unsigned short int u16;
 typedef unsigned int u32;

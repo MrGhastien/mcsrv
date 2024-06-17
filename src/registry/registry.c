@@ -1,5 +1,6 @@
 #include "registry.h"
 #include "containers/dict.h"
+#include "logger.h"
 #include "memory/arena.h"
 #include "resource/resource_id.h"
 #include <stdlib.h>
@@ -18,7 +19,14 @@ void registry_system_init(void) {
     arena     = arena_create(REGISTRY_ARENA_SIZE);
     root.name = resid_default_cstr("root");
     dict_init_fixed(&root.entries, &arena, 100, sizeof(ResourceID), sizeof(Registry));
+
+    log_info("Registry subsystem initialized.");
 }
+
+void registry_system_cleanup(void) {
+    arena_destroy(&arena);
+}
+
 
 i64 registry_create(ResourceID name, u64 stride) {
     Registry reg = {.name = name};

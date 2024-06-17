@@ -1,7 +1,7 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
-#include "../definitions.h"
+#include "definitions.h"
 
 enum IOCode {
     IOC_OK,
@@ -10,6 +10,9 @@ enum IOCode {
     IOC_CLOSED
 };
 
-int net_handle(char* host, int port, u64 max_connections);
+i32 net_init(char* host, i32 port, u64 max_connections);
+void net_cleanup(void);
+
+i32 net_handle(void);
 
 #endif /* ! NETWORK_H */
