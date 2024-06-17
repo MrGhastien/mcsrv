@@ -7,6 +7,7 @@ SRCS := $(SRC_DIR)/utils/string.c \
 		$(SRC_DIR)/containers/vector-op.c \
 		$(SRC_DIR)/containers/dict-init.c \
 		$(SRC_DIR)/main.c \
+		$(SRC_DIR)/logger.c \
 		$(SRC_DIR)/network/handlers.c \
 		$(SRC_DIR)/network/network.c \
 		$(SRC_DIR)/network/decoders.c \

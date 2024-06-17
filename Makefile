@@ -17,8 +17,11 @@ TARGET = mcsrv
 
 .PHONY: all clean
 
-debug: CFLAGS += -DDEBUG -O0 -g
+debug: CFLAGS += -O0 -g -DDEBUG 
 debug: $(TARGET)
+
+trace: CFLAGS += -O0 -g -DDEBUG -DTRACE
+trace: $(TARGET)
 
 release: CFLAGS += -O2
 release: $(TARGET)

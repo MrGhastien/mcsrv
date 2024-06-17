@@ -8,6 +8,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/network/packet.h \
 		$(SRC_DIR)/network/decoders.h \
 		$(SRC_DIR)/network/utils.h \
+		$(SRC_DIR)/logger.h \
 		$(SRC_DIR)/network/connection.h \
 		$(SRC_DIR)/network/bytebuffer.h \
 		$(SRC_DIR)/network/receiver.h \
