@@ -83,3 +83,36 @@ Truly dynamic strings are allocated with libC's ~malloc~. The string is very sim
 **** No way to create a truly dynamic string using an arena
 Creating a truly dynamic string using an arena simply displaces the problem to the arena.
 The arena is not dynamic, and if it were, continuity would not be garanteed for allocated memory.
+
+* Networking
+The networking system can be divided into three parts :
+- The /epoll/ loop,
+- The /receiver/,
+- The /sender/.
+
+** Epoll
+The ~epoll~ loop is responsible for notifying the other parts when they can read from / write to the sockets. It uses the Linux API ~epoll~, hence the name.
+
+** Receiving
+The receiver reads, decodes and handles packets. It uses a connection-specific byte buffer to keep track of the reading progress.
+*** Reading
+Packets are always prefixed by their length as a ~VarInt~. The length is read first, to know how long the packet is.
+Then the receiver reads the rest of the packet.
+
+All of the data is pushed inside the connection's byte buffer.
+
+If the socket the receiver reads from indicates that there is no more data to read (~EAGAIN~ or ~EWOULDBLOCK~ errors), the receiver terminates and the control is given back to the ~epoll~ loop.
+The next time ~epoll~ sends a "readable" event, the receiver tries to read the rest of the packet.
+
+*** Decoding / handling
+When the entire packet is read and pushed in the buffer, It is then decoded (i.e. turned into a usable format in the C code), and handled (events or packets are sent, ...)
+
+The receiver then repeats, going back to reading the next incoming packet.
+
+** Sending
+The sender works similarly to the receiver. It uses a connection-specific byte queue to buffer packets.
+
+When packets need to be sent, they are first encoded (turned into a byte array).
+
+If the sender can write to the socket and the byte queue is empty, the bytes are sent directly.
+Otherwise, the bytes are pushed into a byte queue. When the socket becomes writable, all bytes inside the queue are sent.
