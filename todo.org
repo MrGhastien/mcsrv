@@ -1,0 +1,51 @@
+#+TODO: TODO OPT WIP | DONE
+#+TODO: BUG NOWORK CRASH | FIXED
+
+* Bugs                                                                :mcsrv:
+
+** Network
+*** FIXED Legacy ping request is sent after sending the status response
+CLOSED: [2024-06-15 sam. 00:20]
+** FIXED Properly handle termination signals (SIGINT)
+CLOSED: [2024-06-24 lun. 00:05]
+Trying to interrupt with Ctrl-C does nothing.
+
+* Features                                                            :mcsrv:
+** Network
+*** DONE Create a byte buffer that writes directly to a socket if possible
+CLOSED: [2024-06-17 lun. 22:10]
+This would replace arenas for packet encoding.
+
+** TODO Proper threading
+- [X] Ensure no race conditions / deadlocks in the event & network subsystems.
+- [ ] Thread library wrapper
+  Useful for setting thread names & allows for more porability
+  The difficulty is the ~pthread_self~ interface
+- [X] Signal handler thread
+- [ ] Make the logger thread-safe
+  Buffer for each thread, then merge-sort style merging, sorting by time
+  - [ ] Create a ring buffer container
+  - [ ] Check if the buffer can be used with networking
+
+** TODO Login sequence
+*** TODO Protocols
+- [ ] Mojang Auth
+- [ ] Encryption with OpenSSL
+- [ ] Compression with ZLib
+*** TODO Data loading / saving
+- [ ] Anvil map saver & loader
+  Try to come up with a better format?
+- [ ] NBT saver & loader
+- [ ] JSON loader
+
+
+* Ideas                                                               :mcsrv:
+** Ease of use
+These items work hand in hand
+*** Configuration interface & CLI options
+- [ ] Chose a config file format (YAML, TOML)
+- [ ] IP address & port
+- [ ] Max players
+
+*** Tooling
+- [ ] NBT Explorer / Editor
