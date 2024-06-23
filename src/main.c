@@ -1,6 +1,7 @@
 #include "event/event.h"
 #include "logger.h"
 #include "network/network.h"
+#include "platform/signal-handler.h"
 #include "registry/registry.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,57 +10,49 @@
 
 #include <signal.h>
 
-void on_interrupt(int num) {
-    switch (num) {
-    case SIGINT: {
-        //TODO: Make this signal handler safe !
-        log_info("Requested shutdown.");
-        break;
-    }
-    default:
-        break;
-    }
-}
+typedef struct server_ctx {
+    bool running;
+} ServerContext;
+
+static ServerContext server_ctx;
 
 static void init(char* host, i32 port, u64 max_connections) {
 
-    struct sigaction action = {0};
-    sigemptyset(&action.sa_mask);
-    action.sa_handler       = &on_interrupt;
+    sigset_t global_sigmask;
+    sigfillset(&global_sigmask);
 
-    sigaction(SIGINT, &action, NULL);
+    // Block the SIGINT & SIGTERM signals for all other threads.
+    // Make sure the main thread is the one handling signals.
+    pthread_sigmask(SIG_BLOCK, &global_sigmask, NULL);
 
+    signal_system_init();
     event_system_init();
     registry_system_init();
-    net_init(host, port, max_connections);
+    network_init(host, port, max_connections);
+
+    server_ctx.running = TRUE;
 }
 
 static void cleanup(void) {
-    net_cleanup();
+    server_ctx.running = FALSE;
+
+    network_stop();
     registry_system_cleanup();
     event_system_cleanup();
+    signal_system_cleanup();
 }
 
 int main(int argc, char** argv) {
     (void) argc;
     (void) argv;
-
-    i32 res;
-
-#ifdef DEBUG
-    log_trace("Trace message test.");
-    log_debug("Debug message test.");
-    log_info("Info message test.");
-    log_warn("Warning message test.");
-    log_error("Error message test.");
-    log_fatal("Fatal error message test. Don't worry, I won't crash now !");
-#endif
+    i32 res = 0;
 
     init("0.0.0.0", 25565, 10);
 
-    res = net_handle();
+    event_handle();
 
     cleanup();
+    log_info("Goodbye!");
 
     return res;
 }
