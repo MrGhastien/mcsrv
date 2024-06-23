@@ -1,6 +1,10 @@
 #include "logger.h"
+#include "containers/dict.h"
+#include "memory/arena.h"
 #include <stdarg.h>
 #include <stdio.h>
+
+#define LOGGER_ARENA_SIZE 262144
 
 static char* names[_LOG_LEVEL_COUNT] = {
     [LOG_LEVEL_FATAL] = "[FATAL]",
@@ -27,6 +31,18 @@ static char* colors[_LOG_LEVEL_COUNT] = {
     [LOG_LEVEL_TRACE] = "\x1b[30;3m",
 #endif
 };
+
+typedef struct logger_ctx {
+    Arena arena;
+    Dict buffers;
+} LoggerCtx;
+
+static LoggerCtx ctx;
+
+void logger_system_init(void) {
+    ctx.arena = arena_create(LOGGER_ARENA_SIZE);
+    //TODO: Create a dictionnary of ring buffers
+}
 
 void _log_msg(enum LogLevel lvl, char* msg) {
     if (lvl < LOG_LEVEL_FATAL || lvl >= _LOG_LEVEL_COUNT)
