@@ -1,19 +1,21 @@
 #include "json/json.h"
+#include "logger.h"
 #include "packet.h"
 #include "sender.h"
 #include <stdio.h>
 
 void pkt_handle_handshake(Packet* pkt, Connection* conn) {
     PacketHandshake* shake = pkt->payload;
-    printf("  - Protocol version: %i\n  - Server address: '%s'", shake->protocol_version, shake->srv_addr.base);
-    printf("\n  - Port: %u\n  - Next state: %i\n", shake->srv_port, shake->next_state);
+    log_debugf("  - Protocol version: %i", shake->protocol_version);
+    log_debugf("  - Server address: '%s'", shake->srv_addr.base);
+    log_debugf("  - Port: %u", shake->srv_port);
+    log_debugf("  - Next state: %i", shake->next_state);
     conn->state = shake->next_state;
 }
 
 void pkt_handle_status(Packet* pkt, Connection* conn) {
     (void)pkt;
     (void)conn;
-    printf("  Status request\n");
     PacketStatusResponse response;
 
     JSON json;
@@ -57,7 +59,7 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     json_set_bool(nodes[0], FALSE);
 
     json_stringify(&json, &response.data, &conn->arena);
-    printf("%s", response.data.base);
+    log_debugf("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     write_packet(&out_pkt, conn);
 }

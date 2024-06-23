@@ -1,4 +1,5 @@
 #include "receiver.h"
+#include "logger.h"
 #include "utils/bitwise.h"
 #include "connection.h"
 #include "network.h"
@@ -92,8 +93,9 @@ static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
     if (decoder)
         decoder(out_pkt, &conn->arena, offset(raw->data, id_size));
 
-    puts("====");
-    printf("Received packet:\n  - Size: %zu\n  - ID: %i\n", out_pkt->total_length, out_pkt->id);
+    log_debug("Received packet:");
+    log_debugf("  - Size: %zu", out_pkt->total_length);
+    log_debugf("  - ID: %i", out_pkt->id);
 
     return TRUE;
 }

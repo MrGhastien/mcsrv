@@ -10,9 +10,7 @@ enum IOCode {
     IOC_CLOSED
 };
 
-i32 net_init(char* host, i32 port, u64 max_connections);
-void net_cleanup(void);
-
-i32 net_handle(void);
+i32 network_init(char* host, i32 port, u64 max_connections);
+void network_stop(void);
 
 #endif /* ! NETWORK_H */

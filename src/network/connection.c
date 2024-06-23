@@ -5,6 +5,7 @@
 #include "handlers.h"
 #include "packet.h"
 
+#include <pthread.h>
 #include <string.h>
 #include <sys/socket.h>
 
@@ -20,10 +21,10 @@ typedef struct pkt_func {
 static PacketFunction function_table[_STATE_COUNT][_STATE_COUNT] = {
     [STATE_HANDSHAKE] =
         {
-            [PKT_HANDSHAKE] = {&pkt_decode_handshake, &pkt_handle_handshake, NULL},
-        },
+                           [PKT_HANDSHAKE] = {&pkt_decode_handshake, &pkt_handle_handshake, NULL},
+                           },
     [STATE_STATUS] = {[PKT_STATUS] = {NULL, &pkt_handle_status, &pkt_encode_status},
-                      [PKT_PING] = {&pkt_decode_ping, &pkt_handle_ping, &pkt_encode_ping}},
+                           [PKT_PING]   = {&pkt_decode_ping, &pkt_handle_ping, &pkt_encode_ping}},
 };
 
 pkt_acceptor get_pkt_handler(const Packet* pkt, Connection* conn) {
@@ -39,9 +40,9 @@ pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn) {
 }
 
 void conn_reset_buffer(Connection* conn, void* new_buffer, size_t size) {
-    conn->bytes_read = 0;
+    conn->bytes_read  = 0;
     conn->buffer_size = size;
-    conn->pkt_buffer = new_buffer;
+    conn->pkt_buffer  = new_buffer;
 }
 
 bool conn_is_resuming_read(const Connection* conn) {
@@ -50,14 +51,15 @@ bool conn_is_resuming_read(const Connection* conn) {
 
 Connection conn_create(int sockfd, u64 table_index) {
     Connection conn = {
-        .arena = arena_create(CONN_ARENA_SIZE),
-        .compression = FALSE,
-        .state = STATE_HANDSHAKE,
-        .sockfd = sockfd,
+        .arena         = arena_create(CONN_ARENA_SIZE),
+        .compression   = FALSE,
+        .state         = STATE_HANDSHAKE,
+        .sockfd        = sockfd,
         .has_read_size = FALSE,
-        .send_buffer = bytebuf_create(CONN_BYTEBUF_SIZE, &conn.arena),
-        .table_index = table_index
+        .send_buffer   = bytebuf_create(CONN_BYTEBUF_SIZE, &conn.arena),
+        .table_index   = table_index,
     };
+    pthread_mutex_init(&conn.mutex, NULL);
     conn_reset_buffer(&conn, NULL, 0);
 
     return conn;

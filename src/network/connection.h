@@ -32,6 +32,8 @@ typedef struct {
     ByteBuffer send_buffer;
 
     u64 table_index;
+
+    pthread_mutex_t mutex;
 } Connection;
 
 Connection conn_create(int sockfd, u64 table_index);
