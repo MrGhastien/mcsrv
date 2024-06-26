@@ -31,7 +31,7 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     json_set_cstr(nodes[1], "1.20.6");
 
     nodes[1] = json_node_put(&json, nodes[0], "protocol", JSON_INT);
-    json_set_int(nodes[1], 766);
+    json_set_int(nodes[1], 767);
 
     nodes[0] = json_node_put(&json, json.root, "players", JSON_OBJECT);
 
