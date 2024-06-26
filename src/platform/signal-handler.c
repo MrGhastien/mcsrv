@@ -2,7 +2,7 @@
 #include "definitions.h"
 #include "event/event.h"
 #include "logger.h"
-#include <asm-generic/errno-base.h>
+
 #include <errno.h>
 #include <linux/prctl.h>
 #include <pthread.h>
@@ -26,6 +26,7 @@ void signal_system_init(void) {
     sigaction(SIGTERM, &action, NULL);
 
     pthread_create(&thread, NULL, &handle_signals, NULL);
+    log_debug("Signal handling subsystem initialized.");
 }
 
 static void* handle_signals(void* param) {
@@ -67,4 +68,5 @@ static void* handle_signals(void* param) {
 
 void signal_system_cleanup(void) {
     pthread_join(thread, NULL);
+    log_debug("Signal handler thread exited.");
 }
