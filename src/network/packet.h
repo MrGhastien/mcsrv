@@ -2,7 +2,7 @@
 #define PACKET_H
 
 #include "../definitions.h"
-#include "bytebuffer.h"
+#include "containers/bytebuffer.h"
 #include "connection.h"
 #include "../memory/arena.h"
 #include "../utils/string.h"

@@ -3,7 +3,7 @@
 
 #include "../definitions.h"
 #include "../memory/arena.h"
-#include "bytebuffer.h"
+#include "containers/bytebuffer.h"
 #include <sys/types.h>
 
 typedef struct pkt Packet;

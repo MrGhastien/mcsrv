@@ -1,52 +1,43 @@
 #include "sender.h"
+#include "containers/bytebuffer.h"
 #include "logger.h"
-#include "utils/bitwise.h"
-#include "bytebuffer.h"
 #include "network.h"
 #include "packet.h"
 #include "utils.h"
+#include "utils/bitwise.h"
 
 #include <pthread.h>
 #include <string.h>
 #include <sys/socket.h>
 
+#define MAX_PACKET_SIZE 2097151
+
 static enum IOCode send_bytebuf(ByteBuffer* buffer, int sockfd) {
-    if(buffer->size == 0)
+    if (buffer->size == 0)
         return IOC_OK;
 
     u64 sent;
-    enum IOCode code = try_send(sockfd, buffer->buf, buffer->size, &sent);
-    u64 remaining = buffer->size - sent;
+    enum IOCode code = try_send(sockfd, offset(buffer->buf, buffer->read_head), buffer->size, &sent);
 
-    memmove(buffer->buf, offset(buffer->buf, sent), remaining);
-    buffer->size = remaining;
+    bytebuf_read(buffer, sent, NULL);
     return code;
-}
-
-static void insert_into_bytebuf(ByteBuffer* buffer, u64 pos, const void* data, u64 size) {
-    bytebuf_reserve(buffer, size);
-    void* src = offset(buffer->buf, pos);
-    void* dst = offset(src, size);
-    memmove(dst, src, buffer->size - pos);
-    memcpy(src, data, size);
 }
 
 void write_packet(const Packet* pkt, Connection* conn) {
     pkt_encoder encoder = get_pkt_encoder(pkt, conn);
-    u64 initial_length = conn->send_buffer.size;
+
+    ByteBuffer scratch = bytebuf_create_fixed(MAX_PACKET_SIZE, &conn->arena);
+
+    bytebuf_write_varint(&scratch, pkt->id);
+    encoder(pkt, &scratch);
+
+    log_tracef("Sending: { Size: %zu, ID: %zu }", scratch.size, pkt->id);
 
     pthread_mutex_lock(&conn->mutex);
 
-    bytebuf_write_varint(&conn->send_buffer, pkt->id);
-    encoder(pkt, &conn->send_buffer);
-    
-    u64 pkt_length = conn->send_buffer.size - initial_length;
-    u8 pkt_length_buf[4];
-    u64 pkt_length_size = encode_varint(pkt_length, pkt_length_buf);
+    bytebuf_write_varint(&conn->send_buffer, scratch.size);
+    bytebuf_copy(&conn->send_buffer, &scratch);
 
-    log_tracef("Sending: { Size: %zu, ID: %zu }", pkt_length, pkt->id);
-
-    insert_into_bytebuf(&conn->send_buffer, initial_length, pkt_length_buf, pkt_length_size);
     send_bytebuf(&conn->send_buffer, conn->sockfd);
 
     pthread_mutex_unlock(&conn->mutex);

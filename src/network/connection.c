@@ -1,5 +1,4 @@
 #include "connection.h"
-#include "bytebuffer.h"
 #include "decoders.h"
 #include "encoders.h"
 #include "handlers.h"
@@ -56,7 +55,7 @@ Connection conn_create(int sockfd, u64 table_index) {
         .state         = STATE_HANDSHAKE,
         .sockfd        = sockfd,
         .has_read_size = FALSE,
-        .send_buffer   = bytebuf_create(CONN_BYTEBUF_SIZE, &conn.arena),
+        .send_buffer   = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.arena),
         .table_index   = table_index,
     };
     pthread_mutex_init(&conn.mutex, NULL);
