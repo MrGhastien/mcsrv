@@ -125,7 +125,7 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
         ctx.connections[i].sockfd = -1;
     }
 
-    log_debug("Network sub-system initialized.");
+    log_debug("Network subsystem initialized.");
 
     pthread_create(&ctx.thread, NULL, &network_handle, NULL);
     return 0;
@@ -271,6 +271,6 @@ static void* network_handle(void* params) {
 void network_stop(void) {
     u64 count = 1;
     write(ctx.eventfd, &count, sizeof(count));
-    log_debug("Waiting for the network thread to exit...");
     pthread_join(ctx.thread, NULL);
+    log_debug("Network thread exited.");
 }
