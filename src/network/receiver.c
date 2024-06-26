@@ -20,6 +20,11 @@ static enum IOCode read_varint(Connection* conn) {
         else if(status == 0)
             return IOC_CLOSED;
 
+        if(conn->bytes_read == 0 && byte == 0xfe) {
+            log_error("Received legacy ping request. Not implemented yet!!");
+            return IOC_ERROR;
+        }
+
         conn->pkt_buffer[conn->bytes_read] = byte;
         conn->bytes_read++;
 

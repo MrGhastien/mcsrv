@@ -1,5 +1,4 @@
 #include "encoders.h"
-#include "bytebuffer.h"
 #include "packet.h"
 
 static void encode_string(const string* str, ByteBuffer* buffer) {

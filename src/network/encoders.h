@@ -1,7 +1,7 @@
 #ifndef ENCODERS_H
 #define ENCODERS_H
 
-#include "bytebuffer.h"
+#include "containers/bytebuffer.h"
 #include "packet.h"
 
 void pkt_encode_status(const Packet* pkt, ByteBuffer* buffer);
