@@ -1,8 +1,6 @@
 #include "bitwise.h"
 
-#include <stddef.h>
-
-size_t ceil_two_pow(size_t num) {
+u64 ceil_two_pow(u64 num) {
     num |= num >> 1;
     num |= num >> 2;
     num |= num >> 4;
@@ -12,8 +10,8 @@ size_t ceil_two_pow(size_t num) {
     return num + 1;
 }
 
-void* offset(void* ptr, size_t offset) {
-    size_t a = (size_t)ptr;
+void* offset(void* ptr, i64 offset) {
+    u64 a = (u64)ptr;
     a += offset;
     return (void*)a;
 }
@@ -21,7 +19,7 @@ void* offset(void* ptr, size_t offset) {
 static u64 swap_bytes(u64 x) {
     u8* array = (u8*)&x;
 
-    for (size_t i = 0; i < 4; i++) {
+    for (i64 i = 0; i < 4; i++) {
         u8 tmp = array[i];
         array[i] = array[7 - i];
         array[7 - i] = tmp;

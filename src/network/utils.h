@@ -3,13 +3,8 @@
 
 #include <stddef.h>
 
-#include "../utils/string.h"
-#include "../definitions.h"
-
-#define CONTINUE_BIT 0x80
-#define SEGMENT_BITS 0x7F
-
-#define VARINT_MAX_SIZE 4
+#include "utils/string.h"
+#include "definitions.h"
 
 int socket_readbytes(int sockfd, void* restrict buf, size_t byte_count);
 
