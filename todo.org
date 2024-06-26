@@ -16,16 +16,21 @@ Trying to interrupt with Ctrl-C does nothing.
 CLOSED: [2024-06-17 lun. 22:10]
 This would replace arenas for packet encoding.
 
-** TODO Proper threading
+** DONE Proper threading
+CLOSED: [2024-06-27 jeu. 00:21]
 - [X] Ensure no race conditions / deadlocks in the event & network subsystems.
-- [ ] Thread library wrapper
+- [X] Thread library wrapper
   Useful for setting thread names & allows for more porability
   The difficulty is the ~pthread_self~ interface
 - [X] Signal handler thread
-- [ ] Make the logger thread-safe
+- [X] Make the logger thread-safe
   Buffer for each thread, then merge-sort style merging, sorting by time
-  - [ ] Create a ring buffer container
-  - [ ] Check if the buffer can be used with networking
+  - [X] Create a ring buffer container
+  - [X] Check if the buffer can be used with networking
+  # This is overkill & i can't get it to work
+  # The logger performace is only significant for debug & trace logging levels
+  # - [-] Make the main  logger loop (using cond vars or sleep)
+  # - [-] Refactor the ~log_msg~ functions to defer prefix & color formatting
 
 ** TODO Login sequence
 *** TODO Protocols

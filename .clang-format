@@ -7,7 +7,7 @@ AllowShortBlocksOnASingleLine: Never
 AllowShortIfStatementsOnASingleLine: Never
 PackConstructorInitializers: NextLineOnly
 AlignArrayOfStructures: Left
-AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveAssignments: None
 BinPackArguments: false
 BinPackParameters: false
 SpaceAfterCStyleCast: true
