@@ -57,6 +57,9 @@ enum LogLevel {
 #define log_errorf(msg, ...) _log_msgf(LOG_LEVEL_ERROR, msg, __VA_ARGS__)
 #define log_fatalf(msg, ...) _log_msgf(LOG_LEVEL_FATAL, msg, __VA_ARGS__)
 
+void logger_system_init(void);
+void logger_system_cleanup(void);
+
 void _log_msg(enum LogLevel lvl, char* msg);
 void _log_msgf(enum LogLevel lvl, char* format, ...);
 

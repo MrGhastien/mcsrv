@@ -7,17 +7,22 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/containers/dict.h \
 		$(SRC_DIR)/containers/vector.h \
 		$(SRC_DIR)/containers/ring_queue.h \
+		$(SRC_DIR)/containers/bytebuffer.h \
 		$(SRC_DIR)/network/packet.h \
 		$(SRC_DIR)/network/decoders.h \
 		$(SRC_DIR)/network/utils.h \
 		$(SRC_DIR)/network/connection.h \
-		$(SRC_DIR)/network/bytebuffer.h \
 		$(SRC_DIR)/network/receiver.h \
 		$(SRC_DIR)/network/sender.h \
 		$(SRC_DIR)/network/network.h \
 		$(SRC_DIR)/network/handlers.h \
 		$(SRC_DIR)/network/encoders.h \
 		$(SRC_DIR)/platform/signal-handler.h \
+		$(SRC_DIR)/platform/mc_threads.h \
+		$(SRC_DIR)/platform/mc_threads_linux.h \
+		$(SRC_DIR)/platform/mc_mutex.h \
+		$(SRC_DIR)/platform/mc_mutex_linux.h \
+		$(SRC_DIR)/platform/mc_cond_var.h \
 		$(SRC_DIR)/json/json.h \
 		$(SRC_DIR)/registry/registry.h \
 		$(SRC_DIR)/resource/resource_id.h \

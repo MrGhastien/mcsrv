@@ -25,6 +25,7 @@ static void init(char* host, i32 port, u64 max_connections) {
     // Make sure the main thread is the one handling signals.
     pthread_sigmask(SIG_BLOCK, &global_sigmask, NULL);
 
+    logger_system_init();
     signal_system_init();
     event_system_init();
     registry_system_init();
@@ -40,6 +41,7 @@ static void cleanup(void) {
     registry_system_cleanup();
     event_system_cleanup();
     signal_system_cleanup();
+    logger_system_cleanup();
 }
 
 int main(int argc, char** argv) {

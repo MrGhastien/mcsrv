@@ -4,7 +4,7 @@ OBJ_DIR = ./obj
 
 CC = gcc
 CFLAGS = -Wall -Wextra -Wreturn-type -Werror #-fsanitize=address
-CPPFLAGS = -I$(SRC_DIR)
+CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_LINUX
 #LDFLAGS = -fsanitize=address
 
 
@@ -28,6 +28,9 @@ release: $(TARGET)
 
 $(TARGET): $(OBJS) $(HDRS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+
+%.o: %.c $(HDRS)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 clean:
 	rm $(OBJS)

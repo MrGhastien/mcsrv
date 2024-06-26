@@ -1,6 +1,10 @@
 #include "logger.h"
+
+#ifndef MC_CPLX_LOGGER
+
 #include "containers/dict.h"
 #include "memory/arena.h"
+#include "platform/mc_mutex.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -33,15 +37,17 @@ static char* colors[_LOG_LEVEL_COUNT] = {
 };
 
 typedef struct logger_ctx {
-    Arena arena;
-    Dict buffers;
+    MCMutex mutex;
 } LoggerCtx;
 
 static LoggerCtx ctx;
 
 void logger_system_init(void) {
-    ctx.arena = arena_create(LOGGER_ARENA_SIZE);
-    //TODO: Create a dictionnary of ring buffers
+    mcmutex_create(&ctx.mutex);
+}
+
+void logger_system_cleanup(void) {
+    mcmutex_destroy(&ctx.mutex);
 }
 
 void _log_msg(enum LogLevel lvl, char* msg) {
@@ -80,8 +86,13 @@ void _log_msgf(enum LogLevel lvl, char* msg, ...) {
         break;
     }
 
+    mcmutex_lock(&ctx.mutex);
+
     fprintf(stream, "%s%s ", colors[lvl], names[lvl]);
     vfprintf(stream, msg, args);
     puts("\x1b[0m");
+    mcmutex_unlock(&ctx.mutex);
     va_end(args);
 }
+
+#endif
