@@ -15,6 +15,7 @@ typedef struct ring_queue {
 
 RingQueue rqueue_create(u32 size, u32 stride, Arena* arena);
 
+void* rqueue_reserve(RingQueue* queue);
 bool rqueue_enqueue(RingQueue* queue, const void* value);
 bool rqueue_dequeue(RingQueue* queue, void* out_value);
 const void* rqueue_peek(const RingQueue* queue);

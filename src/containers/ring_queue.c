@@ -6,41 +6,61 @@
 
 RingQueue rqueue_create(u32 size, u32 stride, Arena* arena) {
     return (RingQueue){
-        .block    = arena_allocate(arena, size * stride),
-        .start    = 0,
-        .end      = 0,
+        .block = arena_allocate(arena, size * stride),
+        .start = 0,
+        .end = 0,
         .capacity = size,
-        .stride   = stride,
-        .length   = 0,
+        .stride = stride,
+        .length = 0,
     };
 }
 
+void* rqueue_reserve(RingQueue* queue) {
+    u32 length = queue->length;
+    u32 end = queue->end;
+    if (length == queue->capacity) {
+        log_fatal("Attempt to enqueue something to a full ring queue.");
+        return NULL;
+    }
+
+    void* dest = offset(queue->block, queue->stride * end);
+    queue->end = (end + 1) % queue->capacity;
+    queue->length = length + 1;
+    return dest;
+}
+
 bool rqueue_enqueue(RingQueue* queue, const void* value) {
-    if (queue->length == queue->capacity) {
-        log_warn("Attempt to enqueue something to a full ring queue.");
+    u32 length = queue->length;
+    u32 end = queue->end;
+    if (length == queue->capacity) {
+        log_fatal("Attempt to enqueue something to a full ring queue.");
         return FALSE;
     }
 
-    void* dest = offset(queue->block, queue->stride * queue->end);
+    void* dest = offset(queue->block, queue->stride * end);
     memcpy(dest, value, queue->stride);
-    queue->length++;
-    queue->end = (queue->end + 1) % queue->capacity;
+
+    queue->end = (end + 1) % queue->capacity;
+
+    queue->length = length + 1;
 
     return TRUE;
 }
 
 bool rqueue_dequeue(RingQueue* queue, void* out_value) {
+    u32 length = queue->length;
+    u32 start = queue->start;
     if (queue->length == 0) {
         log_warn("Attempt to dequeue an empty ring queue.");
         return FALSE;
     }
 
     if (out_value) {
-        void* src = offset(queue->block, queue->stride * queue->start);
+        void* src = offset(queue->block, queue->stride * start);
         memcpy(out_value, src, queue->stride);
     }
-    queue->start = (queue->start + 1) % queue->capacity;
-    queue->length--;
+    queue->start = (start + 1) % queue->capacity;
+    queue->length = length - 1;
 
     return TRUE;
 }
