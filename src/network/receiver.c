@@ -87,7 +87,7 @@ static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
     int id;
     size_t id_size = decode_varint(raw->data, &id);
     if (id_size == FAIL) {
-        perror("Invalid id");
+        log_error("Received invalid packet id");
         return FALSE;
     }
 
@@ -95,8 +95,9 @@ static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
     out_pkt->id = id;
 
     pkt_decoder decoder = get_pkt_decoder(out_pkt, conn);
-    if (decoder)
-        decoder(out_pkt, &conn->arena, offset(raw->data, id_size));
+    if (!decoder)
+        return FALSE;
+    decoder(out_pkt, &conn->arena, offset(raw->data, id_size));
 
     log_debug("Received packet:");
     log_debugf("  - Size: %zu", out_pkt->total_length);
@@ -105,10 +106,11 @@ static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
     return TRUE;
 }
 
-static void handle_packet(const Packet* pkt, Connection* conn) {
+static bool handle_packet(const Packet* pkt, Connection* conn) {
     pkt_acceptor handler = get_pkt_handler(pkt, conn);
-    if (handler)
-        handler(pkt, conn);
+    if (!handler)
+        return FALSE;
+    return handler(pkt, conn);
 }
 
 enum IOCode receive_packet(Connection* conn) {
@@ -125,10 +127,12 @@ enum IOCode receive_packet(Connection* conn) {
         RawPacket raw = {.data = conn->pkt_buffer, .size = conn->buffer_size};
         Packet pkt;
 
-        decode_packet(&raw, conn, &pkt);
+        if(!decode_packet(&raw, conn, &pkt))
+            return IOC_ERROR;
         conn_reset_buffer(conn, NULL, 0);
 
-        handle_packet(&pkt, conn);
+        if(!handle_packet(&pkt, conn))
+            return IOC_ERROR;
 
         arena_restore(&conn->arena);
     }

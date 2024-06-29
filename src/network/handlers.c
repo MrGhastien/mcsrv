@@ -1,19 +1,34 @@
 #include "json/json.h"
 #include "logger.h"
+#include "network/connection.h"
 #include "packet.h"
 #include "sender.h"
-#include <stdio.h>
 
-void pkt_handle_handshake(Packet* pkt, Connection* conn) {
+bool pkt_handle_dummy(const Packet* pkt, Connection* conn) {
+    (void)pkt;
+    (void)conn;
+    return TRUE;
+}
+
+bool pkt_handle_handshake(Packet* pkt, Connection* conn) {
     PacketHandshake* shake = pkt->payload;
     log_debugf("  - Protocol version: %i", shake->protocol_version);
     log_debugf("  - Server address: '%s'", shake->srv_addr.base);
     log_debugf("  - Port: %u", shake->srv_port);
     log_debugf("  - Next state: %i", shake->next_state);
-    conn->state = shake->next_state;
+    switch(shake->next_state) {
+    case STATE_STATUS:
+    case STATE_LOGIN:
+        conn->state = shake->next_state;
+        break;
+    default:
+        log_errorf("Invalid state of connection %i", shake->next_state);
+        return FALSE;
+    }
+    return TRUE;
 }
 
-void pkt_handle_status(Packet* pkt, Connection* conn) {
+bool pkt_handle_status(Packet* pkt, Connection* conn) {
     (void)pkt;
     (void)conn;
     PacketStatusResponse response;
@@ -28,7 +43,7 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
 
     nodes[1] = json_node_put(&json, nodes[0], "name", JSON_STRING);
 
-    json_set_cstr(nodes[1], "1.20.6");
+    json_set_cstr(nodes[1], "1.21");
 
     nodes[1] = json_node_put(&json, nodes[0], "protocol", JSON_INT);
     json_set_int(nodes[1], 767);
@@ -62,9 +77,10 @@ void pkt_handle_status(Packet* pkt, Connection* conn) {
     log_debugf("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     write_packet(&out_pkt, conn);
+    return TRUE;
 }
 
-void pkt_handle_ping(Packet* pkt, Connection* conn) {
+bool pkt_handle_ping(Packet* pkt, Connection* conn) {
     (void)pkt;
     (void)conn;
     PacketPing* ping = pkt->payload;
@@ -72,4 +88,16 @@ void pkt_handle_ping(Packet* pkt, Connection* conn) {
     Packet response = {.id = PKT_PING, .payload = &pong};
 
     write_packet(&response, conn);
+    return TRUE;
+}
+
+
+bool pkt_handle_log_start(const Packet* pkt, Connection* conn) {
+    (void)conn;
+    PacketLoginStart* payload = pkt->payload;
+
+    log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
+    log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
+
+    return TRUE;
 }

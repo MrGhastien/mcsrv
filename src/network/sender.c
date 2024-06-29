@@ -25,13 +25,15 @@ static enum IOCode send_bytebuf(ByteBuffer* buffer, int sockfd) {
 
 void write_packet(const Packet* pkt, Connection* conn) {
     pkt_encoder encoder = get_pkt_encoder(pkt, conn);
+    if(!encoder)
+        return;
 
     ByteBuffer scratch = bytebuf_create_fixed(MAX_PACKET_SIZE, &conn->arena);
 
     bytebuf_write_varint(&scratch, pkt->id);
     encoder(pkt, &scratch);
 
-    log_tracef("Sending: { Size: %zu, ID: %zu }", scratch.size, pkt->id);
+    log_debugf("Sending: { Size: %zu, ID: %zu }", scratch.size, pkt->id);
 
     pthread_mutex_lock(&conn->mutex);
 

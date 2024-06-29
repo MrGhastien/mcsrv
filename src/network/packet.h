@@ -10,8 +10,24 @@
 
 enum PacketType {
     PKT_HANDSHAKE = 0x0,
+
     PKT_STATUS = 0x0,
     PKT_PING = 0x1,
+
+    // === LOGIN ===
+    // Client-bound
+    PKT_DISCONNECT = 0x0,
+    PKT_ENC_REQ = 0x1,
+    PKT_LOG_SUCCESS = 0x2,
+    PKT_COMPRESS = 0x3,
+    PKT_LOG_PLUGIN_REQ = 0x4,
+    PKT_COOKIE_REQ = 0x5,
+    // Server-bound
+    PKT_LOG_START = 0x0,
+    PKT_ENC_RES = 0x1,
+    PKG_LOG_PLUGIN_RES = 0x2,
+    PKT_LOG_ACK = 0x3,
+    PKT_COOKIE_RES = 0x4,
 };
 
 typedef struct raw_pkt {
@@ -41,7 +57,12 @@ typedef struct {
     long num;
 } PacketPing;
 
-typedef void (*pkt_acceptor)(const Packet* pkt, Connection* conn);
+typedef struct {
+    string player_name;
+    u64 uuid[2];
+} PacketLoginStart;
+
+typedef bool (*pkt_acceptor)(const Packet* pkt, Connection* conn);
 typedef void (*pkt_decoder)(Packet* pkt, Arena* arena, u8* raw);
 typedef void (*pkt_encoder)(const Packet* pkt, ByteBuffer* buffer);
 

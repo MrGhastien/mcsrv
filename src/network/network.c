@@ -3,7 +3,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/prctl.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
@@ -173,6 +172,7 @@ static i32 accept_connection(void) {
 
 void close_connection(Connection* conn) {
     struct epoll_event placeholder;
+    log_infof("Closing connection %i.", conn->sockfd);
     close(conn->sockfd);
     epoll_ctl(ctx.epollfd, EPOLL_CTL_DEL, conn->sockfd, &placeholder);
     arena_destroy(&conn->arena);
@@ -213,8 +213,11 @@ static i32 handle_connection_io(Connection* conn, u32 events) {
         break;
     }
 
+    if(conn->sockfd == -1)
+        return ret_code;
+
     if (events & EPOLLOUT)
-        sender_send(conn);
+        io_code = sender_send(conn);
 
     switch (io_code) {
     case IOC_CLOSED:

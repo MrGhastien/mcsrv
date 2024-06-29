@@ -1,10 +1,17 @@
 #include "encoders.h"
+#include "containers/bytebuffer.h"
 #include "packet.h"
+
 
 static void encode_string(const string* str, ByteBuffer* buffer) {
     bytebuf_write_varint(buffer, str->length);
 
     bytebuf_write(buffer, str->base, str->length);
+}
+
+void pkt_encode_dummy(const Packet* pkt, ByteBuffer* buffer) {
+    (void)pkt;
+    (void)buffer;
 }
 
 void pkt_encode_status(const Packet* pkt, ByteBuffer* buffer) {

@@ -4,6 +4,8 @@
 #include "containers/bytebuffer.h"
 #include "packet.h"
 
+void pkt_encode_dummy(const Packet* pkt, ByteBuffer* buffer);
+
 void pkt_encode_status(const Packet* pkt, ByteBuffer* buffer);
 void pkt_encode_ping(const Packet* pkt, ByteBuffer* buffer);
 
