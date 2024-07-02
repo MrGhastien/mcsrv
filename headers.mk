@@ -2,6 +2,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/logger.h \
 		$(SRC_DIR)/utils/bitwise.h \
 		$(SRC_DIR)/utils/string.h \
+		$(SRC_DIR)/utils/math.h \
 		$(SRC_DIR)/memory/dyn_arena.h \
 		$(SRC_DIR)/memory/arena.h \
 		$(SRC_DIR)/containers/dict.h \
@@ -17,6 +18,8 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/network/network.h \
 		$(SRC_DIR)/network/handlers.h \
 		$(SRC_DIR)/network/encoders.h \
+		$(SRC_DIR)/network/encryption.h \
+		$(SRC_DIR)/network/compression.h \
 		$(SRC_DIR)/platform/signal-handler.h \
 		$(SRC_DIR)/platform/mc_threads.h \
 		$(SRC_DIR)/platform/mc_threads_linux.h \

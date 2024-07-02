@@ -6,6 +6,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Wreturn-type -Werror #-fsanitize=address
 CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_LINUX
 #LDFLAGS = -fsanitize=address
+LDLIBS := -lcrypto -lz
 
 
 include sources.mk
@@ -27,7 +28,7 @@ release: CFLAGS += -O2
 release: $(TARGET)
 
 $(TARGET): $(OBJS) $(HDRS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+	$(CC) $(LDFLAGS) $(LDLIBS) -o $@ $(OBJS)
 
 %.o: %.c $(HDRS)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<

@@ -3,6 +3,7 @@ SRCS := $(SRC_DIR)/main.c \
 		$(SRC_DIR)/logger1.c \
 		$(SRC_DIR)/utils/string.c \
 		$(SRC_DIR)/utils/bitwise.c \
+		$(SRC_DIR)/utils/math.c \
 		$(SRC_DIR)/memory/dyn_arena.c \
 		$(SRC_DIR)/memory/arena.c \
 		$(SRC_DIR)/containers/vector-init.c \
@@ -19,6 +20,8 @@ SRCS := $(SRC_DIR)/main.c \
 		$(SRC_DIR)/network/utils.c \
 		$(SRC_DIR)/network/encoders.c \
 		$(SRC_DIR)/network/sender.c \
+		$(SRC_DIR)/network/encryption.c \
+		$(SRC_DIR)/network/compression.c \
 		$(SRC_DIR)/platform/signal-handler.c \
 		$(SRC_DIR)/platform/mc_threads_linux.c \
 		$(SRC_DIR)/platform/mc_mutex_linux.c \
