@@ -1,6 +1,8 @@
 #include "containers/bytebuffer.h"
 #include "logger.h"
+#include "network/utils.h"
 #include "utils/bitwise.h"
+#include "utils/math.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -44,8 +46,8 @@ static void ensure_capacity(ByteBuffer* buffer, u64 size) {
 
     if (is_fixed(buffer)) {
         log_fatalf("Byte buffer is too small: %zu bytes needed, %zu bytes available.",
-                   buffer->capacity - buffer->size,
-                   size - buffer->size);
+                   size,
+                   buffer->capacity - buffer->size);
         abort();
     }
 
@@ -75,8 +77,23 @@ void* bytebuf_reserve(ByteBuffer* buffer, u64 size) {
     return ptr;
 }
 
-void bytebuf_copy(ByteBuffer *dst, const ByteBuffer *src) {
-    bytebuf_write(dst, src->buf, src->size);
+static void bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data) {
+    if (out_data) {
+        u64 to_read = min_u64(size, buffer->capacity - buffer->read_head);
+        memcpy(out_data, offset(buffer->buf, buffer->read_head), to_read);
+        if (to_read < size)
+            memcpy(offset(out_data, to_read), buffer->buf, size - to_read);
+    }
+}
+
+void bytebuf_copy(ByteBuffer* dst, const ByteBuffer* src) {
+    u64 size = min_u64(dst->capacity, src->size);
+    bytebuf_read_const(src, size, dst->buf);
+    dst->size = size;
+    if(is_fixed(dst)) {
+        dst->read_head = 0;
+        dst->write_head = size;
+    }
 }
 
 void bytebuf_write(ByteBuffer* buffer, void* data, size_t size) {
@@ -86,9 +103,9 @@ void bytebuf_write(ByteBuffer* buffer, void* data, size_t size) {
     u32 cap = buffer->capacity;
 
     if (is_fixed(buffer)) {
-        i64 to_write = end + size > cap ? cap - end : size;
+        u64 to_write = min_u64(size, cap - end);
         memcpy(offset(buffer->buf, end), data, to_write);
-        if (end + size > cap)
+        if (to_write < size)
             memcpy(buffer->buf, offset(data, to_write), size - to_write);
         buffer->write_head = (end + size) % buffer->capacity;
     } else
@@ -117,12 +134,42 @@ void bytebuf_write_varint(ByteBuffer* buffer, int n) {
     bytebuf_write(buffer, buf, i + 1);
 }
 
+void bytebuf_prepend(ByteBuffer* buffer, void* data, u64 size) {
+    ensure_capacity(buffer, buffer->size + size);
+
+    u32 start = buffer->read_head;
+    u32 cap = buffer->capacity;
+
+    if (is_fixed(buffer)) {
+        i64 new_start = start - size;
+        i64 to_write = start < size ? start : size;
+        memcpy(offset(buffer->buf, start - to_write), data, to_write);
+        if (new_start < 0) {
+            new_start += cap;
+            memcpy(offset(buffer->buf, new_start), offset(data, to_write), size - to_write);
+        }
+        buffer->read_head = new_start;
+    } else {
+        memmove(offset(buffer->buf, size), buffer->buf, buffer->size);
+        memcpy(buffer->buf, data, size);
+    }
+
+    buffer->size += size;
+}
+
+void bytebuf_prepend_varint(ByteBuffer* buffer, i32 num) {
+    u8 buf[4];
+    u64 size = encode_varint(num, buf);
+
+    bytebuf_prepend(buffer, buf, size);
+}
+
 void bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
     if (size > buffer->size)
         size = buffer->size;
 
-    if (out_data)
-        memcpy(out_data, offset(buffer->buf, buffer->read_head), size);
+    bytebuf_read_const(buffer, size, out_data);
+
     buffer->size -= size;
     buffer->read_head = (buffer->read_head + size) % buffer->capacity;
 }
