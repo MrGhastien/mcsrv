@@ -44,6 +44,7 @@ static void* handle_signals(void* param) {
         .sender = NULL,
     };
 
+test_label:
     while ((signal = sigwaitinfo(&sigmask, NULL)) != -1) {
         log_debugf("Received signal '%s'.", strsignal(signal));
         switch (signal) {
@@ -53,6 +54,7 @@ static void* handle_signals(void* param) {
             return NULL;
         }
     }
+    goto test_label;
 
     if (signal == -1) {
         if (errno == EINTR)
