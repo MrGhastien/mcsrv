@@ -3,6 +3,9 @@
 
 #include "definitions.h"
 
+// Notchian server compression threshold
+#define COMPRESS_THRESHOLD 256
+
 enum IOCode {
     IOC_OK,
     IOC_ERROR,

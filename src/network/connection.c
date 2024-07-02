@@ -3,13 +3,16 @@
 #include "encoders.h"
 #include "handlers.h"
 #include "logger.h"
+#include "memory/arena.h"
+#include "network/encryption.h"
 #include "packet.h"
 
 #include <pthread.h>
 #include <string.h>
 #include <sys/socket.h>
 
-#define CONN_ARENA_SIZE 33554432
+#define CONN_PARENA_SIZE 33554432
+#define CONN_SARENA_SIZE 4194304
 #define CONN_BYTEBUF_SIZE 4194304
 
 typedef struct pkt_func {
@@ -43,7 +46,17 @@ static PacketFunction function_table[_STATE_COUNT][_STATE_COUNT] = {
             &pkt_decode_log_start,
             &pkt_handle_log_start,
             &pkt_encode_dummy,
-        }
+        },
+        [PKT_ENC_REQ] = {
+            &pkt_decode_enc_res,
+            &pkt_handle_enc_res,
+            &pkt_encode_enc_req,
+        },
+        [PKT_COMPRESS] = {
+            &pkt_decode_dummy,
+            &pkt_handle_dummy,
+            &pkt_encode_compress,
+        },
     }
 };
 
@@ -85,7 +98,7 @@ pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn) {
     return funcs->encoder;
 }
 
-void conn_reset_buffer(Connection* conn, void* new_buffer, size_t size) {
+void conn_reset_buffer(Connection* conn, void* new_buffer, u64 size) {
     conn->bytes_read = 0;
     conn->buffer_size = size;
     conn->pkt_buffer = new_buffer;
@@ -95,14 +108,17 @@ bool conn_is_resuming_read(const Connection* conn) {
     return conn->pkt_buffer != NULL;
 }
 
-Connection conn_create(int sockfd, u64 table_index) {
+Connection conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx) {
     Connection conn = {
-        .arena = arena_create(CONN_ARENA_SIZE),
+        .persistent_arena = arena_create(CONN_PARENA_SIZE),
+        .scratch_arena = arena_create(CONN_SARENA_SIZE),
         .compression = FALSE,
+        .encryption = FALSE,
         .state = STATE_HANDSHAKE,
+        .global_enc_ctx = enc_ctx,
         .sockfd = sockfd,
         .has_read_size = FALSE,
-        .send_buffer = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.arena),
+        .send_buffer = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.persistent_arena),
         .table_index = table_index,
     };
     pthread_mutex_init(&conn.mutex, NULL);

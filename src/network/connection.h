@@ -1,10 +1,11 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include "../definitions.h"
-#include "../memory/arena.h"
+#include "definitions.h"
+#include "memory/arena.h"
 #include "containers/bytebuffer.h"
-#include <sys/types.h>
+#include "network/compression.h"
+#include "network/encryption.h"
 
 typedef struct pkt Packet;
 
@@ -18,9 +19,17 @@ enum State {
 };
 
 typedef struct {
-    Arena arena;
+    Arena persistent_arena;
+    Arena scratch_arena;
     bool compression;
+    bool encryption;
     enum State state;
+
+    EncryptionContext* global_enc_ctx;
+    PeerEncryptionContext peer_enc_ctx;
+
+    CompressionContext cmprss_ctx;
+    
     int sockfd;
 
     // Current reading progress
@@ -31,14 +40,17 @@ typedef struct {
 
     ByteBuffer send_buffer;
 
+    u64 verify_token_size;
+    u8* verify_token;
+
     u64 table_index;
 
     pthread_mutex_t mutex;
 } Connection;
 
-Connection conn_create(int sockfd, u64 table_index);
+Connection conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx);
 
-void conn_reset_buffer(Connection* conn, void* new_buffer, size_t size);
+void conn_reset_buffer(Connection* conn, void* new_buffer, u64 size);
 
 enum IOCode conn_read_bytes(Connection* conn);
 bool conn_is_resuming_read(const Connection* conn);

@@ -5,8 +5,9 @@
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-void pkt_decode_dummy(Packet* packet, Arena* arena, u8* raw) {
+PKT_DECODER(dummy) {
     (void) packet;
     (void) arena;
     (void) raw;
@@ -22,7 +23,7 @@ static bool has_read_all_bytes(Packet* pkt, u64 read) {
     return FALSE;
 }
 
-void pkt_decode_handshake(Packet* packet, Arena* arena, u8* raw) {
+PKT_DECODER(handshake) {
     PacketHandshake* hshake = arena_allocate(arena, sizeof(PacketHandshake));
     if (!hshake)
         return;
@@ -39,20 +40,40 @@ void pkt_decode_handshake(Packet* packet, Arena* arena, u8* raw) {
     packet->payload = hshake;
 }
 
-void pkt_decode_ping(Packet* packet, Arena* arena, u8* raw) {
+PKT_DECODER(ping) {
     PacketPing* ping = arena_allocate(arena, sizeof *ping);
 
     ping->num = ((u64*) raw)[0];
     packet->payload = ping;
 }
 
-void pkt_decode_log_start(Packet* packet, Arena* arena, u8* raw) {
+PKT_DECODER(log_start) {
     PacketLoginStart* payload = arena_allocate(arena, sizeof *payload);
     u64 i = decode_string(raw, arena, &payload->player_name);
     i += decode_uuid(raw, payload->uuid);
 
     if (!has_read_all_bytes(packet, i))
         return;
+
+    packet->payload = payload;
+}
+
+PKT_DECODER(enc_res) {
+    PacketEncRes* payload = arena_allocate(arena, sizeof *payload);
+
+    u64 i = 0;
+    i += decode_varint(raw, &payload->shared_secret_length);
+    payload->shared_secret = arena_allocate(arena, payload->shared_secret_length);
+    memcpy(payload->shared_secret, &raw[i], payload->shared_secret_length);
+    i += payload->shared_secret_length;
+    i += decode_varint(raw, &payload->verify_token_length);
+    payload->verify_token = arena_allocate(arena, payload->verify_token_length);
+    memcpy(payload->verify_token, &raw[i], payload->verify_token_length);
+    i += payload->verify_token_length;
+
+    if (!has_read_all_bytes(packet, i)) {
+        return;
+    }
 
     packet->payload = payload;
 }

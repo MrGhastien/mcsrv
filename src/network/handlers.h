@@ -4,13 +4,16 @@
 #include "network/connection.h"
 #include "packet.h"
 
-bool pkt_handle_dummy(const Packet* pkt, Connection* conn);
+#define PKT_HANDLER(name) bool pkt_handle_##name(const Packet* pkt, Connection* conn)
 
-bool pkt_handle_handshake(const Packet* pkt, Connection* conn);
+PKT_HANDLER(dummy);
 
-bool pkt_handle_status(const Packet* pkt, Connection* conn);
-bool pkt_handle_ping(const Packet* pkt, Connection* conn);
+PKT_HANDLER(handshake);
 
-bool pkt_handle_log_start(const Packet* pkt, Connection* conn);
+PKT_HANDLER(status);
+PKT_HANDLER(ping);
+
+PKT_HANDLER(log_start);
+PKT_HANDLER(enc_res);
 
 #endif /* ! HANDLER_H */

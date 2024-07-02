@@ -4,9 +4,14 @@
 #include "containers/bytebuffer.h"
 #include "packet.h"
 
-void pkt_encode_dummy(const Packet* pkt, ByteBuffer* buffer);
+#define PKT_ENCODER(name) void pkt_encode_##name(const Packet* pkt, ByteBuffer* buffer)
 
-void pkt_encode_status(const Packet* pkt, ByteBuffer* buffer);
-void pkt_encode_ping(const Packet* pkt, ByteBuffer* buffer);
+PKT_ENCODER(dummy);
+
+PKT_ENCODER(status);
+PKT_ENCODER(ping);
+
+PKT_ENCODER(enc_req);
+PKT_ENCODER(compress);
 
 #endif /* ! ENCODERS_H */

@@ -10,11 +10,12 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
-#include <sys/socket.h>
 #include <sys/prctl.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include "connection.h"
+#include "encryption.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "receiver.h"
@@ -23,17 +24,24 @@
 
 typedef struct net_ctx {
     Arena arena;
+
     Connection* connections;
     u32 max_connections;
     u32 connection_count;
+
     int serverfd;
     int epollfd;
     int eventfd;
+    pthread_t thread;
+
+    EncryptionContext enc_ctx;
+    u64 compress_threshold;
+
     string host;
     u32 port;
+
     i32 code;
     bool should_continue;
-    pthread_t thread;
 } NetworkContext;
 
 static NetworkContext ctx;
@@ -41,7 +49,7 @@ static NetworkContext ctx;
 static void* network_handle(void* params);
 
 static i32 create_server_socket(char* host, i32 port) {
-    int sockfd   = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     ctx.serverfd = sockfd;
     if (sockfd == -1) {
         log_fatalf("Failed to create the server socket: %s", strerror(errno));
@@ -111,18 +119,21 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
     if (res)
         return res;
 
-    ctx.arena            = arena_create(40960);
-    ctx.connections      = arena_allocate(&ctx.arena, sizeof(Connection) * max_connections);
-    ctx.max_connections  = max_connections;
+    ctx.arena = arena_create(40960);
+    ctx.connections = arena_allocate(&ctx.arena, sizeof(Connection) * max_connections);
+    ctx.max_connections = max_connections;
     ctx.connection_count = 0;
-    ctx.host             = str_create_const(host);
-    ctx.port             = port;
-    ctx.code             = 0;
-    ctx.should_continue  = TRUE;
+    ctx.host = str_create_const(host);
+    ctx.port = port;
+    ctx.code = 0;
+    ctx.should_continue = TRUE;
 
     for (u64 i = 0; i < max_connections; i++) {
         ctx.connections[i].sockfd = -1;
     }
+
+    if(!encryption_init(&ctx.enc_ctx))
+        return 3;
 
     log_debug("Network subsystem initialized.");
 
@@ -162,7 +173,7 @@ static i32 accept_connection(void) {
         return 1;
     }
 
-    ctx.connections[idx] = conn_create(peerfd, idx);
+    ctx.connections[idx] = conn_create(peerfd, idx, &ctx.enc_ctx);
 
     char addr_str[16];
     inet_ntop(AF_INET, &peer_addr.sin_addr, addr_str, 16);
@@ -173,15 +184,24 @@ static i32 accept_connection(void) {
 void close_connection(Connection* conn) {
     struct epoll_event placeholder;
     log_infof("Closing connection %i.", conn->sockfd);
+
+    if(conn->encryption) {
+        encryption_cleanup_peer(&conn->peer_enc_ctx);
+    }
+
     close(conn->sockfd);
     epoll_ctl(ctx.epollfd, EPOLL_CTL_DEL, conn->sockfd, &placeholder);
-    arena_destroy(&conn->arena);
+    arena_destroy(&conn->scratch_arena);
+    arena_destroy(&conn->persistent_arena);
     pthread_mutex_destroy(&conn->mutex);
     conn->sockfd = -1;
     ctx.connection_count--;
 }
 
 static void network_finish(void) {
+
+    encryption_cleanup(&ctx.enc_ctx);
+
     for (u32 i = 0; i < ctx.max_connections; i++) {
         Connection* c = &ctx.connections[i];
         if (c->sockfd >= 0)
@@ -196,7 +216,7 @@ static void network_finish(void) {
 
 static i32 handle_connection_io(Connection* conn, u32 events) {
     enum IOCode io_code = IOC_OK;
-    i32 ret_code        = 0;
+    i32 ret_code = 0;
     if (events & EPOLLIN)
         io_code = receive_packet(conn);
     switch (io_code) {
@@ -213,7 +233,7 @@ static i32 handle_connection_io(Connection* conn, u32 events) {
         break;
     }
 
-    if(conn->sockfd == -1)
+    if (conn->sockfd == -1)
         return ret_code;
 
     if (events & EPOLLOUT)
@@ -252,7 +272,7 @@ static void* network_handle(void* params) {
                 ctx.should_continue = FALSE;
             else {
                 Connection* conn = &ctx.connections[e->data.u64];
-                ctx.code         = handle_connection_io(conn, e->events);
+                ctx.code = handle_connection_io(conn, e->events);
             }
         }
     }

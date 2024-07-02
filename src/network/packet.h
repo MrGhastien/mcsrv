@@ -9,8 +9,10 @@
 #include <stddef.h>
 
 enum PacketType {
+    // === HANDSHAKE ===
     PKT_HANDSHAKE = 0x0,
 
+    // === STATUS ===
     PKT_STATUS = 0x0,
     PKT_PING = 0x1,
 
@@ -61,6 +63,26 @@ typedef struct {
     string player_name;
     u64 uuid[2];
 } PacketLoginStart;
+
+typedef struct {
+    string server_id;
+    i32 pkey_length;
+    u8* pkey;
+    i32 verify_tok_length;
+    u8* verify_tok;
+    bool authenticate;
+} PacketEncReq;
+
+typedef struct {
+    i32 shared_secret_length;
+    u8* shared_secret;
+    i32 verify_token_length;
+    u8* verify_token;
+} PacketEncRes;
+
+typedef struct {
+    i64 threadhold;
+} PacketSetCompress;
 
 typedef bool (*pkt_acceptor)(const Packet* pkt, Connection* conn);
 typedef void (*pkt_decoder)(Packet* pkt, Arena* arena, u8* raw);

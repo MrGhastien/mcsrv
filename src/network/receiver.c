@@ -97,7 +97,7 @@ static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
     pkt_decoder decoder = get_pkt_decoder(out_pkt, conn);
     if (!decoder)
         return FALSE;
-    decoder(out_pkt, &conn->arena, offset(raw->data, id_size));
+    decoder(out_pkt, &conn->scratch_arena, offset(raw->data, id_size));
 
     log_debug("Received packet:");
     log_debugf("  - Size: %zu", out_pkt->total_length);
@@ -119,8 +119,8 @@ enum IOCode receive_packet(Connection* conn) {
 
     while (code == IOC_OK) {
         if(!conn_is_resuming_read(conn))
-            arena_save(&conn->arena);
-        code = read_packet(conn, &conn->arena);
+            arena_save(&conn->scratch_arena);
+        code = read_packet(conn, &conn->scratch_arena);
         if (code != IOC_OK)
             return code;
 
@@ -134,7 +134,7 @@ enum IOCode receive_packet(Connection* conn) {
         if(!handle_packet(&pkt, conn))
             return IOC_ERROR;
 
-        arena_restore(&conn->arena);
+        arena_restore(&conn->scratch_arena);
     }
 
     return code;
