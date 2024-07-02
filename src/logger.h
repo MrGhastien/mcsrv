@@ -1,6 +1,7 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include "definitions.h"
 enum LogLevel {
     /** Errors which prevent the server from running at all.
      * The server will always crash after raising this king of error.

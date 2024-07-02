@@ -16,7 +16,7 @@ typedef struct server_ctx {
 
 static ServerContext server_ctx;
 
-static void init(char* host, i32 port, u64 max_connections) {
+static i32 init(char* host, i32 port, u64 max_connections) {
 
     sigset_t global_sigmask;
     sigfillset(&global_sigmask);
@@ -25,13 +25,21 @@ static void init(char* host, i32 port, u64 max_connections) {
     // Make sure the main thread is the one handling signals.
     pthread_sigmask(SIG_BLOCK, &global_sigmask, NULL);
 
+    i32 code = 0;
+
     logger_system_init();
     signal_system_init();
     event_system_init();
     registry_system_init();
-    network_init(host, port, max_connections);
+    code = network_init(host, port, max_connections);
 
-    server_ctx.running = TRUE;
+    if (code != 0) {
+        log_fatal("Failed to initialize the server.");
+        server_ctx.running = FALSE;
+    } else {
+        server_ctx.running = TRUE;
+    }
+    return code;
 }
 
 static void cleanup(void) {
@@ -49,7 +57,11 @@ int main(int argc, char** argv) {
     (void) argv;
     i32 res = 0;
 
-    init("0.0.0.0", 25565, 10);
+    res = init("0.0.0.0", 25565, 10);
+
+    if(res != 0) {
+        return res;
+    }
 
     event_handle();
 
