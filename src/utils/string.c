@@ -13,14 +13,14 @@ string str_init(const char* cstr, size_t length, size_t capacity, Arena* arena) 
         str.base = arena_allocate(arena, capacity);
 
     if (!str.base) {
-        str.fixed    = TRUE;
+        str.fixed = TRUE;
         str.capacity = 0;
-        str.length   = 0;
+        str.length = 0;
         return str;
     }
 
-    str.fixed    = capacity == 0 || arena != NULL;
-    str.length   = length;
+    str.fixed = capacity == 0 || arena != NULL;
+    str.length = length;
     str.capacity = capacity;
 
     if (!str_is_const(&str)) {
@@ -34,6 +34,11 @@ string str_init(const char* cstr, size_t length, size_t capacity, Arena* arena) 
 string str_create(const char* cstr) {
     size_t len = strlen(cstr);
     return str_init(cstr, len, len + 1, NULL);
+}
+
+string str_create_fixed(const char* cstr, Arena* arena) {
+    u64 len = strlen(cstr);
+    return str_init(cstr, len, len + 1, arena);
 }
 
 string str_create_const(const char* cstr) {
@@ -99,7 +104,7 @@ void str_append(string* str, const char* cstr) {
         char* new_base = realloc(str->base, new_cap);
         if (new_base) {
             str->capacity = new_cap;
-            str->base     = new_base;
+            str->base = new_base;
         }
     }
 
@@ -121,7 +126,7 @@ void str_concat(string* lhs, const string* rhs) {
         char* new_base = realloc(lhs->base, new_cap);
         if (new_base) {
             lhs->capacity = new_cap;
-            lhs->base     = new_base;
+            lhs->base = new_base;
         }
     }
 

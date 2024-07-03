@@ -132,7 +132,7 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
         ctx.connections[i].sockfd = -1;
     }
 
-    if(!encryption_init(&ctx.enc_ctx))
+    if (!encryption_init(&ctx.enc_ctx))
         return 3;
 
     log_debug("Network subsystem initialized.");
@@ -173,10 +173,12 @@ static i32 accept_connection(void) {
         return 1;
     }
 
-    ctx.connections[idx] = conn_create(peerfd, idx, &ctx.enc_ctx);
-
     char addr_str[16];
     inet_ntop(AF_INET, &peer_addr.sin_addr, addr_str, 16);
+
+    ctx.connections[idx] =
+        conn_create(peerfd, idx, &ctx.enc_ctx, str_create_const(addr_str), peer_addr.sin_port);
+
     log_infof("Accepted connection from %s:%i.", addr_str, peer_addr.sin_port);
     return 0;
 }
@@ -185,7 +187,7 @@ void close_connection(Connection* conn) {
     struct epoll_event placeholder;
     log_infof("Closing connection %i.", conn->sockfd);
 
-    if(conn->encryption) {
+    if (conn->encryption) {
         encryption_cleanup_peer(&conn->peer_enc_ctx);
     }
 

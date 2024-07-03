@@ -1,6 +1,8 @@
 #include "encryption.h"
 #include "logger.h"
 #include "memory/arena.h"
+#include "network/connection.h"
+#include "utils/string.h"
 
 #include <openssl/crypto.h>
 #include <openssl/encoder.h>
@@ -116,7 +118,7 @@ bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_s
         log_error("Failed to initialize symmetric encryption context.");
         return FALSE;
     }
-    if(EVP_CIPHER_CTX_set_key_length(ctx->cipher_ctx, 16) <= 0) {
+    if (EVP_CIPHER_CTX_set_key_length(ctx->cipher_ctx, 16) <= 0) {
         encryption_get_errors();
         return FALSE;
     }
@@ -128,7 +130,7 @@ bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_s
         log_error("Failed to initialize symmetric decryption context.");
         return FALSE;
     }
-    if(EVP_CIPHER_CTX_set_key_length(ctx->decipher_ctx, 16) <= 0) {
+    if (EVP_CIPHER_CTX_set_key_length(ctx->decipher_ctx, 16) <= 0) {
         encryption_get_errors();
         return FALSE;
     }
@@ -161,4 +163,81 @@ i32 encryption_decipher(PeerEncryptionContext* ctx, u8* in, i32 in_size) {
     }
 
     return in_size;
+}
+
+static void hash_to_string(u8* hash, u32 hash_size, Arena* arena, string* out) {
+    bool negative = hash[0] >> 7;
+    u32 offset = 0;
+    if (negative) {
+        u16 carry = 1;
+
+        for (i32 i = hash_size - 1; i >= 0; i--) {
+            u16 tmp = (u8)~hash[i];
+            tmp += carry;
+            hash[i] = tmp & 0xff;
+            carry = tmp >> 8;
+        }
+        *out = str_alloc(hash_size * 2 + 2, arena);
+        out->base[0] = '-';
+        offset = 1;
+    } else {
+        *out = str_alloc(hash_size * 2 + 1, arena);
+    }
+
+    for (u32 i = 0; i < hash_size; i++) {
+        char tmp[3];
+        snprintf(tmp, 3, "%02hhx", hash[i]);
+
+        out->base[i * 2 + offset] = tmp[0];
+        out->base[i * 2 + offset + 1] = tmp[1];
+    }
+}
+
+static string
+encryption_hash(Arena* arena, EncryptionContext* global_ctx, PeerEncryptionContext* peer_ctx) {
+    EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
+
+    string out = {0};
+
+    if (EVP_DigestInit_ex(md_ctx, EVP_sha1(), NULL) <= 0) {
+        encryption_get_errors();
+        log_error("Could not initialize the digest context.");
+        return out;
+    }
+
+    // Don't digest the server ID, as it is empty
+
+    if (EVP_DigestUpdate(md_ctx, peer_ctx->shared_secret, 16) <= 0) {
+        encryption_get_errors();
+        log_error("Could not create the login hash.");
+        return out;
+    }
+
+    if (EVP_DigestUpdate(md_ctx, global_ctx->encoded_key, global_ctx->encoded_key_size) <= 0) {
+        encryption_get_errors();
+        log_error("Could not create the login hash.");
+        return out;
+    }
+
+    u8 buf[EVP_MAX_MD_SIZE];
+    u32 size = EVP_MAX_MD_SIZE;
+    if (EVP_DigestFinal_ex(md_ctx, buf, &size) <= 0) {
+        encryption_get_errors();
+        log_error("Could not generate the login hash.");
+        return out;
+    }
+
+    hash_to_string(buf, size, arena, &out);
+
+    return out;
+}
+
+bool encryption_authenticate_player(Connection* conn) {
+    Arena arena = arena_create(2048);
+    string hash = encryption_hash(&arena, conn->global_enc_ctx, &conn->peer_enc_ctx);
+
+    
+
+    log_infof("Hash: %s", hash.base);
+    return TRUE;
 }

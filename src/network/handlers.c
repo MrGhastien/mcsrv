@@ -104,6 +104,9 @@ PKT_HANDLER(log_start) {
     (void) conn;
     PacketLoginStart* payload = pkt->payload;
 
+    conn->player_name = str_alloc(payload->player_name.capacity, &conn->persistent_arena);
+    str_copy(&conn->player_name, &payload->player_name);
+
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
 
@@ -193,6 +196,8 @@ PKT_HANDLER(enc_res) {
     conn->encryption = TRUE;
 
     log_infof("Protocol encryption successfully initialized for connection %i.", conn->sockfd);
+
+    encryption_authenticate_player(conn);
 
     return enable_compression(conn);
 }

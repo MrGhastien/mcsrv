@@ -22,42 +22,44 @@ typedef struct pkt_func {
 } PacketFunction;
 
 static PacketFunction function_table[_STATE_COUNT][_STATE_COUNT] = {
-    [STATE_HANDSHAKE] = {
-        [PKT_HANDSHAKE] = {
-            &pkt_decode_handshake,
-            &pkt_handle_handshake,
-            &pkt_encode_dummy,
-        },
-    },
-    [STATE_STATUS] = {
-        [PKT_STATUS] = {
-            &pkt_decode_dummy,
-            &pkt_handle_status,
-            &pkt_encode_status,
-        },
-        [PKT_PING] = {
-            &pkt_decode_ping,
-            &pkt_handle_ping,
-            &pkt_encode_ping,
-        },
-    },
+    [STATE_HANDSHAKE] =
+        {
+                           [PKT_HANDSHAKE] =
+                {
+                    &pkt_decode_handshake,
+                    &pkt_handle_handshake,
+                    &pkt_encode_dummy,
+                }, },
+    [STATE_STATUS] =
+        {
+                           [PKT_STATUS] =
+                {
+                    &pkt_decode_dummy,
+                    &pkt_handle_status,
+                    &pkt_encode_status,
+                }, [PKT_PING] =
+                {
+                    &pkt_decode_ping,
+                    &pkt_handle_ping,
+                    &pkt_encode_ping,
+                }, },
     [STATE_LOGIN] = {
-        [PKT_LOG_START] = {
-            &pkt_decode_log_start,
-            &pkt_handle_log_start,
-            &pkt_encode_dummy,
-        },
-        [PKT_ENC_REQ] = {
-            &pkt_decode_enc_res,
-            &pkt_handle_enc_res,
-            &pkt_encode_enc_req,
-        },
-        [PKT_COMPRESS] = {
-            &pkt_decode_dummy,
-            &pkt_handle_dummy,
-            &pkt_encode_compress,
-        },
-    }
+                           [PKT_LOG_START] =
+            {
+                &pkt_decode_log_start,
+                &pkt_handle_log_start,
+                &pkt_encode_dummy,
+            }, [PKT_ENC_REQ] =
+            {
+                &pkt_decode_enc_res,
+                &pkt_handle_enc_res,
+                &pkt_encode_enc_req,
+            }, [PKT_COMPRESS] =
+            {
+                &pkt_decode_dummy,
+                &pkt_handle_dummy,
+                &pkt_encode_compress,
+            }, }
 };
 
 static PacketFunction* get_pkt_funcs(const Packet* pkt, Connection* conn) {
@@ -65,12 +67,12 @@ static PacketFunction* get_pkt_funcs(const Packet* pkt, Connection* conn) {
     enum State state = conn->state;
 
     PacketFunction* row = function_table[state];
-    if(!row) {
+    if (!row) {
         log_errorf("Could not get packet functions: connection is in an invalid state %i.", state);
         return NULL;
     }
     PacketFunction* funcs = &row[pkt->id];
-    if(!funcs->decoder) {
+    if (!funcs->decoder) {
         log_errorf("Could not get packet functions: state = %i, type = %i.", state, type);
         return NULL;
     }
@@ -79,21 +81,21 @@ static PacketFunction* get_pkt_funcs(const Packet* pkt, Connection* conn) {
 
 pkt_acceptor get_pkt_handler(const Packet* pkt, Connection* conn) {
     PacketFunction* funcs = get_pkt_funcs(pkt, conn);
-    if(!funcs)
+    if (!funcs)
         return NULL;
     return funcs->handler;
 }
 
 pkt_decoder get_pkt_decoder(const Packet* pkt, Connection* conn) {
     PacketFunction* funcs = get_pkt_funcs(pkt, conn);
-    if(!funcs)
+    if (!funcs)
         return NULL;
     return funcs->decoder;
 }
 
 pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn) {
     PacketFunction* funcs = get_pkt_funcs(pkt, conn);
-    if(!funcs)
+    if (!funcs)
         return NULL;
     return funcs->encoder;
 }
@@ -108,7 +110,8 @@ bool conn_is_resuming_read(const Connection* conn) {
     return conn->pkt_buffer != NULL;
 }
 
-Connection conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx) {
+Connection
+conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr, u32 port) {
     Connection conn = {
         .persistent_arena = arena_create(CONN_PARENA_SIZE),
         .scratch_arena = arena_create(CONN_SARENA_SIZE),
@@ -120,6 +123,8 @@ Connection conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx) 
         .has_read_size = FALSE,
         .send_buffer = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.persistent_arena),
         .table_index = table_index,
+        .peer_addr = str_create_from(&addr, &conn.persistent_arena),
+        .peer_port = port,
     };
     pthread_mutex_init(&conn.mutex, NULL);
     conn_reset_buffer(&conn, NULL, 0);

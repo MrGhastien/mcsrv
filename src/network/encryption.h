@@ -8,6 +8,8 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 
+typedef struct connection Connection;
+
 typedef struct enc_ctx {
     EVP_PKEY* key_pair;
     EVP_PKEY_CTX* key_ctx;
@@ -32,5 +34,7 @@ void encryption_cleanup_peer(PeerEncryptionContext* ctx);
 
 i32 encryption_cipher(PeerEncryptionContext* ctx, u8* in, i32 in_size);
 i32 encryption_decipher(PeerEncryptionContext* ctx, u8* in, i32 in_size);
+
+bool encryption_authenticate_player(Connection* conn);
 
 #endif /* ! ENCRYPTION_H */
