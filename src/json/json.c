@@ -1,5 +1,6 @@
 #include "json.h"
-#include "../utils/string.h"
+#include "json_internal.h"
+#include "utils/string.h"
 #include <stdio.h>
 
 static const char* TYPES[_JSON_COUNT] = {
@@ -15,7 +16,7 @@ static const char* TYPES[_JSON_COUNT] = {
 static void json_node_destroy(JSONNode* node);
 static void json_node_stringify(JSON* json, const JSONNode* node, string* str, size_t level);
 
-static JSONNode* json_node_create(JSON* json, enum JSONType type) {
+JSONNode* json_node_create(JSON* json, enum JSONType type) {
     Arena* arena = json->arena;
 
     JSONNode* node = arena_allocate(arena, sizeof(JSONNode));
@@ -79,6 +80,8 @@ static void json_node_destroy(JSONNode* node) {
 void json_destroy(JSON* json) {
     // json_node_destroy(json->root);
     arena_free_ptr(json->arena, json->root);
+    json->arena = NULL;
+    json->root = NULL;
 }
 
 static bool json_check_type(const JSONNode* node, enum JSONType type) {

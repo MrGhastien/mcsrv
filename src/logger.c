@@ -2,8 +2,6 @@
 
 #ifndef MC_CPLX_LOGGER
 
-#include "containers/dict.h"
-#include "memory/arena.h"
 #include "platform/mc_mutex.h"
 #include <stdarg.h>
 #include <stdio.h>

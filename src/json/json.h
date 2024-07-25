@@ -5,6 +5,7 @@
 #include "../containers/dict.h"
 #include "../memory/arena.h"
 #include "../containers/vector.h"
+#include "containers/bytebuffer.h"
 
 enum JSONType {
     JSON_STRING,
@@ -74,5 +75,7 @@ void json_set_double(JSONNode* node, double value);
 void json_set_bool(JSONNode* node, bool value);
 
 void json_stringify(JSON* json, string* out, Arena* arena);
+
+JSON json_parse(ByteBuffer* buffer, Arena* arena);
 
 #endif /* ! JSON_H */

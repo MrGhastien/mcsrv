@@ -24,7 +24,7 @@ typedef struct pkt_func {
 static PacketFunction function_table[_STATE_COUNT][_STATE_COUNT] = {
     [STATE_HANDSHAKE] =
         {
-                           [PKT_HANDSHAKE] =
+            [PKT_HANDSHAKE] =
                 {
                     &pkt_decode_handshake,
                     &pkt_handle_handshake,
@@ -123,7 +123,7 @@ conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr
         .has_read_size = FALSE,
         .send_buffer = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.persistent_arena),
         .table_index = table_index,
-        .peer_addr = str_create_from(&addr, &conn.persistent_arena),
+        .peer_addr = str_create_copy(&addr, &conn.persistent_arena),
         .peer_port = port,
     };
     pthread_mutex_init(&conn.mutex, NULL);

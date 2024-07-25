@@ -3,54 +3,72 @@
 #include <stdlib.h>
 #include <string.h>
 
-string str_init(const char* cstr, size_t length, size_t capacity, Arena* arena) {
-    string str;
-    if (capacity == 0)
-        str.base = (char*) cstr;
-    else if (!arena)
-        str.base = malloc(capacity);
-    else
-        str.base = arena_allocate(arena, capacity);
-
-    if (!str.base) {
-        str.fixed = TRUE;
-        str.capacity = 0;
-        str.length = 0;
-        return str;
-    }
-
-    str.fixed = capacity == 0 || arena != NULL;
-    str.length = length;
-    str.capacity = capacity;
-
-    if (!str_is_const(&str)) {
-        str.base[str.length] = 0;
-        if (cstr)
-            memcpy(str.base, cstr, length);
-    }
-    return str;
-}
-
-string str_create(const char* cstr) {
+string str_create_dynamic(const char* cstr) {
     size_t len = strlen(cstr);
-    return str_init(cstr, len, len + 1, NULL);
+    char* base = malloc(len + 1);
+    memcpy(base, cstr, len);
+    base[len] = 0;
+    return (string){
+        .base = base,
+        .length = len,
+        .capacity = len + 1,
+        .fixed = FALSE,
+    };
 }
 
-string str_create_fixed(const char* cstr, Arena* arena) {
-    u64 len = strlen(cstr);
-    return str_init(cstr, len, len + 1, arena);
+string str_create(const char* cstr, Arena* arena) {
+    size_t len = strlen(cstr);
+    char* base = arena_allocate(arena, len + 1);
+    memcpy(base, cstr, len);
+    base[len] = 0;
+    return (string){
+        .base = base,
+        .length = len,
+        .capacity = len + 1,
+        .fixed = TRUE,
+    };
 }
 
 string str_create_const(const char* cstr) {
-    return str_init(cstr, strlen(cstr), 0, NULL);
+    u64 len = strlen(cstr);
+    return (string){
+        .base = (char*) cstr,
+        .length = len,
+        .capacity = 0,
+        .fixed = TRUE,
+    };
 }
 
 string str_alloc(size_t capacity, Arena* arena) {
-    return str_init(NULL, 0, capacity, arena);
+    char* base = arena_allocate(arena, capacity);
+    return (string){
+        .base = base,
+        .length = 0,
+        .capacity = capacity,
+        .fixed = TRUE,
+    };
 }
 
-string str_create_from(const string* str, Arena* arena) {
-    return str_init(str->base, str->length, str->capacity, arena);
+string str_create_copy(const string* str, Arena* arena) {
+    string copy = str_alloc(str->length + 1, arena);
+    str_copy(&copy, str);
+    return copy;
+}
+
+string str_create_from_buffer(const char* buf, u64 length, Arena* arena) {
+    string str = str_alloc(length + 1, arena);
+    memcpy(str.base, buf, length);
+    str.base[length] = 0;
+    str.length = length;
+    return str;
+}
+
+string str_substring(const string* str, u64 begin, u64 end, Arena* arena) {
+    u64 size = end - begin;
+    string sub = str_alloc(size + 1, arena);
+    memcpy(sub.base, &str->base[begin], size);
+    sub.base[size] = 0;
+    return sub;
 }
 
 bool str_is_const(const string* str) {
@@ -88,7 +106,8 @@ void str_copy(string* dst, const string* src) {
     else if (len > dst->capacity)
         return;
 
-    memcpy(dst->base, src->base, len + 1);
+    memcpy(dst->base, src->base, len);
+    dst->base[len] = 0;
     dst->length = len;
 }
 

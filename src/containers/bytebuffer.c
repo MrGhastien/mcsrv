@@ -78,19 +78,19 @@ void* bytebuf_reserve(ByteBuffer* buffer, u64 size) {
 }
 
 static void bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data) {
-    if (out_data) {
-        u64 to_read = min_u64(size, buffer->capacity - buffer->read_head);
-        memcpy(out_data, offset(buffer->buf, buffer->read_head), to_read);
-        if (to_read < size)
-            memcpy(offset(out_data, to_read), buffer->buf, size - to_read);
-    }
+    if (!out_data)
+        return;
+    u64 to_read = min_u64(size, buffer->capacity - buffer->read_head);
+    memcpy(out_data, offset(buffer->buf, buffer->read_head), to_read);
+    if (to_read < size)
+        memcpy(offset(out_data, to_read), buffer->buf, size - to_read);
 }
 
 void bytebuf_copy(ByteBuffer* dst, const ByteBuffer* src) {
     u64 size = min_u64(dst->capacity, src->size);
     bytebuf_read_const(src, size, dst->buf);
     dst->size = size;
-    if(is_fixed(dst)) {
+    if (is_fixed(dst)) {
         dst->read_head = 0;
         dst->write_head = size;
     }
@@ -164,7 +164,7 @@ void bytebuf_prepend_varint(ByteBuffer* buffer, i32 num) {
     bytebuf_prepend(buffer, buf, size);
 }
 
-void bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
+i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
     if (size > buffer->size)
         size = buffer->size;
 
@@ -172,4 +172,13 @@ void bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
 
     buffer->size -= size;
     buffer->read_head = (buffer->read_head + size) % buffer->capacity;
+    return size;
+}
+
+i64 bytebuf_peek(ByteBuffer* buffer, u64 size, void* out_data) {
+    if (size > buffer->size)
+        size = buffer->size;
+
+    bytebuf_read_const(buffer, size, out_data);
+    return size;
 }

@@ -104,8 +104,7 @@ PKT_HANDLER(log_start) {
     (void) conn;
     PacketLoginStart* payload = pkt->payload;
 
-    conn->player_name = str_alloc(payload->player_name.capacity, &conn->persistent_arena);
-    str_copy(&conn->player_name, &payload->player_name);
+    conn->player_name = str_create_copy(&payload->player_name, &conn->persistent_arena);
 
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
@@ -117,7 +116,7 @@ PKT_HANDLER(log_start) {
         .pkey = conn->global_enc_ctx->encoded_key,
         .verify_tok_length = 4,
         .verify_tok = arena_allocate(&conn->scratch_arena, 4),
-        .authenticate = FALSE,
+        .authenticate = TRUE,
     };
     memset(req->verify_tok, 78, req->verify_tok_length);
     conn->verify_token = arena_allocate(&conn->persistent_arena, req->verify_tok_length);

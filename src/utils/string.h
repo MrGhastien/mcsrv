@@ -12,13 +12,11 @@ typedef struct str {
     bool fixed;
 } string;
 
-string str_init(const char* cstr, size_t length, size_t capacity, Arena* arena);
-
 /**
  * Create a string from the provided C string.
  * The contents are copied into a newly allocated buffer.
  */
-string str_create(const char* cstr);
+string str_create_dynamic(const char* cstr);
 
 /**
  * Create a string from the provided C string,
@@ -26,7 +24,7 @@ string str_create(const char* cstr);
  *
  * The contents are copied.
  */
-string str_create_fixed(const char* cstr, Arena* arena);
+string str_create(const char* cstr, Arena* arena);
 
 /**
  * Create an immutable string from the given C string.
@@ -37,8 +35,12 @@ string str_create_const(const char* cstr);
 /**
  * Create a new string from an other one, using ARENA to allocate the underlying buffer.
  */
-string str_create_from(const string* str, Arena* arena);
+string str_create_copy(const string* str, Arena* arena);
+
+string str_create_from_buffer(const char* buf, u64 length, Arena* arena);
+
 string str_alloc(size_t capacity, Arena* arena);
+string str_substring(const string* str, u64 begin, u64 end, Arena* arena);
 
 void str_destroy(string* str);
 

@@ -1,6 +1,7 @@
 #include "utils.h"
-#include "utils/bitwise.h"
+#include "logger.h"
 #include "network.h"
+#include "utils/bitwise.h"
 
 #include <errno.h>
 #include <sys/socket.h>
@@ -45,6 +46,7 @@ u64 decode_varint(const u8* buf, i32* out) {
     }
 
     *out = res;
+    log_tracef("Decoding %zu bytes varint.", i);
     return i;
 }
 
@@ -54,20 +56,23 @@ u64 decode_string(const u8* buf, Arena* arena, string* out_str) {
     if (total <= 0)
         return -1;
 
-    *out_str = str_init((const char*)&buf[total], length, length, arena);
+    *out_str = str_create_from_buffer((const char*) &buf[total], length, arena);
 
+    log_tracef("Decoded %zu characters long string.", out_str->length);
     return total + out_str->length;
 }
 
 u64 decode_u16(const u8* buf, u16* out) {
     *out = (buf[0] << 8) | buf[1];
+    log_trace("Decoded 2 bytes unsigned short.");
     return 2;
 }
 
 u64 decode_uuid(const u8* buf, u64* out) {
-    u64* cast_buf = (u64*)buf;
+    u64* cast_buf = (u64*) buf;
     out[0] = cast_buf[0];
     out[1] = cast_buf[1];
+    log_trace("Decoded 16 bytes UUID.");
     return sizeof(u64) << 1;
 }
 

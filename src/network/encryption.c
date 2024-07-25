@@ -1,14 +1,19 @@
 #include "encryption.h"
+#include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "network/connection.h"
 #include "utils/string.h"
 
+#include "json/json.h"
+#include <curl/curl.h>
 #include <openssl/crypto.h>
 #include <openssl/encoder.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define SHARED_SECRET_SIZE 16
 
@@ -172,7 +177,7 @@ static void hash_to_string(u8* hash, u32 hash_size, Arena* arena, string* out) {
         u16 carry = 1;
 
         for (i32 i = hash_size - 1; i >= 0; i--) {
-            u16 tmp = (u8)~hash[i];
+            u16 tmp = (u8) ~hash[i];
             tmp += carry;
             hash[i] = tmp & 0xff;
             carry = tmp >> 8;
@@ -232,12 +237,61 @@ encryption_hash(Arena* arena, EncryptionContext* global_ctx, PeerEncryptionConte
     return out;
 }
 
+static u64 write_data_callback(void* ptr, u64 size, u64 nmemb, ByteBuffer* buffer) {
+    u64 total = size * nmemb;
+    bytebuf_write(buffer, ptr, total);
+    return total;
+}
+
 bool encryption_authenticate_player(Connection* conn) {
-    Arena arena = arena_create(2048);
-    string hash = encryption_hash(&arena, conn->global_enc_ctx, &conn->peer_enc_ctx);
-
-    
-
+    Arena scratch = conn->scratch_arena;
+    string hash = encryption_hash(&scratch, conn->global_enc_ctx, &conn->peer_enc_ctx);
     log_infof("Hash: %s", hash.base);
-    return TRUE;
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        log_error("Failed to initialize libcurl.");
+        return FALSE;
+    }
+
+    ByteBuffer buffer = bytebuf_create_fixed(8192, &scratch);
+    char url[2048];
+    char* error_buffer = arena_callocate(&scratch, CURL_ERROR_SIZE);
+    snprintf(url,
+             2048,
+             "https://sessionserver.mojang.com/session/minecraft/"
+             "hasJoined?serverId=%s&username=%s",
+             hash.base,
+             conn->player_name.base);
+
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.8.0");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_buffer);
+
+    log_debugf("URL: %s", url);
+    i64 res_code;
+    CURLcode curl_code = curl_easy_perform(curl);
+    if (curl_code != CURLE_OK) {
+        log_errorf("Curl: %s.", error_buffer);
+    }
+
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res_code);
+
+    if (res_code != 200) {
+        log_errorf("Failed request to sessionserver.mojang.com: %li", res_code);
+    }
+
+    curl_easy_cleanup(curl);
+
+    bytebuf_write_varint(&buffer, 0);
+
+    JSON json = json_parse(&buffer, &scratch);
+    (void)json;
+
+    log_debug(buffer.buf);
+
+    return res_code == 200;
 }

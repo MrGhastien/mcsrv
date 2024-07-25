@@ -31,6 +31,7 @@ void bytebuf_write_varint(ByteBuffer* buffer, i32 num);
 void bytebuf_prepend(ByteBuffer* buffer, void* data, u64 size);
 void bytebuf_prepend_varint(ByteBuffer* buffer, i32 num);
 
-void bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data);
+i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data);
+i64 bytebuf_peek(ByteBuffer* buffer, u64 size, void* out_data);
 
 #endif /* ! BYTEBUFFER_H */
