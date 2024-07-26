@@ -217,14 +217,19 @@ static bool json_analyze_obj(JSONNode* parent, ParsingInfo* info) {
     enum JSONToken token;
     do {
         token = pop_token(info);
-        if(token == TOK_RBRACE)
-            break;
         if(token != TOK_STRING) {
             log_errorf("JSON: Parsing error: Invalid object property type %s.", names[token]);
             return FALSE;
         }
 
+        // Pop the colon token !
         TokenValue* val = pop_value(info);
+        token = pop_token(info);
+        if (token != TOK_COLON) {
+            log_error("JSON: Syntax error: Missing colon after a property name.");
+            return FALSE;
+        }
+
         token = peek_token(info);
         enum JSONType type = types[token];
         if(type == _JSON_COUNT) {
@@ -234,7 +239,13 @@ static bool json_analyze_obj(JSONNode* parent, ParsingInfo* info) {
         JSONNode* subnode = json_node_puts(info->json, parent, &val->str, type);
         json_analyze(subnode, info);
             
-    } while(token != TOK_RBRACE);
+        token = pop_token(info);
+    } while(token == TOK_COMMA);
+
+    if (token != TOK_RBRACE) {
+        log_errorf("JSON: Syntax error: Expected a closing brace after property, got '%s'.", names[token]);
+        return FALSE;
+    }
 
     return TRUE;
 }

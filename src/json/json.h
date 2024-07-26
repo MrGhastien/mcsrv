@@ -1,10 +1,10 @@
 #ifndef JSON_H
 #define JSON_H
 
-#include "../utils/string.h"
-#include "../containers/dict.h"
-#include "../memory/arena.h"
-#include "../containers/vector.h"
+#include "utils/string.h"
+#include "containers/dict.h"
+#include "memory/arena.h"
+#include "containers/vector.h"
 #include "containers/bytebuffer.h"
 
 enum JSONType {
