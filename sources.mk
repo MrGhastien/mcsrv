@@ -1,5 +1,6 @@
-SRCS := $(SRC_DIR)/main.c \
-		$(SRC_DIR)/logger.c \
+MAIN_SRC := $(SRC_DIR)/main.c
+
+SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/logger1.c \
 		$(SRC_DIR)/utils/string.c \
 		$(SRC_DIR)/utils/bitwise.c \
@@ -27,6 +28,7 @@ SRCS := $(SRC_DIR)/main.c \
 		$(SRC_DIR)/platform/mc_mutex_linux.c \
 		$(SRC_DIR)/platform/mc_cond_var_linux.c \
 		$(SRC_DIR)/json/json.c \
+		$(SRC_DIR)/json/json_parse.c \
 		$(SRC_DIR)/registry/registry.c \
 		$(SRC_DIR)/resource/resource_id.c \
 		$(SRC_DIR)/event/event.c

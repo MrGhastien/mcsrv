@@ -27,6 +27,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/platform/mc_mutex_linux.h \
 		$(SRC_DIR)/platform/mc_cond_var.h \
 		$(SRC_DIR)/json/json.h \
+		$(SRC_DIR)/json/json_internal.h \
 		$(SRC_DIR)/registry/registry.h \
 		$(SRC_DIR)/resource/resource_id.h \
 		$(SRC_DIR)/event/event.h
