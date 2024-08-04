@@ -80,6 +80,11 @@ void* bytebuf_reserve(ByteBuffer* buffer, u64 size) {
 static void bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data) {
     if (!out_data)
         return;
+    if(!is_fixed(buffer)) {
+        memcpy(out_data, buffer->buf, min_u64(size, buffer->size));
+        return;
+    }
+
     u64 to_read = min_u64(size, buffer->capacity - buffer->read_head);
     memcpy(out_data, offset(buffer->buf, buffer->read_head), to_read);
     if (to_read < size)
@@ -109,7 +114,7 @@ void bytebuf_write(ByteBuffer* buffer, void* data, size_t size) {
             memcpy(buffer->buf, offset(data, to_write), size - to_write);
         buffer->write_head = (end + size) % buffer->capacity;
     } else
-        memcpy(offset(buffer->buf, cap), data, size);
+        memcpy(offset(buffer->buf, buffer->size), data, size);
 
     buffer->size += size;
 }
@@ -170,8 +175,11 @@ i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
 
     bytebuf_read_const(buffer, size, out_data);
 
+    if(is_fixed(buffer))
+        buffer->read_head = (buffer->read_head + size) % buffer->capacity;
+    else
+        memmove(buffer->buf, offset(buffer->buf, size), buffer->size - size);
     buffer->size -= size;
-    buffer->read_head = (buffer->read_head + size) % buffer->capacity;
     return size;
 }
 
