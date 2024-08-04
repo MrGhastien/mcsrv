@@ -1,4 +1,5 @@
 #include "string.h"
+#include "logger.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +41,7 @@ string str_create_const(const char* cstr) {
 }
 
 string str_alloc(size_t capacity, Arena* arena) {
-    char* base = arena_allocate(arena, capacity);
+    char* base = arena_callocate(arena, capacity);
     return (string){
         .base = base,
         .length = 0,
@@ -76,10 +77,10 @@ bool str_is_const(const string* str) {
 }
 
 void str_destroy(string* str) {
-    if (str_is_const(str))
+    if (str_is_const(str) || str->fixed)
         return;
-    if (!str->fixed)
-        free(str->base);
+
+    free(str->base);
 }
 
 void str_set(string* str, const char* cstr) {
@@ -111,6 +112,34 @@ void str_copy(string* dst, const string* src) {
     dst->length = len;
 }
 
+static void ensure_capacity(string* str, u64 size) {
+    if (str->capacity >= size)
+        return;
+
+    if (str->fixed) {
+        log_error("Cannot extend a fixed string.");
+        abort();
+        return;
+    }
+
+    u64 new_cap = str->capacity + (str->capacity >> 1);
+    if(new_cap == 1)
+        new_cap++;
+    while(new_cap < size) {
+        new_cap += new_cap >> 1;
+    }
+
+    char* new_base = realloc(str->base, new_cap);
+    if (new_base) {
+        str->capacity = new_cap;
+        str->base = new_base;
+    } else {
+        log_error("Memory allocation failure.");
+        abort();
+        return;
+    }
+}
+
 void str_append(string* str, const char* cstr) {
     if (str_is_const(str)) {
         fputs("Attempted to concat something to a const string!", stderr);
@@ -118,19 +147,23 @@ void str_append(string* str, const char* cstr) {
     }
     size_t len = strlen(cstr);
 
-    if (!str->fixed && str->length + len >= str->capacity) {
-        size_t new_cap = str->capacity + (str->capacity >> 1);
-        char* new_base = realloc(str->base, new_cap);
-        if (new_base) {
-            str->capacity = new_cap;
-            str->base = new_base;
-        }
-    }
+    ensure_capacity(str, str->length + len + 1);
 
     str->length = strlcat(str->base, cstr, str->capacity);
-    if (str->length >= str->capacity)
-        str->length = str->capacity - 1;
     str->base[str->length] = 0;
+}
+
+void str_appendc(string* str, char c) {
+    if (str_is_const(str)) {
+        fputs("Attempted to concat something to a const string!", stderr);
+        return;
+    }
+
+    ensure_capacity(str, str->length + 2);
+
+    str->base[str->length] = c;
+    str->base[str->length + 1] = 0;
+    str->length++;
 }
 
 void str_concat(string* lhs, const string* rhs) {
@@ -138,19 +171,10 @@ void str_concat(string* lhs, const string* rhs) {
         fputs("Attempted to concat something to a const string!", stderr);
         return;
     }
-    size_t len = rhs->length;
+    u64 len = rhs->length;
 
-    if (!lhs->fixed && lhs->length + len >= lhs->capacity) {
-        size_t new_cap = lhs->capacity + (lhs->capacity >> 1);
-        char* new_base = realloc(lhs->base, new_cap);
-        if (new_base) {
-            lhs->capacity = new_cap;
-            lhs->base = new_base;
-        }
-    }
+    ensure_capacity(lhs, lhs->length + len + 1);
 
     lhs->length = strlcat(lhs->base, rhs->base, lhs->capacity);
-    if (lhs->length >= lhs->capacity)
-        lhs->length = lhs->capacity - 1;
     lhs->base[lhs->length] = 0;
 }

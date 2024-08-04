@@ -54,6 +54,7 @@ void str_set(string* str, const char* cstr);
 void str_copy(string* dst, const string* src);
 
 void str_append(string* str, const char* cstr);
+void str_appendc(string* str, char c);
 void str_concat(string* lhs, const string* rhs);
 
 #endif /* ! STRING_H */
