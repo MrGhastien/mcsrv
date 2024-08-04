@@ -1,45 +1,54 @@
-SRC_DIR = ./src
-INC_DIR = ./include
-OBJ_DIR = ./obj
-TEST_DIR = ./test
+export SRC_DIR := $(CURDIR)/src
+export INC_DIR := $(CURDIR)/include
+export OBJ_DIR := $(CURDIR)/obj
+export TEST_DIR := $(CURDIR)/test
 
-CC = gcc
-CFLAGS = -Wall -Wextra -Wreturn-type -Werror #-fsanitize=address
-CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_LINUX
-#LDFLAGS = -fsanitize=address
-LDLIBS := -lcrypto -lz -lcurl
+export CC = gcc
+export CFLAGS = -Wall -Wextra -Wreturn-type -Werror #-fsanitize=address
+export CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_LINUX
+#export LDFLAGS = -fsanitize=address
+export LDLIBS := -lcrypto -lz -lcurl
 
 include sources.mk
 include headers.mk
 include tests.mk
 
-OBJS = $(patsubst %.c,%.o,$(SRCS))
-MAIN_OBJ := $(patsubst %.c,%.o,$(MAIN_SRC))
-TEST_TARGETS := $(patsubst %.c,%,$(MAIN_TESTS))
-TEST_OBJS := $(patsubst %.c,%.o,$(TESTS))
+export OBJS := $(patsubst %.c,%.o,$(SRCS))
+export MAIN_OBJ := $(patsubst %.c,%.o,$(MAIN_SRC))
+export TEST_TARGETS := $(patsubst %.c,%,$(MAIN_TESTS))
+export TEST_OBJS := $(patsubst %.c,%.o,$(TESTS))
+
+export CORE_LIB := $(CURDIR)/libsrv.a
 
 MAIN_TARGET = mcsrv
 
-.PHONY: all clean
+.PHONY: all clean $(TEST_TARGETS)
 
 debug: CFLAGS += -O0 -g -DDEBUG 
-debug: $(TARGET)
+debug: $(MAIN_TARGET)
 
 trace: CFLAGS += -O0 -g -DDEBUG -DTRACE
-trace: $(TARGET)
+trace: $(MAIN_TARGET)
 
 release: CFLAGS += -O2
-release: $(TARGET)
+release: $(MAIN_TARGET)
 
-$(MAIN_TARGET): $(MAIN_OBJ) $(OBJS) $(HDRS)
-	$(CC) $(LDFLAGS) $(LDLIBS) -o $@ $(OBJS)
+test: CFLAGS += -O0 -g -DDEBUG
+test: $(TEST_TARGETS)
 
-$(TEST_TARGETS): $(TEST_OBJS) $(OBJS) $(HDRS)
-	$(MAKE) 
+$(CORE_LIB): $(OBJS) $(HDRS)
+	$(AR) rc $@ $(OBJS)
+
+$(MAIN_TARGET): $(MAIN_OBJ) $(CORE_LIB)
+	$(CC) $(LDFLAGS) $(LDLIBS) -o $@ $^
+
+$(TEST_TARGETS): $(CORE_LIB)
+	$(MAKE) -C $(dir $@)
 
 %.o: %.c $(HDRS)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 clean:
 	rm $(OBJS)
-	rm $(TARGET)
+	rm $(MAIN_TARGET)
+	rm libsrv.a

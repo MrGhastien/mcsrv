@@ -46,6 +46,7 @@ PKT_HANDLER(status) {
     JSON json;
     arena_save(&conn->scratch_arena);
     json_create(&json, &conn->scratch_arena);
+    json_set_root(&json, json_node_create(&json, JSON_OBJECT));
 
     JSONNode* nodes[4];
 
@@ -53,7 +54,7 @@ PKT_HANDLER(status) {
 
     nodes[1] = json_node_put(&json, nodes[0], "name", JSON_STRING);
 
-    json_set_cstr(nodes[1], "1.21");
+    json_set_cstr(&json, nodes[1], "1.21");
 
     nodes[1] = json_node_put(&json, nodes[0], "protocol", JSON_INT);
     json_set_int(nodes[1], 767);
@@ -74,7 +75,7 @@ PKT_HANDLER(status) {
 
     nodes[0] = json_node_put(&json, json.root, "description", JSON_OBJECT);
     nodes[1] = json_node_put(&json, nodes[0], "text", JSON_STRING);
-    json_set_cstr(nodes[1], "Hello gamerz!");
+    json_set_cstr(&json, nodes[1], "Hello gamerz!");
 
     nodes[0] = json_node_put(&json, json.root, "enforcesSecureChat", JSON_BOOL);
     json_set_bool(nodes[0], FALSE);
@@ -82,7 +83,7 @@ PKT_HANDLER(status) {
     nodes[0] = json_node_put(&json, json.root, "previewsChat", JSON_BOOL);
     json_set_bool(nodes[0], FALSE);
 
-    json_stringify(&json, &response.data, &conn->scratch_arena);
+    json_stringify(&json, &response.data, 2048, &conn->scratch_arena);
     log_debugf("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     write_packet(&out_pkt, conn);

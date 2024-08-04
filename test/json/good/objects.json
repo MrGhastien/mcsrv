@@ -11,6 +11,8 @@
         "second": {
             "id": 19,
             "valid": false
-        }
+        },
+        "basket": {},
+        "hobbies": []
     }
 }

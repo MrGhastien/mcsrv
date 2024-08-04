@@ -1,19 +1,21 @@
 #include "json.h"
 #include "json_internal.h"
+
+#include "containers/dict.h"
+#include "containers/vector.h"
+#include "logger.h"
 #include "utils/string.h"
+
 #include <stdio.h>
 
-static const char* TYPES[_JSON_COUNT] = {
-    [JSON_NULL] = "JSON_NULL",
-    [JSON_INT] = "JSON_INT",
-    [JSON_FLOAT] = "JSON_FLOAT",
-    [JSON_OBJECT] = "JSON_OBJECT",
-    [JSON_ARRAY] = "JSON_ARRAY",
-    [JSON_STRING] = "JSON_STRING",
-    [JSON_BOOL] = "JSON_BOOL"
-};
+static const char* TYPES[_JSON_COUNT] = {[JSON_NULL] = "JSON_NULL",
+                                         [JSON_INT] = "JSON_INT",
+                                         [JSON_FLOAT] = "JSON_FLOAT",
+                                         [JSON_OBJECT] = "JSON_OBJECT",
+                                         [JSON_ARRAY] = "JSON_ARRAY",
+                                         [JSON_STRING] = "JSON_STRING",
+                                         [JSON_BOOL] = "JSON_BOOL"};
 
-static void json_node_destroy(JSONNode* node);
 static void json_node_stringify(JSON* json, const JSONNode* node, string* str, size_t level);
 
 JSONNode* json_node_create(JSON* json, enum JSONType type) {
@@ -24,14 +26,14 @@ JSONNode* json_node_create(JSON* json, enum JSONType type) {
     switch (type) {
     case JSON_OBJECT:
         node->data.obj = arena_allocate(arena, sizeof(Dict));
-        dict_init_fixed(node->data.obj, arena, 16, sizeof(string), sizeof(JSONNode*));
+        dict_init(node->data.obj, sizeof(string), sizeof(JSONNode*));
         break;
     case JSON_ARRAY:
         node->data.array = arena_allocate(arena, sizeof(Vector));
-        vector_init_fixed(node->data.array, arena, 2, sizeof(JSONNode*));
+        vector_init(node->data.array, 4, sizeof(JSONNode*));
         break;
     case JSON_STRING:
-        node->data.string = str_alloc(256, arena);
+        node->data.string = (string) {0};
         break;
     case JSON_BOOL:
     case JSON_FLOAT:
@@ -47,18 +49,27 @@ JSONNode* json_node_create(JSON* json, enum JSONType type) {
 
 void json_create(JSON* out_json, Arena* arena) {
     out_json->arena = arena;
-    out_json->root = json_node_create(out_json, JSON_OBJECT);
+    out_json->root = NULL;
+}
+
+void json_set_root(JSON* json, JSONNode* node) {
+    if (json->root) {
+        log_warn("JSON already has a root node.");
+        return;
+    }
+    json->root = node;
 }
 
 static void foreach_destroy(const Dict* dict, size_t idx, void* key, void* value, void* data) {
-    (void)dict;
-    (void)key;
-    (void)data;
-    (void)idx;
-    json_node_destroy(value);
+    (void) dict;
+    (void) key;
+    (void) data;
+    (void) idx;
+    JSONNode** subnode = value;
+    json_node_destroy(*subnode);
 }
 
-static void json_node_destroy(JSONNode* node) {
+void json_node_destroy(JSONNode* node) {
     switch (node->type) {
     case JSON_OBJECT:
         dict_foreach(node->data.obj, &foreach_destroy, NULL);
@@ -66,20 +77,25 @@ static void json_node_destroy(JSONNode* node) {
         break;
     case JSON_ARRAY:
         for (size_t i = 0; i < node->data.array->size; i++) {
-            json_node_destroy(vector_ref(node->data.array, i));
+            JSONNode* subnode;
+            vector_get(node->data.array, i, &subnode);
+            json_node_destroy(subnode);
         }
-        vector_clear(node->data.array);
+        vector_destroy(node->data.array);
         break;
     case JSON_STRING:
         str_destroy(&node->data.string);
+        break;
     default:
         break;
     }
 }
 
 void json_destroy(JSON* json) {
-    // json_node_destroy(json->root);
-    arena_free_ptr(json->arena, json->root);
+    if (json->root) {
+        json_node_destroy(json->root);
+        arena_free_ptr(json->arena, json->root);
+    }
     json->arena = NULL;
     json->root = NULL;
 }
@@ -98,16 +114,23 @@ JSONNode* json_node_puts(JSON* json, JSONNode* obj, const string* name, enum JSO
         return NULL;
 
     JSONNode* node = json_node_create(json, type);
-    Dict* dict = obj->data.obj;
-
-    dict_put(dict, name, &node);
+    json_node_putn(obj, name, node);
     return node;
 }
 
 JSONNode* json_node_put(JSON* json, JSONNode* obj, const char* name, enum JSONType type) {
-    //string str = str_alloc(name, json->arena);
+    // string str = str_alloc(name, json->arena);
     const string str = str_create_const(name);
     return json_node_puts(json, obj, &str, type);
+}
+
+void json_node_putn(JSONNode* obj, const string* name, JSONNode* subnode) {
+    if (!json_check_type(obj, JSON_OBJECT))
+        return;
+
+    Dict* dict = obj->data.obj;
+
+    dict_put(dict, name, &subnode);
 }
 
 JSONNode* json_node_add(JSON* json, JSONNode* array, enum JSONType type) {
@@ -119,33 +142,60 @@ JSONNode* json_node_add(JSON* json, JSONNode* array, enum JSONType type) {
     return node;
 }
 
-void json_set_str(JSONNode* node, const string* value) {
+void json_node_addn(JSONNode* array, JSONNode* element) {
+    if (!json_check_type(array, JSON_ARRAY))
+        return;
+
+    vector_add(array->data.array, &element);
+}
+
+void json_set_str_direct(JSONNode* node, string* value) {
     if (!json_check_type(node, JSON_STRING))
         return;
+    if(node->data.string.base) {
+        log_error("JSON: String is already set.");
+        return;
+    }
 
-    str_copy(&node->data.string, value);
+    node->data.string = *value;
 }
 
-void json_set_cstr(JSONNode* node, const char* value) {
-    if(!json_check_type(node, JSON_STRING))
+void json_set_str(JSON* json, JSONNode* node, const string* value) {
+    if (!json_check_type(node, JSON_STRING))
         return;
+    if(node->data.string.base) {
+        log_error("JSON: String is already set.");
+        return;
+    }
+
+    node->data.string = str_create_copy(value, json->arena);
+}
+
+void json_set_cstr(JSON* json, JSONNode* node, const char* value) {
+    if (!json_check_type(node, JSON_STRING))
+        return;
+    if(node->data.string.base) {
+        log_error("JSON: String is already set.");
+        return;
+    }
 
     str_set(&node->data.string, value);
+    node->data.string = str_create(value, json->arena);
 }
 void json_set_int(JSONNode* node, long value) {
-    if(!json_check_type(node, JSON_INT))
+    if (!json_check_type(node, JSON_INT))
         return;
     node->data.number = value;
 }
 
 void json_set_double(JSONNode* node, double value) {
-    if(!json_check_type(node, JSON_FLOAT))
+    if (!json_check_type(node, JSON_FLOAT))
         return;
     node->data.fnumber = value;
 }
 
 void json_set_bool(JSONNode* node, bool value) {
-    if(!json_check_type(node, JSON_BOOL))
+    if (!json_check_type(node, JSON_BOOL))
         return;
     node->data.boolean = value;
 }
@@ -181,10 +231,10 @@ struct stringify_data {
 };
 
 static void foreach_stringify(const Dict* dict, size_t idx, void* key, void* value, void* data) {
-    (void)dict;
+    (void) dict;
     struct stringify_data* sdata = data;
     string* name = key;
-    JSONNode* node = *(JSONNode**)value;
+    JSONNode* node = *(JSONNode**) value;
 
     add_padding(sdata->out_str, sdata->level);
 
@@ -192,12 +242,14 @@ static void foreach_stringify(const Dict* dict, size_t idx, void* key, void* val
     str_concat(sdata->out_str, name);
     str_append(sdata->out_str, "\": ");
     json_node_stringify(sdata->json, node, sdata->out_str, sdata->level);
-    if(idx < dict->size - 1)
+    if (idx < dict->size - 1)
         str_append(sdata->out_str, ",");
     str_append(sdata->out_str, "\n");
 }
 
 static void json_node_stringify(JSON* json, const JSONNode* node, string* str, size_t level) {
+    if(!node)
+        return;
     switch (node->type) {
     case JSON_BOOL:
         str_append(str, node->data.boolean ? "true" : "false");
@@ -239,8 +291,8 @@ static void json_node_stringify(JSON* json, const JSONNode* node, string* str, s
     }
 }
 
-void json_stringify(JSON* json, string* out, Arena* arena) {
-    *out = str_alloc(1 << 10, arena);
+void json_stringify(JSON* json, string* out, u64 capacity, Arena* arena) {
+    *out = str_alloc(capacity, arena);
     json_node_stringify(json, json->root, out, 0);
     str_append(out, "\n");
 }

@@ -39,6 +39,10 @@ typedef struct json {
 void json_create(JSON* out_json, Arena* arena);
 void json_destroy(JSON* json);
 
+JSONNode* json_node_create(JSON* json, enum JSONType type);
+
+void json_set_root(JSON* json, JSONNode* node);
+
 /**
    Add an entry `name` to the JSON object `obj` of type `type`. `obj` must be of type JSON_OBJECT.
 
@@ -55,6 +59,8 @@ JSONNode* json_node_puts(JSON* json, JSONNode* obj, const string* name, enum JSO
 
 JSONNode* json_node_put(JSON* json, JSONNode* obj, const char* name, enum JSONType type);
 
+void json_node_putn(JSONNode* obj, const string* name, JSONNode* subnode);
+
 /**
    Add an element to `array`. `array` must be of type JSON_ARRAY.
 
@@ -68,13 +74,18 @@ JSONNode* json_node_put(JSON* json, JSONNode* obj, const char* name, enum JSONTy
  */
 JSONNode* json_node_add(JSON* json, JSONNode* array, enum JSONType type);
 
-void json_set_str(JSONNode* node, const string* value);
-void json_set_cstr(JSONNode* node, const char* value);
+void json_node_addn(JSONNode* array, JSONNode* element);
+
+void json_set_str_direct(JSONNode* node, string* value);
+void json_set_str(JSON* json, JSONNode* node, const string* value);
+void json_set_cstr(JSON* json, JSONNode* node, const char* value);
 void json_set_int(JSONNode* node, long value);
 void json_set_double(JSONNode* node, double value);
 void json_set_bool(JSONNode* node, bool value);
 
-void json_stringify(JSON* json, string* out, Arena* arena);
+void json_stringify(JSON* json, string* out, u64 capacity, Arena* arena);
+
+void json_print(JSON* json);
 
 JSON json_parse(ByteBuffer* buffer, Arena* arena);
 

@@ -1,0 +1,25 @@
+[
+    {
+        "name": "claudine",
+        "age": 9845,
+        "height": 389.9,
+        "hobbies": [
+            "violin",
+            "piano",
+            42
+        ]
+    },
+    "yo les gens",
+    64,
+    true,
+    null,
+    null,
+    [
+        1,
+        2,
+        3.03,
+        4,
+        true,
+        {}
+    ]
+]

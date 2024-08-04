@@ -289,9 +289,14 @@ bool encryption_authenticate_player(Connection* conn) {
     bytebuf_write_varint(&buffer, 0);
 
     JSON json = json_parse(&buffer, &scratch);
-    (void)json;
+
+    string str;
+
+    json_stringify(&json, &str, 2048, &scratch);
 
     log_debug(buffer.buf);
+
+    log_debugf("%s", str.base);
 
     return res_code == 200;
 }

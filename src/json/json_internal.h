@@ -1,8 +1,8 @@
 #ifndef JSON_INTERNAL_H
 #define JSON_INTERNAL_H
 
-#include "json/json.h"
+#include "json.h"
 
-JSONNode* json_node_create(JSON* json, enum JSONType type);
+void json_node_destroy(JSONNode* node);
 
 #endif /* ! JSON_INTERNAL_H */
