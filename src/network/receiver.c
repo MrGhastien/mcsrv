@@ -99,9 +99,7 @@ static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
         return FALSE;
     decoder(out_pkt, &conn->scratch_arena, offset(raw->data, id_size));
 
-    log_debug("Received packet:");
-    log_debugf("  - Size: %zu", out_pkt->total_length);
-    log_debugf("  - ID: %i", out_pkt->id);
+    log_debugf("Packet IN: %s", get_pkt_name(out_pkt, conn));
 
     return TRUE;
 }

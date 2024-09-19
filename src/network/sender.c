@@ -63,14 +63,16 @@ void write_packet(const Packet* pkt, Connection* conn) {
     bytebuf_write_varint(&scratch, pkt->id);
     encoder(pkt, &scratch);
 
-    log_debugf("Sending: { Size: %zu, ID: %zu }", scratch.size, pkt->id);
+    log_debugf("Packet OUT: %s", get_pkt_name(pkt, conn));
 
     if (conn->compression) {
         if (scratch.size >= COMPRESS_THRESHOLD) {
+            u64 uncompressed_size = scratch.size;
             ByteBuffer compressed_scratch =
-                bytebuf_create_fixed(scratch.size, &conn->scratch_arena);
+                bytebuf_create_fixed(uncompressed_size, &conn->scratch_arena);
             compression_compress(&conn->cmprss_ctx, &compressed_scratch, &scratch);
-            bytebuf_prepend_varint(&compressed_scratch, scratch.size);
+
+            bytebuf_prepend_varint(&compressed_scratch, uncompressed_size);
             scratch = compressed_scratch;
         } else {
             bytebuf_prepend_varint(&scratch, 0);
@@ -85,9 +87,9 @@ void write_packet(const Packet* pkt, Connection* conn) {
     }
 
     pthread_mutex_lock(&conn->mutex);
-    bytebuf_copy(&conn->send_buffer, &scratch);
+    bytebuf_write_buffer(&conn->send_buffer, &scratch);
 
-    send_bytebuf(&conn->send_buffer, conn->sockfd);
+    //send_bytebuf(&conn->send_buffer, conn->sockfd);
 
     arena_restore(&conn->scratch_arena);
     pthread_mutex_unlock(&conn->mutex);
