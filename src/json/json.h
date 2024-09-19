@@ -83,9 +83,17 @@ void json_set_int(JSONNode* node, long value);
 void json_set_double(JSONNode* node, double value);
 void json_set_bool(JSONNode* node, bool value);
 
-void json_stringify(JSON* json, string* out, u64 capacity, Arena* arena);
+JSONNode* json_get_obj(const JSONNode* node, const string* name);
+JSONNode* json_get_obj_cstr(const JSONNode* node, const char* name);
+JSONNode* json_get_array(const JSONNode* node, u64 idx);
+i64 json_get_length(const JSONNode* node);
+string* json_get_str(JSONNode* node);
+bool json_get_int(const JSONNode* node, i64* out);
+bool json_get_float(const JSONNode* node, f64* out);
+bool json_get_bool(const JSONNode* node, bool* out);
+bool json_is_null(const JSONNode* node);
 
-void json_print(JSON* json);
+void json_stringify(JSON* json, string* out, u64 capacity, Arena* arena);
 
 JSON json_parse(ByteBuffer* buffer, Arena* arena);
 
