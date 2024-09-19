@@ -45,7 +45,7 @@ void event_system_init(void) {
     ctx.arena = arena_create(1L << 20);
 
     dict_init_fixed(
-        &ctx.event_registry, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
+                    &ctx.event_registry, NULL, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
     ctx.queue = rqueue_create(MAX_TRIGGERED_EVENTS, sizeof(TriggeredEvent), &ctx.arena);
 
     pthread_mutex_init(&ctx.mutex, 0);
