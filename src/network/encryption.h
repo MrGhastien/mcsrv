@@ -4,6 +4,7 @@
 #include "definitions.h"
 #include "memory/arena.h"
 
+#include "json/json.h"
 #include <openssl/encoder.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -35,6 +36,6 @@ void encryption_cleanup_peer(PeerEncryptionContext* ctx);
 i32 encryption_cipher(PeerEncryptionContext* ctx, u8* in, i32 in_size);
 i32 encryption_decipher(PeerEncryptionContext* ctx, u8* in, i32 in_size);
 
-bool encryption_authenticate_player(Connection* conn);
+bool encryption_authenticate_player(Connection* conn, JSON* json);
 
 #endif /* ! ENCRYPTION_H */

@@ -243,7 +243,7 @@ static u64 write_data_callback(void* ptr, u64 size, u64 nmemb, ByteBuffer* buffe
     return total;
 }
 
-bool encryption_authenticate_player(Connection* conn) {
+bool encryption_authenticate_player(Connection* conn, JSON* json) {
     Arena scratch = conn->scratch_arena;
     string hash = encryption_hash(&scratch, conn->global_enc_ctx, &conn->peer_enc_ctx);
     log_infof("Hash: %s", hash.base);
@@ -271,7 +271,7 @@ bool encryption_authenticate_player(Connection* conn) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_buffer);
 
-    log_debugf("URL: %s", url);
+    log_tracef("URL: %s", url);
     i64 res_code;
     CURLcode curl_code = curl_easy_perform(curl);
     if (curl_code != CURLE_OK) {
@@ -279,24 +279,24 @@ bool encryption_authenticate_player(Connection* conn) {
     }
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res_code);
+    curl_easy_cleanup(curl);
 
     if (res_code != 200) {
         log_errorf("Failed request to sessionserver.mojang.com: %li", res_code);
     }
 
-    curl_easy_cleanup(curl);
 
     bytebuf_write_varint(&buffer, 0);
 
-    JSON json = json_parse(&buffer, &scratch);
+    *json = json_parse(&buffer, &scratch);
+    if(json->arena == NULL)
+        return FALSE;
 
+#ifdef TRACE
     string str;
-
-    json_stringify(&json, &str, 2048, &scratch);
-
-    log_debug(buffer.buf);
-
-    log_debugf("%s", str.base);
+    json_stringify(json, &str, 2048, &scratch);
+    log_tracef("%s", str.base);
+#endif
 
     return res_code == 200;
 }
