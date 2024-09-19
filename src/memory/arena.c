@@ -77,7 +77,7 @@ void arena_free(Arena* arena, u64 bytes) {
         bytes = arena->length;
     arena->length -= bytes;
     if (arena->logging) {
-        log_tracef("Free %zu bytes from %p (%zu/%zu).",
+        log_tracef("Freed %zu bytes from %p (%zu/%zu).",
                    bytes,
                    arena->block,
                    arena->length,
