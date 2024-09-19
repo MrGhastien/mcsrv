@@ -6,6 +6,7 @@
 #include "connection.h"
 #include "../memory/arena.h"
 #include "../utils/string.h"
+#include "containers/vector.h"
 #include <stddef.h>
 
 enum PacketType {
@@ -84,6 +85,20 @@ typedef struct {
     i64 threadhold;
 } PacketSetCompress;
 
+typedef struct {
+    string name;
+    string value;
+    bool is_signed;
+    string signature;
+} PlayerProperty;
+
+typedef struct {
+    u64 uuid[2];
+    string username;
+    Vector properties;
+    bool strict_errors;
+} PacketLoginSuccess;
+
 typedef bool (*pkt_acceptor)(const Packet* pkt, Connection* conn);
 typedef void (*pkt_decoder)(Packet* pkt, Arena* arena, u8* raw);
 typedef void (*pkt_encoder)(const Packet* pkt, ByteBuffer* buffer);
@@ -91,5 +106,6 @@ typedef void (*pkt_encoder)(const Packet* pkt, ByteBuffer* buffer);
 pkt_acceptor get_pkt_handler(const Packet* pkt, Connection* conn);
 pkt_decoder get_pkt_decoder(const Packet* pkt, Connection* conn);
 pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn);
+const char* get_pkt_name(const Packet* pkt, const Connection* conn);
 
 #endif /* ! PACKET_H */

@@ -13,5 +13,6 @@ PKT_ENCODER(ping);
 
 PKT_ENCODER(enc_req);
 PKT_ENCODER(compress);
+PKT_ENCODER(log_success);
 
 #endif /* ! ENCODERS_H */

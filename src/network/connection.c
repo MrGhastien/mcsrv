@@ -19,50 +19,61 @@ typedef struct pkt_func {
     pkt_decoder decoder;
     pkt_acceptor handler;
     pkt_encoder encoder;
+    const char* name;
 } PacketFunction;
 
 static PacketFunction function_table[_STATE_COUNT][_STATE_COUNT] = {
-    [STATE_HANDSHAKE] =
-        {
-            [PKT_HANDSHAKE] =
-                {
-                    &pkt_decode_handshake,
-                    &pkt_handle_handshake,
-                    &pkt_encode_dummy,
-                }, },
-    [STATE_STATUS] =
-        {
-                           [PKT_STATUS] =
-                {
-                    &pkt_decode_dummy,
-                    &pkt_handle_status,
-                    &pkt_encode_status,
-                }, [PKT_PING] =
-                {
-                    &pkt_decode_ping,
-                    &pkt_handle_ping,
-                    &pkt_encode_ping,
-                }, },
+    [STATE_HANDSHAKE] = {
+        [PKT_HANDSHAKE] = {
+            &pkt_decode_handshake,
+            &pkt_handle_handshake,
+            &pkt_encode_dummy,
+            "HANDSHAKE",
+        },
+    },
+    [STATE_STATUS] = {
+        [PKT_STATUS] = {
+            &pkt_decode_dummy,
+            &pkt_handle_status,
+            &pkt_encode_status,
+            "STATUS",
+        },
+        [PKT_PING] = {
+            &pkt_decode_ping,
+            &pkt_handle_ping,
+            &pkt_encode_ping,
+            "PING",
+        },
+    },
     [STATE_LOGIN] = {
-                           [PKT_LOG_START] =
-            {
-                &pkt_decode_log_start,
-                &pkt_handle_log_start,
-                &pkt_encode_dummy,
-            }, [PKT_ENC_REQ] =
-            {
-                &pkt_decode_enc_res,
-                &pkt_handle_enc_res,
-                &pkt_encode_enc_req,
-            }, [PKT_COMPRESS] =
-            {
-                &pkt_decode_dummy,
-                &pkt_handle_dummy,
-                &pkt_encode_compress,
-            }, }
+        [PKT_LOG_START] = {
+            &pkt_decode_log_start,
+            &pkt_handle_log_start,
+            &pkt_encode_dummy,
+            "LOG_START",
+        },
+        [PKT_ENC_REQ] = {
+            &pkt_decode_enc_res,
+            &pkt_handle_enc_res,
+            &pkt_encode_enc_req,
+            "ENC_REQ",
+        },
+        [PKT_LOG_SUCCESS] = {
+            &pkt_decode_dummy,
+            &pkt_handle_dummy,
+            &pkt_encode_log_success,
+            "LOG_SUCCESS",
+        },
+        [PKT_COMPRESS] = {
+            &pkt_decode_dummy,
+            &pkt_handle_dummy,
+            &pkt_encode_compress,
+            "COMPRESS",
+        },
+    },
 };
 
-static PacketFunction* get_pkt_funcs(const Packet* pkt, Connection* conn) {
+static PacketFunction* get_pkt_funcs(const Packet* pkt, const Connection* conn) {
     enum PacketType type = pkt->id;
     enum State state = conn->state;
 
@@ -98,6 +109,13 @@ pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn) {
     if (!funcs)
         return NULL;
     return funcs->encoder;
+}
+
+const char* get_pkt_name(const Packet* pkt, const Connection* conn) {
+    PacketFunction* funcs = get_pkt_funcs(pkt, conn);
+    if (!funcs)
+        return NULL;
+    return funcs->name;
 }
 
 void conn_reset_buffer(Connection* conn, void* new_buffer, u64 size) {

@@ -1,16 +1,19 @@
 #include "handlers.h"
 
+#include "containers/vector.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "network.h"
 #include "network/compression.h"
 #include "network/connection.h"
 #include "network/encryption.h"
+#include "network/utils.h"
 #include "packet.h"
 #include "sender.h"
 #include "utils/string.h"
 #include "json/json.h"
 
+#include "json/json_internal.h"
 #include <string.h>
 #include <zlib.h>
 
@@ -22,10 +25,10 @@ PKT_HANDLER(dummy) {
 
 PKT_HANDLER(handshake) {
     PacketHandshake* shake = pkt->payload;
-    log_debugf("  - Protocol version: %i", shake->protocol_version);
-    log_debugf("  - Server address: '%s'", shake->srv_addr.base);
-    log_debugf("  - Port: %u", shake->srv_port);
-    log_debugf("  - Next state: %i", shake->next_state);
+    log_tracef("  - Protocol version: %i", shake->protocol_version);
+    log_tracef("  - Server address: '%s'", shake->srv_addr.base);
+    log_tracef("  - Port: %u", shake->srv_port);
+    log_tracef("  - Next state: %i", shake->next_state);
     switch (shake->next_state) {
     case STATE_STATUS:
     case STATE_LOGIN:
@@ -84,7 +87,7 @@ PKT_HANDLER(status) {
     json_set_bool(nodes[0], FALSE);
 
     json_stringify(&json, &response.data, 2048, &conn->scratch_arena);
-    log_debugf("%s", response.data.base);
+    log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     write_packet(&out_pkt, conn);
     return TRUE;
@@ -155,6 +158,79 @@ static bool enable_compression(Connection* conn) {
     return TRUE;
 }
 
+static bool send_login_success(Connection* conn, JSON* json) {
+    JSONNode* json_id = json_get_obj_cstr(json->root, "id");
+    JSONNode* json_name = json_get_obj_cstr(json->root, "name");
+    JSONNode* json_properties = json_get_obj_cstr(json->root, "properties");
+
+#ifdef DEBUG
+
+    string str;
+    json_stringify(json, &str, 1 << 12, &conn->scratch_arena);
+
+    log_trace(str.base);
+
+#endif
+
+    if (!json_id)
+        return FALSE;
+    if (!json_name)
+        return FALSE;
+    if (!json_properties)
+        return FALSE;
+
+    string* name = json_get_str(json_name);
+    if (!name)
+        return FALSE;
+
+    PacketLoginSuccess login_success = {
+        .username = str_create_copy(name, &conn->scratch_arena),
+        .strict_errors = TRUE,
+    };
+    string* uuid = json_get_str(json_id);
+    if (!parse_uuid(uuid, login_success.uuid))
+        return FALSE;
+
+    i64 property_count = json_get_length(json_properties);
+    if (property_count == -1)
+        return FALSE;
+
+    vector_init_fixed(
+        &login_success.properties, &conn->scratch_arena, property_count, sizeof(PlayerProperty));
+
+    for (i64 i = 0; i < property_count; i++) {
+        PlayerProperty* property = vector_reserve(&login_success.properties);
+        JSONNode* json_property = json_get_array(json_properties, i);
+        if (!json_property)
+            return FALSE;
+
+        JSONNode* json_prop_name = json_get_obj_cstr(json_property, "name");
+        string* prop_name = json_get_str(json_prop_name);
+        property->name = str_create_copy(prop_name, &conn->scratch_arena);
+
+        JSONNode* json_prop_value = json_get_obj_cstr(json_property, "value");
+        string* prop_value = json_get_str(json_prop_value);
+        property->value = str_create_copy(prop_value, &conn->scratch_arena);
+
+        JSONNode* json_prop_sig = json_get_obj_cstr(json_property, "signature");
+        if (json_prop_sig) {
+            string* prop_sig = json_get_str(json_prop_sig);
+            property->signature = *prop_sig;
+            property->is_signed = TRUE;
+        } else
+            property->is_signed = FALSE;
+    }
+
+    Packet pkt = {
+        .id = PKT_LOG_SUCCESS,
+        .payload = &login_success,
+    };
+
+    write_packet(&pkt, conn);
+
+    return TRUE;
+}
+
 PKT_HANDLER(enc_res) {
     PacketEncRes* payload = pkt->payload;
 
@@ -182,7 +258,7 @@ PKT_HANDLER(enc_res) {
 
     if (memcmp(verif_tok, conn->verify_token, conn->verify_token_size) != 0) {
         log_error("Failed encryption: the received & stored verify tokens differ.");
-        log_debug("RE - ST");
+        log_trace("RE - ST");
         for (u32 i = 0; i < conn->verify_token_size; i++) {
             log_debugf("%hhx - %hhx", verif_tok[i], conn->verify_token[i]);
         }
@@ -197,7 +273,18 @@ PKT_HANDLER(enc_res) {
 
     log_infof("Protocol encryption successfully initialized for connection %i.", conn->sockfd);
 
-    encryption_authenticate_player(conn);
+    JSON json;
+    bool res = encryption_authenticate_player(conn, &json);
+    if (!res)
+        return FALSE;
 
-    return enable_compression(conn);
+    res = enable_compression(conn);
+    if (!res)
+        return FALSE;
+
+    res = send_login_success(conn, &json);
+
+    json_destroy(&json);
+
+    return res;
 }

@@ -1,5 +1,6 @@
 #include "encoders.h"
 #include "containers/bytebuffer.h"
+#include "containers/vector.h"
 #include "packet.h"
 
 static void encode_string(const string* str, ByteBuffer* buffer) {
@@ -39,4 +40,22 @@ PKT_ENCODER(compress) {
     PacketSetCompress* payload = pkt->payload;
 
     bytebuf_write_varint(buffer, payload->threadhold);
+}
+
+PKT_ENCODER(log_success) {
+    PacketLoginSuccess* payload = pkt->payload;
+
+    bytebuf_write(buffer, payload->uuid, 2 * sizeof(u64));
+    encode_string(&payload->username, buffer);
+    bytebuf_write_varint(buffer, payload->properties.size);
+    for(u32 i = 0; i < payload->properties.size; i++) {
+        PlayerProperty* prop = vector_ref(&payload->properties, i);
+        encode_string(&prop->name, buffer);
+        encode_string(&prop->value, buffer);
+        bytebuf_write(buffer, &prop->is_signed, sizeof(bool));
+        if(prop->is_signed)
+            encode_string(&prop->signature, buffer);
+    }
+
+    bytebuf_write(buffer, &payload->strict_errors, sizeof(bool));
 }
