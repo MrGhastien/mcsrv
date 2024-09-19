@@ -3,6 +3,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/utils/bitwise.h \
 		$(SRC_DIR)/utils/string.h \
 		$(SRC_DIR)/utils/math.h \
+		$(SRC_DIR)/utils/hash.h \
 		$(SRC_DIR)/memory/dyn_arena.h \
 		$(SRC_DIR)/memory/arena.h \
 		$(SRC_DIR)/containers/dict.h \

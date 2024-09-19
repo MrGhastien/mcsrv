@@ -5,6 +5,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/utils/string.c \
 		$(SRC_DIR)/utils/bitwise.c \
 		$(SRC_DIR)/utils/math.c \
+		$(SRC_DIR)/utils/hash.c \
 		$(SRC_DIR)/memory/dyn_arena.c \
 		$(SRC_DIR)/memory/arena.c \
 		$(SRC_DIR)/containers/vector-init.c \
