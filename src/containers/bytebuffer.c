@@ -8,6 +8,100 @@
 #include <string.h>
 #include <sys/socket.h>
 
+// === Utility functions ===
+
+static bool is_fixed(const ByteBuffer* buffer) {
+    return buffer->read_head >= 0 && buffer->write_head >= 0;
+}
+
+static void ensure_capacity(ByteBuffer* buffer, u64 size) {
+    if (buffer->capacity >= size)
+        return;
+
+    if (is_fixed(buffer)) {
+        log_fatalf("Byte buffer is too small: %zu bytes needed, %zu bytes available.",
+                   size - buffer->size,
+                   buffer->capacity - buffer->size);
+        abort();
+    }
+
+    u64 new_cap = buffer->capacity;
+    while (new_cap < size) {
+        new_cap += new_cap >> 1;
+    }
+
+    void* new_buf = realloc(buffer->buf, new_cap);
+    if (!new_buf) {
+        log_fatal("Failed to resize dynamic byte buffer.");
+        abort();
+    }
+    buffer->buf = new_buf;
+    buffer->capacity = new_cap;
+}
+
+static void bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data) {
+    if (!out_data)
+        return;
+    if (!is_fixed(buffer)) {
+        memcpy(out_data, buffer->buf, min_u64(size, buffer->size));
+        return;
+    }
+
+    u64 to_read = min_u64(size, buffer->capacity - buffer->read_head);
+    memcpy(out_data, offset(buffer->buf, buffer->read_head), to_read);
+    if (to_read < size)
+        memcpy(offset(out_data, to_read), buffer->buf, size - to_read);
+}
+
+static u64 register_read(ByteBuffer* buffer, u64 size) {
+
+    if (size > buffer->size)
+        size = buffer->size;
+
+    if (is_fixed(buffer)) {
+        buffer->read_head += size;
+        buffer->read_head %= buffer->capacity;
+    }
+    buffer->size -= size;
+    return size;
+}
+
+static u64 register_write(ByteBuffer* buffer, u64 size) {
+
+    ensure_capacity(buffer, buffer->size + size);
+    if (is_fixed(buffer)) {
+        buffer->write_head += size;
+        buffer->write_head %= buffer->capacity;
+    }
+    buffer->size += size;
+    return size;
+}
+
+static void write_at_position(ByteBuffer* buffer, const void* data, i64 position, u64 size) {
+    if (!is_fixed(buffer)) {
+        log_error("`write_at_position()` shall no be called on dynamic byte buffers.");
+        return;
+    }
+    if (position < -(i64) buffer->capacity || (u64) position > buffer->capacity) {
+        log_fatalf("Invalid write position %li.", position);
+        abort();
+    }
+
+    if (position < 0)
+        position += buffer->capacity;
+
+    while (size > 0) {
+        u64 writable = min_u64(buffer->capacity - position, size);
+        memcpy(offset(buffer->buf, position), data, writable);
+        size -= writable;
+        position = (position + writable) % buffer->capacity;
+    }
+}
+
+// === Exported functions ===
+
+// -- Byte Buffer initialization / destruction --
+
 ByteBuffer bytebuf_create(u64 size) {
     return (ByteBuffer){
         .buf = malloc(size),
@@ -28,41 +122,12 @@ ByteBuffer bytebuf_create_fixed(u64 size, Arena* arena) {
     };
 }
 
-static bool is_fixed(const ByteBuffer* buffer) {
-    return buffer->read_head >= 0 && buffer->write_head >= 0;
-}
-
 void bytebuf_destroy(ByteBuffer* buffer) {
     if (is_fixed(buffer)) {
         log_fatal("Cannot destroy fixed-size byte buffer.");
         abort();
     }
     free(buffer->buf);
-}
-
-static void ensure_capacity(ByteBuffer* buffer, u64 size) {
-    if (buffer->capacity >= size)
-        return;
-
-    if (is_fixed(buffer)) {
-        log_fatalf("Byte buffer is too small: %zu bytes needed, %zu bytes available.",
-                   size,
-                   buffer->capacity - buffer->size);
-        abort();
-    }
-
-    u64 new_cap = buffer->capacity;
-    while (new_cap < size) {
-        new_cap += new_cap >> 1;
-    }
-
-    void* new_buf = realloc(buffer->buf, new_cap);
-    if (!new_buf) {
-        log_fatal("Failed to resize dynamic byte buffer.");
-        abort();
-    }
-    buffer->buf = new_buf;
-    buffer->capacity = new_cap;
 }
 
 void* bytebuf_reserve(ByteBuffer* buffer, u64 size) {
@@ -77,20 +142,6 @@ void* bytebuf_reserve(ByteBuffer* buffer, u64 size) {
     return ptr;
 }
 
-static void bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data) {
-    if (!out_data)
-        return;
-    if(!is_fixed(buffer)) {
-        memcpy(out_data, buffer->buf, min_u64(size, buffer->size));
-        return;
-    }
-
-    u64 to_read = min_u64(size, buffer->capacity - buffer->read_head);
-    memcpy(out_data, offset(buffer->buf, buffer->read_head), to_read);
-    if (to_read < size)
-        memcpy(offset(out_data, to_read), buffer->buf, size - to_read);
-}
-
 void bytebuf_copy(ByteBuffer* dst, const ByteBuffer* src) {
     u64 size = min_u64(dst->capacity, src->size);
     bytebuf_read_const(src, size, dst->buf);
@@ -101,22 +152,25 @@ void bytebuf_copy(ByteBuffer* dst, const ByteBuffer* src) {
     }
 }
 
+void bytebuf_write_buffer(ByteBuffer* dst, const ByteBuffer* src) {
+    ByteBuffer cpy = *src;
+    void* tmp;
+    u64 size;
+    do {
+        size = bytebuf_contiguous_read(&cpy, &tmp);
+        bytebuf_write(dst, tmp, size);
+    } while(size > 0);
+}
+
 void bytebuf_write(ByteBuffer* buffer, void* data, size_t size) {
     ensure_capacity(buffer, buffer->size + size);
 
-    u32 end = buffer->write_head;
-    u32 cap = buffer->capacity;
-
-    if (is_fixed(buffer)) {
-        u64 to_write = min_u64(size, cap - end);
-        memcpy(offset(buffer->buf, end), data, to_write);
-        if (to_write < size)
-            memcpy(buffer->buf, offset(data, to_write), size - to_write);
-        buffer->write_head = (end + size) % buffer->capacity;
-    } else
+    if (is_fixed(buffer))
+        write_at_position(buffer, data, buffer->write_head, size);
+    else
         memcpy(offset(buffer->buf, buffer->size), data, size);
 
-    buffer->size += size;
+    register_write(buffer, size);
 }
 
 void bytebuf_write_i64(ByteBuffer* buffer, i64 num) {
@@ -142,18 +196,14 @@ void bytebuf_write_varint(ByteBuffer* buffer, int n) {
 void bytebuf_prepend(ByteBuffer* buffer, void* data, u64 size) {
     ensure_capacity(buffer, buffer->size + size);
 
-    u32 start = buffer->read_head;
-    u32 cap = buffer->capacity;
-
     if (is_fixed(buffer)) {
-        i64 new_start = start - size;
-        i64 to_write = start < size ? start : size;
-        memcpy(offset(buffer->buf, start - to_write), data, to_write);
-        if (new_start < 0) {
-            new_start += cap;
-            memcpy(offset(buffer->buf, new_start), offset(data, to_write), size - to_write);
-        }
-        buffer->read_head = new_start;
+
+        buffer->read_head -= size;
+        if (buffer->read_head < 0)
+            buffer->read_head += buffer->capacity;
+
+        write_at_position(buffer, data, buffer->read_head, size);
+
     } else {
         memmove(offset(buffer->buf, size), buffer->buf, buffer->size);
         memcpy(buffer->buf, data, size);
@@ -175,12 +225,9 @@ i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
 
     bytebuf_read_const(buffer, size, out_data);
 
-    if(is_fixed(buffer))
-        buffer->read_head = (buffer->read_head + size) % buffer->capacity;
-    else
+    if(!is_fixed(buffer))
         memmove(buffer->buf, offset(buffer->buf, size), buffer->size - size);
-    buffer->size -= size;
-    return size;
+    return register_read(buffer, size);
 }
 
 i64 bytebuf_peek(ByteBuffer* buffer, u64 size, void* out_data) {
@@ -189,4 +236,46 @@ i64 bytebuf_peek(ByteBuffer* buffer, u64 size, void* out_data) {
 
     bytebuf_read_const(buffer, size, out_data);
     return size;
+}
+
+u64 bytebuf_contiguous_read(ByteBuffer* buffer, void** out_region) {
+    if (!is_fixed(buffer)) {
+        *out_region = buffer->buf;
+        u64 size = buffer->capacity - buffer->size;
+        bytebuf_read(buffer, size, NULL);
+        return size;
+    }
+
+    *out_region = offset(buffer->buf, buffer->read_head);
+    u64 size;
+
+    if (buffer->read_head < buffer->write_head)
+        size = buffer->write_head - buffer->read_head;
+    else if (buffer->read_head == buffer->write_head)
+        size = buffer->size;
+    else
+        size = buffer->capacity - buffer->read_head;
+
+    return register_read(buffer, size);
+}
+
+u64 bytebuf_contiguous_write(ByteBuffer* buffer, void** out_region) {
+    if (!is_fixed(buffer)) {
+        *out_region = buffer->buf;
+        u64 size = buffer->capacity - buffer->size;
+        buffer->size += size;
+        return size;
+    }
+
+    *out_region = offset(buffer->buf, buffer->write_head);
+    u64 size;
+
+    if (buffer->read_head < buffer->write_head)
+        size = buffer->capacity - buffer->write_head;
+    else if (buffer->read_head == buffer->write_head)
+        size = buffer->capacity - buffer->size;
+    else
+        size = buffer->read_head - buffer->write_head;
+
+    return register_write(buffer, size);
 }
