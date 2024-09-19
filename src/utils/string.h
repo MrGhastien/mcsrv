@@ -3,6 +3,7 @@
 
 #include "definitions.h"
 #include "memory/arena.h"
+#include "utils/hash.h"
 #include <stddef.h>
 
 typedef struct str {
@@ -11,6 +12,8 @@ typedef struct str {
     u64 capacity;
     bool fixed;
 } string;
+
+extern const Comparator CMP_STRING;
 
 /**
  * Create a string from the provided C string.
@@ -56,5 +59,8 @@ void str_copy(string* dst, const string* src);
 void str_append(string* str, const char* cstr);
 void str_appendc(string* str, char c);
 void str_concat(string* lhs, const string* rhs);
+
+u64 str_hash(const void* str);
+i32 str_compare(const string* lhs, const string* rhs);
 
 #endif /* ! STRING_H */

@@ -1,8 +1,19 @@
 #include "string.h"
 #include "logger.h"
+#include "utils/hash.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+i32 str_compare_raw(const void* lhs, const void* rhs) {
+    return str_compare(lhs, rhs);
+}
+
+const Comparator CMP_STRING = {
+    .hfunc = &str_hash,
+    .comp = &str_compare_raw,
+};
 
 string str_create_dynamic(const char* cstr) {
     size_t len = strlen(cstr);
@@ -123,9 +134,9 @@ static void ensure_capacity(string* str, u64 size) {
     }
 
     u64 new_cap = str->capacity + (str->capacity >> 1);
-    if(new_cap == 1)
+    if (new_cap == 1)
         new_cap++;
-    while(new_cap < size) {
+    while (new_cap < size) {
         new_cap += new_cap >> 1;
     }
 
@@ -177,4 +188,21 @@ void str_concat(string* lhs, const string* rhs) {
 
     lhs->length = strlcat(lhs->base, rhs->base, lhs->capacity);
     lhs->base[lhs->length] = 0;
+}
+
+u64 str_hash(const void* str) {
+    const string* cast_str = str;
+    return default_hash((u8*) cast_str->base, cast_str->length);
+}
+
+i32 str_compare(const string* lhs, const string* rhs) {
+    if(lhs == rhs)
+        return 0;
+    if(!lhs)
+        return rhs ? -1 : 0;
+    if(!rhs)
+        return -1;
+    if(lhs->length != rhs->length)
+        return lhs->length - rhs->length;
+    return memcmp(lhs->base, rhs->base, lhs->length);
 }
