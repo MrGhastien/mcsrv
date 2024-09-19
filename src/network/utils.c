@@ -4,6 +4,7 @@
 #include "utils/bitwise.h"
 
 #include <errno.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 
 enum IOCode try_send(int sockfd, void* data, u64 size, u64* out_sent) {
@@ -88,4 +89,34 @@ u64 encode_varint(i32 n, u8* buf) {
         n >>= 7;
     }
     return i + 1;
+}
+
+static u8 parse_hex_digit(char c) {
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    else if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+
+    return 16;
+}
+
+bool parse_uuid(const string* str, u64* out) {
+    if (str->length != 32)
+        return FALSE;
+    out[0] = 0;
+    out[1] = 0;
+    u8* buf = (u8*) out;
+    for (u64 i = 0; i < str->length; i++) {
+        char c = str->base[i];
+        u8 digit = parse_hex_digit(c);
+        if(digit == 16)
+            return FALSE;
+        if(i & 1)
+            buf[i >> 1] |= digit;
+        else
+            buf[i >> 1] = digit << 4;
+    }
+    return TRUE;
 }

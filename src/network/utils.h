@@ -17,4 +17,6 @@ u64 encode_varint(int n, u8* buf);
 
 void printd_string(const u8* buf);
 
+bool parse_uuid(const string* str, u64* out);
+
 #endif /* ! UTILS_H */
