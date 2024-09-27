@@ -3,8 +3,8 @@
 
 #include "definitions.h"
 #include "memory/arena.h"
-
 #include "json/json.h"
+
 #include <openssl/encoder.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -28,7 +28,6 @@ bool encryption_init(EncryptionContext* ctx);
 void encryption_cleanup(EncryptionContext* ctx);
 
 u8* encryption_decrypt(EncryptionContext* ctx, Arena* arena, u64* out_size, u8* in, u64 in_size);
-
 
 bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_secret);
 void encryption_cleanup_peer(PeerEncryptionContext* ctx);

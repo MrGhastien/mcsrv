@@ -19,7 +19,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/network/network.h \
 		$(SRC_DIR)/network/handlers.h \
 		$(SRC_DIR)/network/encoders.h \
-		$(SRC_DIR)/network/encryption.h \
+		$(SRC_DIR)/network/security.h \
 		$(SRC_DIR)/network/compression.h \
 		$(SRC_DIR)/platform/signal-handler.h \
 		$(SRC_DIR)/platform/mc_threads.h \

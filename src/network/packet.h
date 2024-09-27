@@ -1,11 +1,11 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#include "../definitions.h"
+#include "definitions.h"
 #include "containers/bytebuffer.h"
 #include "connection.h"
-#include "../memory/arena.h"
-#include "../utils/string.h"
+#include "memory/arena.h"
+#include "utils/string.h"
 #include "containers/vector.h"
 #include <stddef.h>
 
@@ -35,13 +35,13 @@ enum PacketType {
 
 typedef struct raw_pkt {
     void* data;
-    size_t size;
+    u64 size;
 } RawPacket;
 
 typedef struct pkt {
     enum PacketType id;
-    size_t total_length;
-    size_t payload_length;
+    u64 total_length;
+    u64 payload_length;
     void* payload;
 } Packet;
 
@@ -100,7 +100,7 @@ typedef struct {
 } PacketLoginSuccess;
 
 typedef bool (*pkt_acceptor)(const Packet* pkt, Connection* conn);
-typedef void (*pkt_decoder)(Packet* pkt, Arena* arena, u8* raw);
+typedef void (*pkt_decoder)(Packet* pkt, Arena* arena, ByteBuffer* bytes);
 typedef void (*pkt_encoder)(const Packet* pkt, ByteBuffer* buffer);
 
 pkt_acceptor get_pkt_handler(const Packet* pkt, Connection* conn);

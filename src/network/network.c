@@ -1,3 +1,10 @@
+/**
+ * @file network.c
+ * @author Bastien Morino
+ *
+ * Main loop of the network sub-system.
+ */
+
 #include "network.h"
 
 #include <arpa/inet.h>
@@ -15,10 +22,10 @@
 #include <unistd.h>
 
 #include "connection.h"
-#include "encryption.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "receiver.h"
+#include "security.h"
 #include "sender.h"
 #include "utils/string.h"
 
@@ -218,38 +225,43 @@ static void network_finish(void) {
 
 static i32 handle_connection_io(Connection* conn, u32 events) {
     enum IOCode io_code = IOC_OK;
-    i32 ret_code = 0;
-    if (events & EPOLLIN)
-        io_code = receive_packet(conn);
-    switch (io_code) {
-    case IOC_CLOSED:
-        log_warn("Peer closed connection.");
-        close_connection(conn);
-        break;
-    case IOC_ERROR:
-        log_error("Errored connection.");
-        close_connection(conn);
-        ret_code = 1;
-        break;
-    default:
-        break;
+    if (events & EPOLLIN) {
+        while (io_code == IOC_OK) {
+            io_code = receive_packet(conn);
+        }
+        switch (io_code) {
+        case IOC_CLOSED:
+            log_warn("Peer closed connection.");
+            close_connection(conn);
+            return 0;
+        case IOC_ERROR:
+            log_error("Errored connection.");
+            close_connection(conn);
+            return 1;
+        default:
+            break;
+        }
     }
 
-    if (conn->sockfd == -1)
-        return ret_code;
-
-    if (events & EPOLLOUT)
-        io_code = sender_send(conn);
-
-    switch (io_code) {
-    case IOC_CLOSED:
-    case IOC_ERROR:
-        close_connection(conn);
-        break;
-    default:
-        break;
+    if (events & EPOLLOUT) {
+        if (!conn->can_send) {
+            io_code = sender_send(conn);
+            switch (io_code) {
+            case IOC_CLOSED:
+            case IOC_ERROR:
+                close_connection(conn);
+                break;
+            case IOC_AGAIN:
+                conn->can_send = FALSE;
+                break;
+            default:
+                break;
+            }
+        }
+        conn->can_send = TRUE;
     }
-    return ret_code;
+
+    return 0;
 }
 
 static void* network_handle(void* params) {
@@ -293,6 +305,10 @@ static void* network_handle(void* params) {
     return NULL;
 }
 
+/**
+ *
+ * Tells the network loop to exit, then joins the calling thread with the network thread.
+ */
 void network_stop(void) {
     u64 count = 1;
     write(ctx.eventfd, &count, sizeof(count));

@@ -4,14 +4,13 @@
 #include "memory/arena.h"
 #include "network.h"
 #include "network/compression.h"
-#include "network/encryption.h"
+#include "network/security.h"
 #include "packet.h"
 #include "utils.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
 
 #include <pthread.h>
-#include <string.h>
 #include <sys/socket.h>
 
 #define MAX_PACKET_SIZE 2097151
@@ -22,19 +21,17 @@ static enum IOCode send_bytebuf(ByteBuffer* buffer, int sockfd) {
         return IOC_OK;
     }
 
-    u64 total_sent = 0;
-    u64 sent;
+    void* region;
+    u64 size;
+    enum IOCode code;
+    do {
+        u64 sent;
+        size = bytebuf_contiguous_read(buffer, &region);
+        code = try_send(sockfd, region, size, &sent);
+        if(sent < size)
+            bytebuf_unread(buffer, size - sent);
+    } while (code == IOC_OK && size > 0);
 
-    u64 to_send = min_u64(buffer->capacity - buffer->read_head, buffer->size);
-    enum IOCode code = try_send(sockfd, offset(buffer->buf, buffer->read_head), to_send, &sent);
-    total_sent += sent;
-
-    if (to_send < buffer->size && code == IOC_OK) {
-        code = try_send(sockfd, buffer->buf, buffer->size - to_send, &sent);
-        total_sent += sent;
-    }
-
-    bytebuf_read(buffer, total_sent, NULL);
     return code;
 }
 
@@ -57,6 +54,7 @@ void write_packet(const Packet* pkt, Connection* conn) {
     if (!encoder)
         return;
 
+    pthread_mutex_lock(&conn->mutex);
     arena_save(&conn->scratch_arena);
     ByteBuffer scratch = bytebuf_create_fixed(MAX_PACKET_SIZE, &conn->scratch_arena);
 
@@ -82,14 +80,14 @@ void write_packet(const Packet* pkt, Connection* conn) {
     bytebuf_prepend_varint(&scratch, scratch.size);
 
     if (conn->encryption) {
-        if(!encrypt_bytebuf(&scratch, &conn->peer_enc_ctx))
+        if (!encrypt_bytebuf(&scratch, &conn->peer_enc_ctx))
             return;
     }
 
-    pthread_mutex_lock(&conn->mutex);
     bytebuf_write_buffer(&conn->send_buffer, &scratch);
 
-    //send_bytebuf(&conn->send_buffer, conn->sockfd);
+    if(conn->can_send)
+        send_bytebuf(&conn->send_buffer, conn->sockfd);
 
     arena_restore(&conn->scratch_arena);
     pthread_mutex_unlock(&conn->mutex);

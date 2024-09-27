@@ -4,7 +4,6 @@
 #include "utils/bitwise.h"
 
 #include <errno.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 
 enum IOCode try_send(int sockfd, void* data, u64 size, u64* out_sent) {

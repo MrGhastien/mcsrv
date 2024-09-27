@@ -1,11 +1,17 @@
+/**
+ * @file connection.h
+ * @author Bastien Morino
+ *
+ */
+
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
+#include "containers/bytebuffer.h"
 #include "definitions.h"
 #include "memory/arena.h"
-#include "containers/bytebuffer.h"
 #include "network/compression.h"
-#include "network/encryption.h"
+#include "network/security.h"
 #include "utils/string.h"
 
 typedef struct pkt Packet;
@@ -19,28 +25,31 @@ enum State {
     _STATE_COUNT
 };
 
+/**
+ * @brief Represents the state of a connection.
+ * Contains the state of a connection, and buffers to keep track of data to read / write.
+ */
 typedef struct connection {
-    /** Arena used to allocate data which persists as long as the connection*/
+    /** Arena used to allocate data which persists as long as the connection. */
     Arena persistent_arena;
-    /** Arena used to allocate temporary data for sending / receiving packets */
+    /** Arena used to allocate temporary data, e.g. for sending / receiving packets. */
     Arena scratch_arena;
 
-    bool compression;
-    bool encryption;
-    enum State state;
+    bool compression; /**< Whether packet compression is enabled. */
+    bool encryption;  /**< Whether packet encryption is enabled. */
+    enum State state; /**< The current PC protocol state of the connection. */
 
+    /** Pointer to the encryption context used by all connections. */
     EncryptionContext* global_enc_ctx;
-    PeerEncryptionContext peer_enc_ctx;
-    CompressionContext cmprss_ctx;
-    
-    int sockfd;
+    PeerEncryptionContext peer_enc_ctx; /**< Peer-specific encryption context. */
+    CompressionContext cmprss_ctx;      /**< Compression context. */
 
-    /** These 4 fields are used to keep track of the reading progress */
+    int sockfd; /**< Linux file descriptor of the connection's socket.*/
+
     bool has_read_size;
-    u8* pkt_buffer;
-    u64 bytes_read;
-    u64 buffer_size;
-
+    ByteBuffer recv_buffer;
+    /** Keeps track of whether the underlying socket is writable or not. */
+    bool can_send;
     /** Encoded packet sending queue */
     ByteBuffer send_buffer;
 
@@ -57,13 +66,11 @@ typedef struct connection {
     pthread_mutex_t mutex;
 } Connection;
 
-Connection conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
+Connection
+conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
 
-void conn_reset_buffer(Connection* conn, void* new_buffer, u64 size);
-
-enum IOCode conn_read_bytes(Connection* conn);
 bool conn_is_resuming_read(const Connection* conn);
 
-enum IOCode conn_send_bytes(Connection* conn);
+bool conn_is_closed(const Connection* conn);
 
 #endif /* ! CONTEXT_H */

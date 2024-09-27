@@ -1,11 +1,11 @@
-#include "encryption.h"
+#include "security.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "network/connection.h"
 #include "utils/string.h"
-
 #include "json/json.h"
+
 #include <curl/curl.h>
 #include <openssl/crypto.h>
 #include <openssl/encoder.h>

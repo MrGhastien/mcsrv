@@ -22,7 +22,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/network/utils.c \
 		$(SRC_DIR)/network/encoders.c \
 		$(SRC_DIR)/network/sender.c \
-		$(SRC_DIR)/network/encryption.c \
+		$(SRC_DIR)/network/security.c \
 		$(SRC_DIR)/network/compression.c \
 		$(SRC_DIR)/platform/signal-handler.c \
 		$(SRC_DIR)/platform/mc_threads_linux.c \

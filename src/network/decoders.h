@@ -4,7 +4,7 @@
 #include "connection.h"
 #include "packet.h"
 
-#define PKT_DECODER(name) void pkt_decode_##name(Packet* packet, Arena* arena, u8* raw)
+#define PKT_DECODER(name) void pkt_decode_##name(Packet* packet, Arena* arena, ByteBuffer* bytes)
 
 PKT_DECODER(dummy);
 

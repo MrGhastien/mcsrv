@@ -2,6 +2,7 @@
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
+
 #include <zlib.h>
 
 #define CHUNK 16384

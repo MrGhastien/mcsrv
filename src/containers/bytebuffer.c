@@ -3,6 +3,7 @@
 #include "network/utils.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
+#include "utils/string.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -159,10 +160,10 @@ void bytebuf_write_buffer(ByteBuffer* dst, const ByteBuffer* src) {
     do {
         size = bytebuf_contiguous_read(&cpy, &tmp);
         bytebuf_write(dst, tmp, size);
-    } while(size > 0);
+    } while (size > 0);
 }
 
-void bytebuf_write(ByteBuffer* buffer, void* data, size_t size) {
+void bytebuf_write(ByteBuffer* buffer, const void* data, size_t size) {
     ensure_capacity(buffer, buffer->size + size);
 
     if (is_fixed(buffer))
@@ -193,7 +194,7 @@ void bytebuf_write_varint(ByteBuffer* buffer, int n) {
     bytebuf_write(buffer, buf, i + 1);
 }
 
-void bytebuf_prepend(ByteBuffer* buffer, void* data, u64 size) {
+void bytebuf_prepend(ByteBuffer* buffer, const void* data, u64 size) {
     ensure_capacity(buffer, buffer->size + size);
 
     if (is_fixed(buffer)) {
@@ -225,9 +226,44 @@ i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
 
     bytebuf_read_const(buffer, size, out_data);
 
-    if(!is_fixed(buffer))
+    if (!is_fixed(buffer))
         memmove(buffer->buf, offset(buffer->buf, size), buffer->size - size);
     return register_read(buffer, size);
+}
+
+i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
+    i32 res = 0;
+    u64 position = 0;
+    i64 i = 0;
+    u8 byte;
+    while (TRUE) {
+        if (bytebuf_read(buffer, sizeof byte, &byte) != 1) {
+            log_error("Failed to decode varint: Invalid data.");
+            return -1;
+        }
+        res |= (byte & SEGMENT_BITS) << position;
+        i++;
+        position += 7;
+
+        if ((byte & CONTINUE_BIT) == 0)
+            break;
+
+        if (position >= 32)
+            return -1;
+    }
+    *out = res;
+    return i;
+}
+
+i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str) {
+    i32 length = 0;
+    i64 len_byte_count = bytebuf_read_varint(buffer, &length);
+    if (len_byte_count == -1)
+        return -1;
+
+    *out_str = str_create_from_buffer(offset(buffer->buf, buffer->read_head), length, arena);
+
+    return len_byte_count + register_read(buffer, length);
 }
 
 i64 bytebuf_peek(ByteBuffer* buffer, u64 size, void* out_data) {
@@ -278,4 +314,47 @@ u64 bytebuf_contiguous_write(ByteBuffer* buffer, void** out_region) {
         size = buffer->read_head - buffer->write_head;
 
     return register_write(buffer, size);
+}
+
+void bytebuf_unwrite(ByteBuffer* buffer, u64 size) {
+    if (size == 0)
+        return;
+
+    if (size >= buffer->size) {
+        buffer->size = 0;
+        if (is_fixed(buffer))
+            buffer->write_head = buffer->read_head;
+        return;
+    }
+
+    buffer->size -= size;
+    if (is_fixed(buffer)) {
+        buffer->write_head -= size;
+        if (buffer->write_head < 0)
+            buffer->write_head += buffer->capacity;
+    }
+}
+
+void bytebuf_unread(ByteBuffer* buffer, u64 size) {
+    if(size == 0)
+        return;
+
+    // Reading from a dynamic buffer immediately deletes the data.
+    if(!is_fixed(buffer)) {
+        log_error("Cannot unread data from a dynamic byte buffer.");
+        return;
+    }
+
+    u64 available = buffer->capacity - buffer->size;
+    if(size >= available) {
+        buffer->size = buffer->capacity;
+        buffer->read_head = buffer->write_head;
+        return;
+    }
+
+    buffer->size += size;
+    buffer->read_head -= size;
+    if(buffer->read_head < 0)
+        buffer->read_head += buffer->capacity;
+
 }

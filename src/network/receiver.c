@@ -1,10 +1,11 @@
 #include "receiver.h"
-#include "logger.h"
-#include "utils/bitwise.h"
 #include "connection.h"
+#include "containers/bytebuffer.h"
+#include "logger.h"
+#include "memory/arena.h"
 #include "network.h"
 #include "packet.h"
-#include "utils.h"
+#include "utils/bitwise.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -17,21 +18,20 @@ static enum IOCode read_varint(Connection* conn) {
         ssize_t status = recv(conn->sockfd, &byte, sizeof byte, 0);
         if (status == -1)
             return errno == EWOULDBLOCK || errno == EAGAIN ? IOC_AGAIN : IOC_ERROR;
-        else if(status == 0)
+        else if (status == 0)
             return IOC_CLOSED;
 
-        if(conn->bytes_read == 0 && byte == 0xfe) {
+        if (conn->recv_buffer.size == 0 && byte == 0xfe) {
             log_error("Received legacy ping request. Not implemented yet!!");
             return IOC_ERROR;
         }
 
-        conn->pkt_buffer[conn->bytes_read] = byte;
-        conn->bytes_read++;
+        bytebuf_write(&conn->recv_buffer, &byte, sizeof byte);
 
         if ((byte & CONTINUE_BIT) == 0)
             break;
 
-        if (conn->bytes_read == 4)
+        if (conn->recv_buffer.size == 4)
             return IOC_ERROR;
     }
 
@@ -39,25 +39,26 @@ static enum IOCode read_varint(Connection* conn) {
 }
 
 static enum IOCode read_bytes(Connection* conn) {
-    size_t total_read = 0;
-    while (conn->bytes_read < conn->buffer_size) {
-        void* ptr = offset(conn->pkt_buffer, conn->bytes_read);
-        size_t remaining = conn->buffer_size - conn->bytes_read;
-        ssize_t immediate_read = recv(conn->sockfd, ptr, remaining, 0);
-        if (immediate_read < 0)
-            return errno == EAGAIN || errno == EWOULDBLOCK ? IOC_AGAIN : IOC_ERROR;
-
-        conn->bytes_read += immediate_read;
+    while (conn->recv_buffer.size < conn->recv_buffer.capacity) {
+        void* ptr;
+        u64 remaining = bytebuf_contiguous_write(&conn->recv_buffer, &ptr);
+        while (remaining > 0) {
+            ssize_t immediate_read = recv(conn->sockfd, ptr, remaining, 0);
+            if (immediate_read < 0) {
+                bytebuf_unwrite(&conn->recv_buffer, remaining);
+                return errno == EAGAIN || errno == EWOULDBLOCK ? IOC_AGAIN : IOC_ERROR;
+            }
+            remaining -= immediate_read;
+        }
     }
-    return total_read;
+    return IOC_OK;
 }
 
 enum IOCode read_packet(Connection* conn, Arena* arena) {
 
     if (!conn_is_resuming_read(conn)) {
         // New packet
-        int* buf = arena_allocate(arena, sizeof *buf);
-        conn_reset_buffer(conn, buf, sizeof *buf);
+        conn->recv_buffer = bytebuf_create_fixed(sizeof(int), arena);
         conn->has_read_size = FALSE;
     }
 
@@ -69,24 +70,21 @@ enum IOCode read_packet(Connection* conn, Arena* arena) {
         if (code != IOC_OK)
             return code;
 
-        decode_varint(conn->pkt_buffer, &length);
-        arena_free(arena, sizeof(int));
+        if(bytebuf_read_varint(&conn->recv_buffer, &length) <= 0)
+            return IOC_ERROR;
         conn->has_read_size = TRUE;
-
-        u8* buf = arena_allocate(arena, length);
-
-        conn_reset_buffer(conn, buf, length);
+        conn->recv_buffer = bytebuf_create_fixed(length, arena);
     }
 
     return read_bytes(conn);
 }
 
-static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
-    out_pkt->total_length = raw->size;
+static bool decode_packet(ByteBuffer* bytes, Connection* conn, Packet* out_pkt) {
+    out_pkt->total_length = bytes->size;
 
     int id;
-    size_t id_size = decode_varint(raw->data, &id);
-    if (id_size == FAIL) {
+    i64 id_size = bytebuf_read_varint(bytes, &id);
+    if (id_size <= 0) {
         log_error("Received invalid packet id");
         return FALSE;
     }
@@ -97,7 +95,7 @@ static bool decode_packet(RawPacket* raw, Connection* conn, Packet* out_pkt) {
     pkt_decoder decoder = get_pkt_decoder(out_pkt, conn);
     if (!decoder)
         return FALSE;
-    decoder(out_pkt, &conn->scratch_arena, offset(raw->data, id_size));
+    decoder(out_pkt, &conn->scratch_arena, bytes);
 
     log_debugf("Packet IN: %s", get_pkt_name(out_pkt, conn));
 
@@ -115,21 +113,23 @@ enum IOCode receive_packet(Connection* conn) {
 
     enum IOCode code = IOC_OK;
 
+    //TODO: HANDLE DECOMPRESSION & DECRYPTION !
+
     while (code == IOC_OK) {
-        if(!conn_is_resuming_read(conn))
+        if (!conn_is_resuming_read(conn))
             arena_save(&conn->scratch_arena);
         code = read_packet(conn, &conn->scratch_arena);
         if (code != IOC_OK)
             return code;
 
-        RawPacket raw = {.data = conn->pkt_buffer, .size = conn->buffer_size};
         Packet pkt;
 
-        if(!decode_packet(&raw, conn, &pkt))
+        if (!decode_packet(&conn->recv_buffer, conn, &pkt))
             return IOC_ERROR;
-        conn_reset_buffer(conn, NULL, 0);
+        conn->has_read_size = FALSE;
+        conn->recv_buffer = (ByteBuffer) {0};
 
-        if(!handle_packet(&pkt, conn))
+        if (!handle_packet(&pkt, conn))
             return IOC_ERROR;
 
         arena_restore(&conn->scratch_arena);

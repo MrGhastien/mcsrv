@@ -6,7 +6,7 @@
 #include "network.h"
 #include "network/compression.h"
 #include "network/connection.h"
-#include "network/encryption.h"
+#include "network/security.h"
 #include "network/utils.h"
 #include "packet.h"
 #include "sender.h"
@@ -90,6 +90,7 @@ PKT_HANDLER(status) {
     log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     write_packet(&out_pkt, conn);
+    json_destroy(&json);
     return TRUE;
 }
 
