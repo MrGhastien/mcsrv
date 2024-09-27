@@ -2,3 +2,7 @@
 compile_commands.json
 mcsrv
 *.o
+*.a
+
+docs/
+test.java
