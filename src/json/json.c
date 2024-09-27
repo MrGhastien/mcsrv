@@ -8,13 +8,15 @@
 
 #include <stdio.h>
 
-static const char* TYPES[_JSON_COUNT] = {[JSON_NULL] = "JSON_NULL",
-                                         [JSON_INT] = "JSON_INT",
-                                         [JSON_FLOAT] = "JSON_FLOAT",
-                                         [JSON_OBJECT] = "JSON_OBJECT",
-                                         [JSON_ARRAY] = "JSON_ARRAY",
-                                         [JSON_STRING] = "JSON_STRING",
-                                         [JSON_BOOL] = "JSON_BOOL"};
+static const char* TYPES[_JSON_COUNT] = {
+    [JSON_NULL] = "JSON_NULL",
+    [JSON_INT] = "JSON_INT",
+    [JSON_FLOAT] = "JSON_FLOAT",
+    [JSON_OBJECT] = "JSON_OBJECT",
+    [JSON_ARRAY] = "JSON_ARRAY",
+    [JSON_STRING] = "JSON_STRING",
+    [JSON_BOOL] = "JSON_BOOL",
+};
 
 static void json_node_stringify(JSON* json, const JSONNode* node, string* str, size_t level);
 
@@ -324,7 +326,7 @@ JSONNode* json_get_array(const JSONNode* node, u64 idx) {
 }
 
 i64 json_get_length(const JSONNode* node) {
-    switch(node->type) {
+    switch (node->type) {
     case JSON_OBJECT:
         return node->data.obj->size;
     case JSON_ARRAY:

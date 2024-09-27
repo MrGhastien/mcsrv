@@ -2,6 +2,7 @@
  * @file connection.h
  * @author Bastien Morino
  *
+ * @brief Structure representing a connection.
  */
 
 #ifndef CONTEXT_H
@@ -16,18 +17,32 @@
 
 typedef struct pkt Packet;
 
+/**
+ * @brief Enumeration of connection states.
+ *
+ * 
+   */
 enum State {
+    /** The connection is closed. */
     STATE_CLOSED = -1,
+    /** The connection is open, and no packets have been received yet. */
     STATE_HANDSHAKE,
+    /** The connection is open to send the server's ping. */
     STATE_STATUS,
+    /** The connected peer is logging-in. */
     STATE_LOGIN,
+    /** The connected peer is playing the game. */
     STATE_PLAY,
     _STATE_COUNT
 };
 
 /**
- * @brief Represents the state of a connection.
- * Contains the state of a connection, and buffers to keep track of data to read / write.
+ * @brief Represents a connection to a peer.
+ *
+ * Contains the state of a connection, the OS specific socket handles, and buffers to keep
+ * track of data to read / write.
+ * Connections for status requests, i.e. server pings in the multiplayer menu, do not have
+ * a player name, packet encryption or compression.
  */
 typedef struct connection {
     /** Arena used to allocate data which persists as long as the connection. */
@@ -46,7 +61,9 @@ typedef struct connection {
 
     int sockfd; /**< Linux file descriptor of the connection's socket.*/
 
-    bool has_read_size;
+    /** Keeps track of whether the last packet read operation read the packet's size or not. */
+    bool has_read_size; 
+    /** Buffer storing raw (possibly compressed or encrypted) packets. */
     ByteBuffer recv_buffer;
     /** Keeps track of whether the underlying socket is writable or not. */
     bool can_send;
@@ -59,18 +76,47 @@ typedef struct connection {
     /** Index of the connection in the connection table */
     u64 table_index;
 
+    /** Name of the player connected to the server. */
     string player_name;
-    string peer_addr;
-    u32 peer_port;
+    string peer_addr; /**< Address of the connected peer represented by this connection. */
+    u32 peer_port; /**< TCP port of the connected peer. */
 
+    /** Thread MutEx device to prevent race conditions. */
     pthread_mutex_t mutex;
 } Connection;
 
+/**
+   * @brief Initializes a new connection.
+ *
+ * @param sockfd The File Descriptor of the socket, connected to the peer.
+ * @param table_index The index of the new connection in the global connection table.
+ * @param[in] enc_ctx Pointer to the global encryption context.
+ * @param addr The address of the connected peer.
+ * @param port the TCP port through which the peer is connected.
+* @return A new connection.
+ */
 Connection
 conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
 
+/**
+ * @brief Indicates whether a previous packet read was stopped.
+ *
+ * When reading from the socket of the provided connection would block, the reading process
+ * is interrupted and the network thread goes back to waiting for EPoll events.
+ * In that case, when the socket becomes readable again, we should *resume* the reading
+ * process where it was stopped.
+ *
+ * @param[in] conn The connection to check the reading process of.
+ * @return @ref TRUE if the previous read was interrupted, @ref FALSE otherwise.
+ */
 bool conn_is_resuming_read(const Connection* conn);
 
+/**
+ * @brief Indicates whether a connection is closed or open.
+ *
+ * @param[in] conn The connection to check.
+ * @return @ref TRUE if the connection is closed, @ref FALSE otherwise.
+ */
 bool conn_is_closed(const Connection* conn);
 
 #endif /* ! CONTEXT_H */
