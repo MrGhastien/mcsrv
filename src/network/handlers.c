@@ -141,7 +141,7 @@ PKT_HANDLER(log_start) {
 static bool enable_compression(Connection* conn) {
 
     PacketSetCompress payload = {
-        .threadhold = COMPRESS_THRESHOLD,
+        .threshold = COMPRESS_THRESHOLD,
     };
 
     Packet cmprss_pkt = {

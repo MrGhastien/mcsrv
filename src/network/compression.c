@@ -7,6 +7,11 @@
 
 #define CHUNK 16384
 
+// WARNING: Notchian client initializes and resets ZLib streams each time
+// a packet is sent / received.
+// This is not the case here, as streams are initialized and reset once per connection !
+// This works now, but this needs to be monitored.
+
 typedef i32 (*zlib_action)(z_streamp stream, int flush);
 typedef i32 (*zlib_resetter)(z_streamp stream);
 
@@ -41,6 +46,7 @@ bool compression_init(CompressionContext* ctx, Arena* arena) {
         log_error("Failed to initialize the compression context.");
         return FALSE;
     }
+    ctx->threshold = COMPRESS_THRESHOLD;
     return TRUE;
 }
 

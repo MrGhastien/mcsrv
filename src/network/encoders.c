@@ -39,7 +39,7 @@ PKT_ENCODER(enc_req) {
 PKT_ENCODER(compress) {
     PacketSetCompress* payload = pkt->payload;
 
-    bytebuf_write_varint(buffer, payload->threadhold);
+    bytebuf_write_varint(buffer, payload->threshold);
 }
 
 PKT_ENCODER(log_success) {

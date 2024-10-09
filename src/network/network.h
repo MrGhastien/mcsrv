@@ -1,6 +1,9 @@
 /**
  * @file network.h
  * @author Bastien Morino
+ * @ingroup networking
+ * @addtogroup networking
+ * @{
  *
  * General functions regarding the Network sub-system.
  */
@@ -9,9 +12,6 @@
 #define NETWORK_H
 
 #include "definitions.h"
-
-// Notchian server compression threshold
-#define COMPRESS_THRESHOLD 256
 
 /**
  * Enumeration used internally to keep track of the state of connections.
@@ -43,3 +43,5 @@ i32 network_init(char* host, i32 port, u64 max_connections);
 void network_stop(void);
 
 #endif /* ! NETWORK_H */
+
+/** @} */

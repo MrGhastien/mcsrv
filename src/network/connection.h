@@ -15,13 +15,13 @@
 #include "network/security.h"
 #include "utils/string.h"
 
-typedef struct pkt Packet;
+typedef struct Packet Packet;
 
 /**
- * @brief Enumeration of connection states.
+ * Enumeration of connection states.
  *
  * 
-   */
+ */
 enum State {
     /** The connection is closed. */
     STATE_CLOSED = -1,
@@ -37,14 +37,14 @@ enum State {
 };
 
 /**
- * @brief Represents a connection to a peer.
+ * Represents a connection to a peer.
  *
  * Contains the state of a connection, the OS specific socket handles, and buffers to keep
  * track of data to read / write.
  * Connections for status requests, i.e. server pings in the multiplayer menu, do not have
  * a player name, packet encryption or compression.
  */
-typedef struct connection {
+typedef struct Connection {
     /** Arena used to allocate data which persists as long as the connection. */
     Arena persistent_arena;
     /** Arena used to allocate temporary data, e.g. for sending / receiving packets. */
@@ -99,7 +99,7 @@ Connection
 conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
 
 /**
- * @brief Indicates whether a previous packet read was stopped.
+ * Indicates whether a previous packet read was stopped.
  *
  * When reading from the socket of the provided connection would block, the reading process
  * is interrupted and the network thread goes back to waiting for EPoll events.
@@ -112,7 +112,7 @@ conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr
 bool conn_is_resuming_read(const Connection* conn);
 
 /**
- * @brief Indicates whether a connection is closed or open.
+ * Indicates whether a connection is closed or open.
  *
  * @param[in] conn The connection to check.
  * @return @ref TRUE if the connection is closed, @ref FALSE otherwise.

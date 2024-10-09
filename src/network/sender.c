@@ -64,7 +64,7 @@ void write_packet(const Packet* pkt, Connection* conn) {
     log_debugf("Packet OUT: %s", get_pkt_name(pkt, conn));
 
     if (conn->compression) {
-        if (scratch.size >= COMPRESS_THRESHOLD) {
+        if (scratch.size >= conn->cmprss_ctx.threshold) {
             u64 uncompressed_size = scratch.size;
             ByteBuffer compressed_scratch =
                 bytebuf_create_fixed(uncompressed_size, &conn->scratch_arena);
