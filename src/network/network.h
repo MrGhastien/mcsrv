@@ -2,10 +2,11 @@
  * @file network.h
  * @author Bastien Morino
  * @ingroup networking
- * @addtogroup networking
- * @{
  *
  * General functions regarding the Network sub-system.
+ *
+ * @addtogroup networking
+ * @{
  */
 
 #ifndef NETWORK_H
