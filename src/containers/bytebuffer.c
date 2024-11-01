@@ -266,7 +266,7 @@ i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str) {
     return len_byte_count + register_read(buffer, length);
 }
 
-i64 bytebuf_peek(ByteBuffer* buffer, u64 size, void* out_data) {
+i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data) {
     if (size > buffer->size)
         size = buffer->size;
 

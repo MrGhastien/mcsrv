@@ -136,8 +136,8 @@ void bytebuf_prepend(ByteBuffer* buffer, const void* data, u64 size);
 void bytebuf_prepend_varint(ByteBuffer* buffer, i32 num);
 
 /**
-   * Reads arbitrary data from a byte buffer.
-*
+ * Reads arbitrary data from a byte buffer.
+ *
  * This functions assumes the memory region pointed to by @p out_data is at least as large as the specified size.
  *
  * @param buffer The buffer to read from.
@@ -146,9 +146,36 @@ void bytebuf_prepend_varint(ByteBuffer* buffer, i32 num);
  * @return The number of bytes read.
    */
 i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data);
+/**
+ * Reads and decodes a MC VarInt from a byte buffer.
+ *
+ * @param buffer The buffer to read from.
+ * @param[out] out A pointer to a 32-bit signed integer that will contained the decoded VarInt.
+ * @return The number of bytes read and decoded.
+ */
 i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out);
+/**
+ * Reads a MC string from a byte buffer.
+ *
+ * Minecraft strings are made of a UTF-8 string prefixed by its length encoded as a VarInt.
+ *
+ * @param buffer The buffer to read from.
+ * @param arena The arena used to allocate the resulting string.
+ * @param[out] out_str A pointer to a string structure that will contain the resulting string.
+ * @return The number of bytes read.
+ */
 i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str);
-i64 bytebuf_peek(ByteBuffer* buffer, u64 size, void* out_data);
+
+/**
+ * Reads arbitrary data from a byte buffer, without registering the read.
+ *
+ * Chained calls of this function will start reading from the same point in the buffer.
+ * @param buffer The buffer to read from.
+ * @param size The number of bytes to read.
+ * @param[out] out_data A pointer to the memory where data is written.
+ * @return The number of bytes read.
+ */
+i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data);
 
 /**
  * Get the size of the next contiguous readable region of the buffer,

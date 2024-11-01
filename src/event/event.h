@@ -4,6 +4,8 @@
  *
  * General functions regarding the Network sub-system.
  *
+ * Each event is identified by a unique number (u32).
+ *
  * @addtogroup event
  * @{
  *
@@ -46,8 +48,11 @@ typedef struct EventInfo {
     } event_data;
 } EventInfo;
 
+/**
+ * Enumeration of standard events.
+ */
 enum BuiltinEvents {
-    BEVENT_STOP = 0,
+    BEVENT_STOP = 0, /**< Event triggered when the server must stop. */
     _BEVENT_COUNT
 };
 
