@@ -1,0 +1,19 @@
+/**
+
+@defgroup event
+Sub-system which handles communication between several other sub-systems.
+ 
+## Sub system structure
+The event sub-system consists of only one thread doing all of the work.
+
+Sub systems can *trigger* an event. Triggered events must then be handled.
+When they are triggered, events are stored in a FIFO data structure (queue), meaning events triggered first are handled first.
+
+Triggering an event is asynchronous, i.e. it does not block the calling thread.
+
+The event thread waits for events to be triggered. When one or multiple events are triggered, it empties
+the queue and handles events one by one.
+*Handling* an event means calling all functions that were registered as *listeners* for the event.
+Sub systems can register an event listener for a particular event at any point in time.
+
+ */

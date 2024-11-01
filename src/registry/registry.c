@@ -16,7 +16,7 @@ static Registry root;
 static Arena arena;
 
 void registry_system_init(void) {
-    arena     = arena_create(REGISTRY_ARENA_SIZE);
+    arena = arena_create(REGISTRY_ARENA_SIZE);
     root.name = resid_default_cstr("root");
     dict_init_fixed(&root.entries, NULL, &arena, 100, sizeof(ResourceID), sizeof(Registry));
 
@@ -27,18 +27,17 @@ void registry_system_cleanup(void) {
     arena_destroy(&arena);
 }
 
-
-i64 registry_create(ResourceID name, u64 stride) {
+bool registry_create(ResourceID name, u64 stride) {
     Registry reg = {.name = name};
     dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
 
     return dict_put(&root.entries, &name, &reg);
 }
 
-void registry_register(i64 registry, ResourceID id, void* instance) {
-    Registry* reg = dict_ref(&root.entries, registry);
-    if(!reg)
+void registry_register(ResourceID registry_name, ResourceID id, void* instance) {
+    Registry reg;
+    if (dict_get(&root.entries, &registry_name, &reg) < 0)
         abort();
 
-    dict_put(&reg->entries, &id, instance);
+    dict_put(&reg.entries, &id, instance);
 }

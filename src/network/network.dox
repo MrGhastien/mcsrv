@@ -1,48 +1,49 @@
 /**
- * @defgroup networking
- * Sub-system dedicated to handle packets and connections.
- *
- * ## Sub system structure
- * The sub-system can be divided into multiple parts:
- * - The *receiver*, which reads, decodes and handles packets,
- * - The *sender*, which encodes, encrypts, compresses and sends packets,
- * - The *main loop*, which run the receiver / the sender when the underlying socket
- *   can be read from / written to.
- *
- * ### The receiver
- * The receiver is comprised of 3 steps :
- * - The **reading** step, i.e. reading the stream of bytes from a connected socket,
- *   and delimiting the binary data. It is also responsible for decrypting and decompressing
- *   packets.
- * - The **decoding** step, meaning reading the previously delimited binary data and
- *   initializing a new packet structure to be easily used next.
- * - The **handling** step, which uses the initialized packet structure to perform actions
- *   or update other parts of the server, such as triggering an event.
- *
- * The decoding and handling steps make use of packet specific functions stored inside a table
- * (kind of like C++ vtables). The decryption and decompression of packets do not use this table,
- * as it is done in the same way for all packets.
- *
- * All of the receiver's steps are done by the `network` thread.
- *
- * ### The sender
- * The sender is also comprised of 2 steps :
- * - The **encoding** step, which is essentially the inverse of the receiver's decoding step.
- *   In this step, packets stored in a packet structure are turned into a binary stream,
- *   that is then compressed and encrypted.
- * - The **sending** step, which simply tries to send the most bytes to the peer connected to
- *   the server.
- *
- * As for the receiver, encoding makes use of packet specific functions through a table, but
- * encryption and compression do not.
- *
- * The encoding step is always done by threads making requests to send packets. If possible,
- * they also try to send the resulting binary stream to the peer, as well as previous unsent bytes.<br>
- * If it is not possible to send all bytes to the peer, remaining bytes are stored in a connection
- * specific @ref ByteBuffer. When the main network loop notices that it is possible to send more bytes,
- * the `network` thread tries to send buffered bytes again.
- *
- * ### The main loop
- * The main loop is the core routine that initializes sockets, and invokes the receiver or the sender when needed.
- * It makes use of Linux' EPoll mechanism to perform asynchronous I/O.
- */
+@defgroup networking
+Sub-system dedicated to handle packets and connections.
+
+## Sub system structure
+The sub-system can be divided into multiple parts:
+- The *receiver*, which reads, decodes and handles packets,
+- The *sender*, which encodes, encrypts, compresses and sends packets,
+- The *main loop*, which run the receiver / the sender when the underlying socket
+  can be read from / written to.
+
+### The receiver
+The receiver is comprised of 3 steps :
+- The **reading** step, i.e. reading the stream of bytes from a connected socket,
+  and delimiting the binary data. It is also responsible for decrypting and decompressing
+  packets.
+- The **decoding** step, meaning reading the previously delimited binary data and
+  initializing a new packet structure to be easily used next.
+- The **handling** step, which uses the initialized packet structure to perform actions
+  or update other parts of the server, such as triggering an event.
+
+The decoding and handling steps make use of packet specific functions stored inside a table
+(kind of like C++ vtables). The decryption and decompression of packets do not use this table,
+as it is done in the same way for all packets.
+
+All of the receiver's steps are done by the `network` thread.
+
+### The sender
+The sender is also comprised of 2 steps :
+- The **encoding** step, which is essentially the inverse of the receiver's decoding step.
+  In this step, packets stored in a packet structure are turned into a binary stream,
+  that is then compressed and encrypted.
+- The **sending** step, which simply tries to send the most bytes to the peer connected to
+  the server.
+
+As for the receiver, encoding makes use of packet specific functions through a table, but
+encryption and compression do not.
+
+The encoding step is always done by threads making requests to send packets. If possible,
+they also try to send the resulting binary stream to the peer, as well as previous unsent bytes.<br>
+If it is not possible to send all bytes to the peer, remaining bytes are stored in a connection
+specific @ref ByteBuffer. When the main network loop notices that it is possible to send more bytes,
+the `network` thread tries to send buffered bytes again.
+
+### The main loop
+The main loop is the core routine that initializes sockets, and invokes the receiver or the sender when needed.
+It makes use of Linux' EPoll mechanism to perform asynchronous I/O.
+
+*/

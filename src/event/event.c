@@ -11,22 +11,22 @@
 #define MAX_EVENT_COUNT 256
 #define MAX_TRIGGERED_EVENTS 32
 
-typedef struct event_listener {
+typedef struct EventListener {
     void* user_data;
-    event_handler handler;
+    event_listener handler;
 } EventListener;
 
-typedef struct event {
+typedef struct EventEntry {
     Vector listeners;
     string name;
 } EventEntry;
 
-typedef struct triggered_event {
+typedef struct TriggeredEvent {
     EventInfo info;
     u32 code;
 } TriggeredEvent;
 
-typedef struct event_ctx {
+typedef struct EventContext {
     Arena arena;
     Dict event_registry;
     pthread_mutex_t mutex;
@@ -98,7 +98,7 @@ void event_register_event(u32 code, string name) {
     pthread_mutex_unlock(&ctx.mutex);
 }
 
-void event_register_listener(u32 code, event_handler handler, void* data) {
+void event_register_listener(u32 code, event_listener handler, void* data) {
     if(code == BEVENT_STOP) {
         log_error("The STOP event cannot be listened to.");
         return;

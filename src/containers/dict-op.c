@@ -55,19 +55,6 @@ static i64 get_elem(const Dict* map, const void* key, struct node* out_node) {
     return idx;
 }
 
-void dict_clear(Dict* map) {
-    u64 j = map->size;
-    for (u64 i = 0; i < map->capacity && j > 0; i++) {
-        struct node node = get_node(map, i);
-        if (node.key) {
-            free(node.key);
-            node.hash = 0;
-            node.key = NULL;
-            j--;
-        }
-    }
-}
-
 static void rehash_nodes(Dict* map, void* old_base, void* new_base, u64 new_capacity) {
     u64 total_stride = sizeof(u64) + map->key_stride + map->value_stride;
     for (u64 i = 0; i < map->capacity; i++) {
@@ -145,9 +132,9 @@ i64 dict_remove(Dict* map, const void* key, void* outValue) {
     if (idx == -1)
         return -1;
 
-    if (outValue) {
+    if (outValue)
         memcpy(outValue, n.value, map->value_stride);
-    }
+
     *n.hashp = 0;
     map->size--;
     if (!map->fixed && map->size <= map->capacity * MIN_LOAD_FACTOR)
