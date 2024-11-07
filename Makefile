@@ -24,6 +24,8 @@ MAIN_TARGET = mcsrv
 
 .PHONY: all clean $(TEST_TARGETS)
 
+all: debug
+
 debug: CFLAGS += -O0 -g -DDEBUG 
 debug: $(MAIN_TARGET)
 
