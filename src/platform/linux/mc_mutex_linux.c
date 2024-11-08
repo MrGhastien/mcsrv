@@ -1,7 +1,7 @@
-#include "mc_mutex.h"
+#include "platform/mc_mutex.h"
 
 #ifdef MC_PLATFORM_LINUX
-#include "mc_mutex_linux.h"
+#include "mc_mutex.h"
 #include "logger.h"
 
 #include <pthread.h>

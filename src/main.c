@@ -1,14 +1,12 @@
 #include "event/event.h"
 #include "logger.h"
 #include "network/network.h"
-#include "platform/signal-handler.h"
+#include "platform/platform.h"
 #include "registry/registry.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#include <signal.h>
 
 typedef struct server_ctx {
     bool running;
@@ -18,17 +16,11 @@ static ServerContext server_ctx;
 
 static i32 init(char* host, i32 port, u64 max_connections) {
 
-    sigset_t global_sigmask;
-    sigfillset(&global_sigmask);
-
-    // Block the SIGINT & SIGTERM signals for all other threads.
-    // Make sure the main thread is the one handling signals.
-    pthread_sigmask(SIG_BLOCK, &global_sigmask, NULL);
 
     i32 code = 0;
 
     logger_system_init();
-    signal_system_init();
+    platform_init();
     event_system_init();
     registry_system_init();
     code = network_init(host, port, max_connections);
@@ -48,7 +40,7 @@ static void cleanup(void) {
     network_stop();
     registry_system_cleanup();
     event_system_cleanup();
-    signal_system_cleanup();
+    platform_cleanup();
     logger_system_cleanup();
 }
 

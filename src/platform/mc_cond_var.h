@@ -4,11 +4,7 @@
 #include "definitions.h"
 #include "platform/mc_mutex.h"
 
-#ifdef MC_PLATFORM_LINUX
-#include "mc_cond_var_linux.h"
-#endif
-
-typedef struct mc_cond_var MCCondVar;
+typedef struct MCCondVar MCCondVar;
 
 bool mcvar_create(MCCondVar* cond_var);
 bool mcvar_destroy(MCCondVar* cond_var);

@@ -3,9 +3,15 @@ export INC_DIR := $(CURDIR)/include
 export OBJ_DIR := $(CURDIR)/obj
 export TEST_DIR := $(CURDIR)/test
 
+ifeq ($(OS),Windows_NT)
+	detected_os := WINDOWS
+else
+	detected_os := $(shell uname | tr '[:lower:]' '[:upper:]')
+endif
+
 export CC = gcc
 export CFLAGS = -Wall -Wextra -Wreturn-type -Werror #-fsanitize=address
-export CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_LINUX
+export CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_$(detected_os)
 #export LDFLAGS = -fsanitize=address
 export LDLIBS := -lcrypto -lz -lcurl
 

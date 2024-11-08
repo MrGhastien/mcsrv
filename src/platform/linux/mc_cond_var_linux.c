@@ -1,8 +1,8 @@
-#include "logger.h"
-#include "mc_cond_var.h"
+#include "platform/mc_cond_var.h"
 
 #ifdef MC_PLATFORM_LINUX
-#include "mc_mutex_linux.h"
+#include "logger.h"
+#include "mc_mutex.h"
 
 #include <errno.h>
 

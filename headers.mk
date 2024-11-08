@@ -21,12 +21,13 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/network/encoders.h \
 		$(SRC_DIR)/network/security.h \
 		$(SRC_DIR)/network/compression.h \
-		$(SRC_DIR)/platform/mc_threads.h \
+		$(SRC_DIR)/platform/platform.h \
+		$(SRC_DIR)/platform/mc_thread.h \
 		$(SRC_DIR)/platform/mc_mutex.h \
 		$(SRC_DIR)/platform/mc_cond_var.h \
 		$(SRC_DIR)/platform/linux/signal-handler.h \
-		$(SRC_DIR)/platform/linux/mc_threads_linux.h \
-		$(SRC_DIR)/platform/linux/mc_mutex_linux.h \
+		$(SRC_DIR)/platform/linux/mc_thread.h \
+		$(SRC_DIR)/platform/linux/mc_mutex.h \
 		$(SRC_DIR)/json/json.h \
 		$(SRC_DIR)/json/json_internal.h \
 		$(SRC_DIR)/registry/registry.h \

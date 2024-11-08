@@ -4,10 +4,12 @@
 #include "definitions.h"
 
 #ifdef MC_PLATFORM_LINUX
-#include "mc_mutex_linux.h"
+#include "linux/mc_mutex_linux.h"
+#elif defined MC_PLATFORM_WINDOWS
+#include "windows/mc_mutex_windows.h"
 #endif
 
-typedef struct mc_mutex MCMutex;
+typedef struct MCMutex MCMutex;
 
 bool mcmutex_create(MCMutex* mutex);
 bool mcmutex_destroy(MCMutex* mutex);

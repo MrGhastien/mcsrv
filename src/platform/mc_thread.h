@@ -4,13 +4,16 @@
 #include "definitions.h"
 #include "utils/string.h"
 
-typedef struct mc_thread MCThread;
 
 #ifdef MC_PLATFORM_LINUX
-#include "mc_threads_linux.h"
+#include "linux/mc_thread_linux.h"
+#elif defined MC_PLATFORM_WINDOWS
+#include "windows/mc_thread_windows.h"
 #else
 #error Not implemented for this platform yet!
 #endif
+
+typedef struct MCThread MCThread;
 
 typedef void* (*mcthread_routine)(void* arg);
 

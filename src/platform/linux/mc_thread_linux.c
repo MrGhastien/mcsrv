@@ -1,4 +1,4 @@
-#include "mc_threads.h"
+#include "platform/mc_thread.h"
 
 #ifdef MC_PLATFORM_LINUX
 #include "logger.h"

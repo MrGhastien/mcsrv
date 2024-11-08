@@ -24,10 +24,11 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/network/sender.c \
 		$(SRC_DIR)/network/security.c \
 		$(SRC_DIR)/network/compression.c \
-		$(SRC_DIR)/platform/signal-handler.c \
-		$(SRC_DIR)/platform/linux/mc_threads_linux.c \
-		$(SRC_DIR)/platform/linux/mc_mutex_linux.c \
-		$(SRC_DIR)/platform/linux/mc_cond_var_linux.c \
+		$(SRC_DIR)/platform/linux/platform.c \
+		$(SRC_DIR)/platform/linux/signal-handler.c \
+		$(SRC_DIR)/platform/linux/mc_thread.c \
+		$(SRC_DIR)/platform/linux/mc_mutex.c \
+		$(SRC_DIR)/platform/linux/mc_cond_var.c \
 		$(SRC_DIR)/json/json.c \
 		$(SRC_DIR)/json/json_parse.c \
 		$(SRC_DIR)/registry/registry.c \
