@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 
-struct mc_cond_var_linux {
+struct MCCondVar {
     pthread_cond_t internal_var;
 };
 
