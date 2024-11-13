@@ -14,6 +14,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/containers/dict-init.c \
 		$(SRC_DIR)/containers/ring_queue.c \
 		$(SRC_DIR)/containers/bytebuffer.c \
+		$(SRC_DIR)/containers/object_pool.c \
 		$(SRC_DIR)/network/handlers.c \
 		$(SRC_DIR)/network/network.c \
 		$(SRC_DIR)/network/decoders.c \
@@ -24,11 +25,15 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/network/sender.c \
 		$(SRC_DIR)/network/security.c \
 		$(SRC_DIR)/network/compression.c \
-		$(SRC_DIR)/platform/linux/platform.c \
+		$(SRC_DIR)/platform/linux/platform_linux.c \
 		$(SRC_DIR)/platform/linux/signal-handler.c \
-		$(SRC_DIR)/platform/linux/mc_thread.c \
-		$(SRC_DIR)/platform/linux/mc_mutex.c \
-		$(SRC_DIR)/platform/linux/mc_cond_var.c \
+		$(SRC_DIR)/platform/linux/mc_thread_linux.c \
+		$(SRC_DIR)/platform/linux/mc_mutex_linux.c \
+		$(SRC_DIR)/platform/linux/mc_cond_var_linux.c \
+		$(SRC_DIR)/platform/windows/platform_windows.c \
+		$(SRC_DIR)/platform/windows/mc_thread_windows.c \
+		$(SRC_DIR)/platform/windows/mc_mutex_windows.c \
+		$(SRC_DIR)/platform/windows/mc_cond_var_windows.c \
 		$(SRC_DIR)/json/json.c \
 		$(SRC_DIR)/json/json_parse.c \
 		$(SRC_DIR)/registry/registry.c \

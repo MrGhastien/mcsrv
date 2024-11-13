@@ -15,6 +15,21 @@ const Comparator CMP_STRING = {
     .comp = &str_compare_raw,
 };
 
+#ifdef MC_PLATFORM_WINDOWS
+static size_t strlcat(char *dst, const char *src, size_t size) {
+    i64 dstlen = 0;
+    while(dst[dstlen] != '\0') {
+        dstlen++;
+    }
+    u64 total = dstlen;
+    for(; total < size; total++) {
+        dst[total] = src[total - dstlen];
+    }
+    dst[size - 1] = '\0';
+    return total - dstlen;
+}
+#endif
+
 string str_create_dynamic(const char* cstr) {
     size_t len = strlen(cstr);
     char* base = malloc(len + 1);

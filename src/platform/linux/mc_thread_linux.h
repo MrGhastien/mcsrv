@@ -1,13 +1,12 @@
-#ifndef MC_THREADS_LINUX_H
-#define MC_THREADS_LINUX_H
+//
+// Created by bmorino on 13/11/2024.
+//
 
-#include "definitions.h"
+#ifndef MC_THREAD_LINUX_H
+#define MC_THREAD_LINUX_H
+
 #include <pthread.h>
 
-struct MCThread {
-    pthread_t handle;
-};
+typedef pthread_t MCThread;
 
-typedef pthread_key_t MCThreadKey;
-
-#endif /* ! MC_THREADS_LINUX_H */
+#endif /* ! MC_THREAD_LINUX_H */

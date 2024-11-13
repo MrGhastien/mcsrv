@@ -3,8 +3,6 @@
 
 #include <pthread.h>
 
-struct mc_mutex {
-    pthread_mutex_t internal_lock;
-};
+typedef pthread_mutex_t MCMutex;
 
 #endif /* ! MC_MUTEX_LINUX_H */

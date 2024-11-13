@@ -7,6 +7,7 @@
 #include "network/security.h"
 #include "packet.h"
 
+#include <platform/mc_mutex.h>
 #include <pthread.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -143,7 +144,7 @@ conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr
         .peer_addr = str_create_copy(&addr, &conn.persistent_arena),
         .peer_port = port,
     };
-    pthread_mutex_init(&conn.mutex, NULL);
+    mcmutex_create(&conn.mutex);
 
     return conn;
 }

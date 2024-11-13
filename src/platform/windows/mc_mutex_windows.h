@@ -7,8 +7,6 @@
 
 #include <windows.h>
 
-struct MCMutex {
-    HANDLE internal_lock;
-};
+typedef CRITICAL_SECTION MCMutex;
 
 #endif /* MC_MUTEX_WINDOWS_H */

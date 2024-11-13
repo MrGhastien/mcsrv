@@ -2,7 +2,7 @@
 #include <string.h>
 
 // Hash function used in sdbm
-// Adapted to work on arbitrary binary data
+// Adapted to work on arbitrary data
 u64 default_hash(const void* data, u64 size) {
     const u8* bytes = data;
     u64 hash = 37;

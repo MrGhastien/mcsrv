@@ -15,6 +15,8 @@
 #include "network/security.h"
 #include "utils/string.h"
 
+#include <platform/windows/mc_mutex_windows.h>
+
 typedef struct Packet Packet;
 
 /**
@@ -82,7 +84,7 @@ typedef struct Connection {
     u32 peer_port; /**< TCP port of the connected peer. */
 
     /** Thread MutEx device to prevent race conditions. */
-    pthread_mutex_t mutex;
+    MCMutex mutex;
 } Connection;
 
 /**

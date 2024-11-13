@@ -10,6 +10,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/containers/vector.h \
 		$(SRC_DIR)/containers/ring_queue.h \
 		$(SRC_DIR)/containers/bytebuffer.h \
+		$(SRC_DIR)/containers/object_pool.h \
 		$(SRC_DIR)/network/packet.h \
 		$(SRC_DIR)/network/decoders.h \
 		$(SRC_DIR)/network/utils.h \
@@ -26,8 +27,8 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/platform/mc_mutex.h \
 		$(SRC_DIR)/platform/mc_cond_var.h \
 		$(SRC_DIR)/platform/linux/signal-handler.h \
-		$(SRC_DIR)/platform/linux/mc_thread.h \
-		$(SRC_DIR)/platform/linux/mc_mutex.h \
+		$(SRC_DIR)/platform/linux/mc_thread_linux.h \
+		$(SRC_DIR)/platform/linux/mc_mutex_linux.h \
 		$(SRC_DIR)/json/json.h \
 		$(SRC_DIR)/json/json_internal.h \
 		$(SRC_DIR)/registry/registry.h \

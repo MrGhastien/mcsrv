@@ -66,6 +66,9 @@ void* arena_allocate(Arena* arena, u64 bytes);
  * @param bytes The amount of bytes to allocate.
  */
 void* arena_callocate(Arena* arena, u64 bytes);
+
+void* arena_allocate_aligned(Arena* arena, u64 bytes);
+void* arena_callocate_aligned(Arena* arena, u64 bytes);
 /**
  * Frees the specified amount of bytes from an arena.
  *

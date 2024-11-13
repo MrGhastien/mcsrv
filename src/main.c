@@ -19,6 +19,8 @@ static i32 init(char* host, i32 port, u64 max_connections) {
 
     i32 code = 0;
 
+    platform_init();
+
     logger_system_init();
     platform_init();
     event_system_init();
@@ -42,6 +44,8 @@ static void cleanup(void) {
     event_system_cleanup();
     platform_cleanup();
     logger_system_cleanup();
+
+    platform_cleanup();
 }
 
 int main(int argc, char** argv) {

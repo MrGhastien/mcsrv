@@ -30,7 +30,7 @@ void vector_deep_clear(Vector *vector);
 
 #define vector_add_imm(vector, elem, type)                                     \
     {                                                                          \
-        type holder = elem;                                                    \
+        typeof(elem) holder = elem;                                                    \
         vector_add(vector, &holder);                                           \
     }
 

@@ -13,7 +13,7 @@
 #error Not implemented for this platform yet!
 #endif
 
-typedef struct MCThread MCThread;
+typedef i32 MCThreadKey;
 
 typedef void* (*mcthread_routine)(void* arg);
 

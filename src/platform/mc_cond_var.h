@@ -4,7 +4,13 @@
 #include "definitions.h"
 #include "platform/mc_mutex.h"
 
-typedef struct MCCondVar MCCondVar;
+#ifdef MC_PLATFORM_LINUX
+#include "linux/mc_cond_var_linux.h"
+#elif defined MC_PLATFORM_WINDOWS
+#include "windows/mc_cond_var_windows.h"
+#else
+#error Not implemented for this platform yet!
+#endif
 
 bool mcvar_create(MCCondVar* cond_var);
 bool mcvar_destroy(MCCondVar* cond_var);

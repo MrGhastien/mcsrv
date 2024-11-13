@@ -1,16 +1,12 @@
 //
-// Created by bmorino on 08/11/2024.
+// Created by bmorino on 13/11/2024.
 //
 
-#ifndef MC_THREAD_WINDOWS_H
-#define MC_THREAD_WINDOWS_H
+#ifndef MCTHREAD_WINDOWS_H
+#define MCTHREAD_WINDOWS_H
 
-#include <windows.h>
+typedef struct {
+    struct ThreadInternal* internal;
+} MCThread;
 
-struct MCThread {
-    HANDLE handle;
-};
-
-typedef unsigned int MCThreadKey;
-
-#endif /* MC_THREAD_WINDOWS_H */
+#endif /* ! MCTHREAD_WINDOWS_H */

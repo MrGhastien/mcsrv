@@ -29,6 +29,7 @@ CLOSED: [2024-06-27 jeu. 00:21]
   # The logger performace is only significant for debug & trace logging levels
   # - [-] Make the main  logger loop (using cond vars or sleep)
   # - [-] Refactor the ~log_msg~ functions to defer prefix & color formatting
+*** TODO Handle more than 128 threads
 
 ** TODO Login sequence
 *** DONE Protocols
@@ -46,7 +47,7 @@ CLOSED: [2024-09-21 sam. 22:04]
 * Ideas                                                               :mcsrv:
 ** Ease of use
 These items work hand in hand
-*** Configuration interface & CLI options [0/3]
+*** Configuration interface & CLI options [0/4]
 - [ ] Chose a config file format (YAML, TOML)
 - [ ] IP address & port
 - [ ] Max players

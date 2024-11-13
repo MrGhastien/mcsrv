@@ -9,12 +9,11 @@
 #include "windows/mc_mutex_windows.h"
 #endif
 
-typedef struct MCMutex MCMutex;
-
 bool mcmutex_create(MCMutex* mutex);
 bool mcmutex_destroy(MCMutex* mutex);
 
 bool mcmutex_lock(MCMutex* mutex);
+bool mcmutex_trylock(MCMutex* mutex);
 bool mcmutex_unlock(MCMutex* mutex);
 
 #endif /* ! MC_MUTEX_H */

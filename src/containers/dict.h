@@ -92,7 +92,7 @@ void dict_destroy(Dict* map);
  * @param map The dictionnary to remove the mapping from.
  * @param key A pointer to the key to create a mapping for.
  * @param value A pointer to the value to create a mapping for.
- * @return The index of the newly created mapping inside of the dictionnary.
+ * @return The index of the newly created mapping inside of the dictionnary, or `-1` if the insertion failed.
  */
 i64 dict_put(Dict* map, const void* key, const void* value);
 /**
