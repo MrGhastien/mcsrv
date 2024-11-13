@@ -1,4 +1,5 @@
 #ifdef MC_PLATFORM_LINUX
+
 #include "platform/mc_thread.h"
 #include "logger.h"
 
@@ -18,12 +19,11 @@ i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg) {
 
     pthread_once(&once_control, &init_routine);
 
-    i32 res = pthread_create(&thread->handle, NULL, routine, arg);
+    i32 res = pthread_create(thread, NULL, routine, arg);
     if (res) {
         log_fatalf("Failed to create thread: %s.", strerror(res));
         return res;
     }
-    thread->running = TRUE;
     mcthread_attach_data(self_key, thread);
     return 0;
 }
@@ -33,7 +33,7 @@ bool mcthread_set_name(const char* name) {
 }
 
 void mcthread_destroy(MCThread* thread) {
-    thread->running = FALSE;
+    pthread_cancel(*thread);
 }
 
 bool mcthread_create_attachment(MCThreadKey* out_key) {
@@ -70,11 +70,11 @@ MCThread* mcthread_self(void) {
 
 bool mcthread_equals(MCThread* thread) {
     pthread_t self = pthread_self();
-    return pthread_equal(self, thread->handle);
+    return pthread_equal(self, *thread);
 }
 
 bool mcthread_join(MCThread* thread, void** out_return) {
-    i32 res = pthread_join(thread->handle, out_return);
+    i32 res = pthread_join(*thread, out_return);
     switch (res) {
     case EDEADLK:
         log_error("Unable to join thread: A deadlock has been detected.");

@@ -1,12 +1,12 @@
-#include <containers/object_pool.h>
-#include <logger.h>
-#include <platform/mc_mutex.h>
 #ifdef MC_PLATFORM_WINDOWS
 
 #include "platform/mc_thread.h"
-#include "definitions.h"
 
-#include <processthreadsapi.h>
+#include "platform/mc_mutex.h"
+#include "containers/object_pool.h"
+#include "definitions.h"
+#include "logger.h"
+
 #include <windows.h>
 
 #define MAX_THREADS 128

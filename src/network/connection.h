@@ -15,7 +15,7 @@
 #include "network/security.h"
 #include "utils/string.h"
 
-#include <platform/windows/mc_mutex_windows.h>
+#include "platform/mc_mutex.h"
 
 typedef struct Packet Packet;
 

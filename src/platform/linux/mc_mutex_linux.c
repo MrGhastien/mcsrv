@@ -1,11 +1,11 @@
-#include "platform/mc_mutex.h"
-
 #ifdef MC_PLATFORM_LINUX
-#include "mc_mutex.h"
+
+#include "platform/mc_mutex.h"
 #include "logger.h"
 
 #include <pthread.h>
 #include <string.h>
+#include <errno.h>
 
 bool mcmutex_create(MCMutex* mutex) {
     pthread_mutex_init(mutex, NULL);

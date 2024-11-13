@@ -1,18 +1,18 @@
+#ifdef MC_PLATFORM_LINUX
+
 #include "platform/mc_cond_var.h"
 
-#ifdef MC_PLATFORM_LINUX
 #include "logger.h"
-#include "mc_mutex.h"
 
 #include <errno.h>
 
 bool mcvar_create(MCCondVar* cond_var) {
-    pthread_cond_init(&cond_var->internal_var, NULL);
+    pthread_cond_init(cond_var, NULL);
     return TRUE;
 }
 
 bool mcvar_destroy(MCCondVar* cond_var) {
-    i32 res = pthread_cond_destroy(&cond_var->internal_var);
+    i32 res = pthread_cond_destroy(cond_var);
     switch (res) {
     case EBUSY:
         log_error(
@@ -24,15 +24,15 @@ bool mcvar_destroy(MCCondVar* cond_var) {
 }
 
 void mcvar_wait(MCCondVar* cond_var, MCMutex* mutex) {
-    pthread_cond_wait(&cond_var->internal_var, &mutex->internal_lock);
+    pthread_cond_wait(cond_var, mutex);
 }
 
 void mcvar_signal(MCCondVar* cond_var) {
-    pthread_cond_signal(&cond_var->internal_var);
+    pthread_cond_signal(cond_var);
 }
 
 void mcvar_broadcast(MCCondVar* cond_var) {
-    pthread_cond_broadcast(&cond_var->internal_var);
+    pthread_cond_broadcast(cond_var);
 }
 
 #endif
