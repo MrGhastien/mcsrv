@@ -22,7 +22,6 @@ static i32 init(char* host, i32 port, u64 max_connections) {
     platform_init();
 
     logger_system_init();
-    platform_init();
     event_system_init();
     registry_system_init();
     code = network_init(host, port, max_connections);
@@ -42,7 +41,6 @@ static void cleanup(void) {
     network_stop();
     registry_system_cleanup();
     event_system_cleanup();
-    platform_cleanup();
     logger_system_cleanup();
 
     platform_cleanup();
