@@ -29,27 +29,31 @@
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
 
+#include <stdint.h>
+#include <stddef.h>
+#include <sys/types.h>
+
 #ifdef TRACE
 #ifndef DEBUG
 #error Macro "DEBUG" must be defined if "TRACE" is defined.
 #endif
 #endif
 
-typedef unsigned char u8;
-typedef unsigned short int u16;
-typedef unsigned int u32;
-typedef unsigned long long int u64;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
-typedef signed char i8;
-typedef signed short int i16;
-typedef signed int i32;
-typedef signed long long int i64;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
 
 typedef float f32;
 typedef double f64;
 
 /** Basic boolean type. */
-typedef unsigned char bool;
+typedef u8 bool;
 
 /** Boolean `false` constant. */
 #define FALSE (bool)0
@@ -81,7 +85,12 @@ CHECK_TYPE_SIZE(f64, 8);
 
 CHECK_TYPE_SIZE(bool, 1);
 
-STATIC_ASSERT(sizeof(i32) <= sizeof(void*), "Cannot store i32 as a pointer to void !");
-STATIC_ASSERT(sizeof(u32) <= sizeof(void*), "Cannot store u32 as a pointer to void !");
+STATIC_ASSERT(sizeof(i32) < sizeof(void*), "Cannot store i32 as a pointer to void !");
+STATIC_ASSERT(sizeof(u32) < sizeof(void*), "Cannot store u32 as a pointer to void !");
+
+STATIC_ASSERT(sizeof(u64) == sizeof(size_t), "size_t and u64 do not have the same size");
+STATIC_ASSERT(sizeof(i64) == sizeof(ssize_t), "size_t and u64 do not have the same size");
+STATIC_ASSERT(sizeof(u64) >= sizeof(intptr_t), "Cannot convert pointers to long integers");
+STATIC_ASSERT(sizeof(i64) >= sizeof(void*), "Cannot convert pointers to long integers");
 
 #endif /* ! DEFINITIONS_H */

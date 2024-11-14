@@ -2,6 +2,7 @@
 // Created by bmorino on 08/11/2024.
 //
 
+#ifdef MC_PLATFORM_WINDOWS
 #include "platform/mc_mutex.h"
 
 #include "mc_cond_var_windows.h"
@@ -26,3 +27,4 @@ void mcvar_signal(MCCondVar* cond_var) {
 void mcvar_broadcast(MCCondVar* cond_var) {
     WakeAllConditionVariable(cond_var);
 }
+#endif

@@ -13,8 +13,6 @@
 #error Not implemented for this platform yet!
 #endif
 
-typedef i32 MCThreadKey;
-
 typedef void* (*mcthread_routine)(void* arg);
 
 i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg);

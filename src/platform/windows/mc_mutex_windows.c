@@ -2,6 +2,8 @@
 // Created by bmorino on 08/11/2024.
 //
 
+#ifdef MC_PLATFORM_WINDOWS
+
 #include "platform/mc_mutex.h"
 
 #include <containers/object_pool.h>
@@ -34,3 +36,5 @@ bool mcmutex_unlock(MCMutex* mutex) {
     LeaveCriticalSection(mutex);
     return TRUE;
 }
+
+#endif

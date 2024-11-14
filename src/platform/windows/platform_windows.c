@@ -1,3 +1,5 @@
+#ifdef MC_PLATFORM_WINDOWS
+
 #include "platform/platform.h"
 
 void mcthread_init(void);
@@ -10,3 +12,5 @@ void platform_init(void) {
 void platform_cleanup(void) {
     mcthread_cleanup();
 }
+
+#endif

@@ -8,5 +8,6 @@
 #include <pthread.h>
 
 typedef pthread_t MCThread;
+typedef pthread_key_t MCThreadKey;
 
 #endif /* ! MC_THREAD_LINUX_H */
