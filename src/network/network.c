@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,10 +23,13 @@
 #include "connection.h"
 #include "logger.h"
 #include "memory/arena.h"
+#include "platform/mc_thread.h"
 #include "receiver.h"
 #include "security.h"
 #include "sender.h"
 #include "utils/string.h"
+
+#include <platform/mc_mutex.h>
 
 typedef struct net_ctx {
     Arena arena;
@@ -39,7 +41,7 @@ typedef struct net_ctx {
     int serverfd;
     int epollfd;
     int eventfd;
-    pthread_t thread;
+    MCThread thread;
 
     EncryptionContext enc_ctx;
     u64 compress_threshold;
@@ -67,8 +69,7 @@ static i32 create_server_socket(char* host, i32 port) {
     // Let the socket reuse the address, to avoid errors when quickly rerunning the server
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof option);
 
-    struct sockaddr_in saddr;
-    memset(&saddr, 0, sizeof saddr);
+    struct sockaddr_in saddr = {0};
     saddr.sin_family = AF_INET;
     if (!inet_aton(host, &saddr.sin_addr)) {
         log_fatal("The server address is invalid.");
@@ -144,7 +145,7 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
 
     log_debug("Network subsystem initialized.");
 
-    pthread_create(&ctx.thread, NULL, &network_handle, NULL);
+    mcthread_create(&ctx.thread, &network_handle, NULL);
     return 0;
 }
 
@@ -202,7 +203,7 @@ void close_connection(Connection* conn) {
     epoll_ctl(ctx.epollfd, EPOLL_CTL_DEL, conn->sockfd, &placeholder);
     arena_destroy(&conn->scratch_arena);
     arena_destroy(&conn->persistent_arena);
-    pthread_mutex_destroy(&conn->mutex);
+    mcmutex_destroy(&conn->mutex);
     conn->sockfd = -1;
     ctx.connection_count--;
 }
@@ -269,7 +270,7 @@ static void* network_handle(void* params) {
     struct epoll_event events[10];
     i32 eventCount = 0;
 
-    prctl(PR_SET_NAME, "network", 0, 0, 0);
+    mcthread_set_name("network");
 
     sigset_t sigmask;
     sigfillset(&sigmask);
@@ -312,6 +313,6 @@ static void* network_handle(void* params) {
 void network_stop(void) {
     u64 count = 1;
     write(ctx.eventfd, &count, sizeof(count));
-    pthread_join(ctx.thread, NULL);
+    mcthread_join(&ctx.thread, NULL);
     log_debug("Network thread exited.");
 }

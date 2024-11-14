@@ -26,11 +26,13 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/network/security.c \
 		$(SRC_DIR)/network/compression.c \
 		$(SRC_DIR)/platform/linux/platform_linux.c \
+		$(SRC_DIR)/platform/linux/network_linux.c \
 		$(SRC_DIR)/platform/linux/signal-handler.c \
 		$(SRC_DIR)/platform/linux/mc_thread_linux.c \
 		$(SRC_DIR)/platform/linux/mc_mutex_linux.c \
 		$(SRC_DIR)/platform/linux/mc_cond_var_linux.c \
 		$(SRC_DIR)/platform/windows/platform_windows.c \
+		$(SRC_DIR)/platform/windows/network_windows.c \
 		$(SRC_DIR)/platform/windows/mc_thread_windows.c \
 		$(SRC_DIR)/platform/windows/mc_mutex_windows.c \
 		$(SRC_DIR)/platform/windows/mc_cond_var_windows.c \
