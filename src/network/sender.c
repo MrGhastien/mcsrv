@@ -9,13 +9,13 @@
 #include "utils.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
+#include "platform/network.h"
 
 #include <pthread.h>
-#include <sys/socket.h>
 
 #define MAX_PACKET_SIZE 2097151
 
-static enum IOCode send_bytebuf(ByteBuffer* buffer, int sockfd) {
+static enum IOCode send_bytebuf(ByteBuffer* buffer, Socket socket) {
     if (buffer->size == 0) {
         log_warn("No data to send.");
         return IOC_OK;
@@ -27,9 +27,12 @@ static enum IOCode send_bytebuf(ByteBuffer* buffer, int sockfd) {
     do {
         u64 sent;
         size = bytebuf_contiguous_read(buffer, &region);
-        code = try_send(sockfd, region, size, &sent);
+        code = try_send(socket, region, size, &sent);
         if(sent < size)
             bytebuf_unread(buffer, size - sent);
+
+        sock_send_buf(socket, buffer);
+
     } while (code == IOC_OK && size > 0);
 
     return code;
@@ -54,7 +57,7 @@ void write_packet(const Packet* pkt, Connection* conn) {
     if (!encoder)
         return;
 
-    pthread_mutex_lock(&conn->mutex);
+    mcmutex_lock(&conn->mutex);
     arena_save(&conn->scratch_arena);
     ByteBuffer scratch = bytebuf_create_fixed(MAX_PACKET_SIZE, &conn->scratch_arena);
 
@@ -90,14 +93,14 @@ void write_packet(const Packet* pkt, Connection* conn) {
         send_bytebuf(&conn->send_buffer, conn->sockfd);
 
     arena_restore(&conn->scratch_arena);
-    pthread_mutex_unlock(&conn->mutex);
+    mcmutex_unlock(&conn->mutex);
 }
 
 enum IOCode sender_send(Connection* conn) {
-    pthread_mutex_lock(&conn->mutex);
+    mcmutex_lock(&conn->mutex);
 
     enum IOCode code = send_bytebuf(&conn->send_buffer, conn->sockfd);
 
-    pthread_mutex_unlock(&conn->mutex);
+    mcmutex_unlock(&conn->mutex);
     return code;
 }

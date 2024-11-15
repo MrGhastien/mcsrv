@@ -57,6 +57,7 @@ static NetworkContext ctx;
 
 static void* network_handle(void* params);
 
+//X
 static i32 create_server_socket(char* host, i32 port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     ctx.serverfd = sockfd;
@@ -90,6 +91,7 @@ static i32 create_server_socket(char* host, i32 port) {
     return 0;
 }
 
+//X
 static i32 init_epoll(void) {
     int epollfd = epoll_create1(0);
     ctx.epollfd = epollfd;
@@ -149,6 +151,7 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
     return 0;
 }
 
+//X
 static i32 accept_connection(void) {
     struct sockaddr_in peer_addr;
     socklen_t peer_addr_length = sizeof peer_addr;
@@ -191,6 +194,7 @@ static i32 accept_connection(void) {
     return 0;
 }
 
+//X
 void close_connection(Connection* conn) {
     struct epoll_event placeholder;
     log_infof("Closing connection %i.", conn->sockfd);
@@ -224,9 +228,10 @@ static void network_finish(void) {
     arena_destroy(&ctx.arena);
 }
 
+//X
 static i32 handle_connection_io(Connection* conn, u32 events) {
     enum IOCode io_code = IOC_OK;
-    if (events & EPOLLIN) {
+    if (events & IOEVENT_IN) {
         while (io_code == IOC_OK) {
             io_code = receive_packet(conn);
         }
@@ -244,7 +249,7 @@ static i32 handle_connection_io(Connection* conn, u32 events) {
         }
     }
 
-    if (events & EPOLLOUT) {
+    if (events & IOEVENT_OUT) {
         if (!conn->can_send) {
             io_code = sender_send(conn);
             switch (io_code) {
@@ -265,6 +270,7 @@ static i32 handle_connection_io(Connection* conn, u32 events) {
     return 0;
 }
 
+//X
 static void* network_handle(void* params) {
     (void) params;
     struct epoll_event events[10];

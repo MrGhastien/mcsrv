@@ -1,13 +1,15 @@
-//
-// Created by bmorino on 14/11/2024.
-//
+/**
+ * @file
+ *
+ * Interface for the platform-specific parts of the network sub-system.
+ */
 
 #ifndef NETWORK_PLATFORM_H
 #define NETWORK_PLATFORM_H
 
 #include "definitions.h"
 #include "network/connection.h"
-
+#include "network/common_types.h"
 
 #ifdef MC_PLATFORM_LINUX
 // TODO add linux-specific includes
@@ -25,6 +27,7 @@ typedef uintptr_t Socket;
 
 typedef struct {
     union {
+        u16 family;
         struct sockaddr sa;
         struct sockaddr_in ip4;
         struct sockaddr_in6 ip6;
@@ -33,18 +36,23 @@ typedef struct {
     u64 length;
 } SocketAddress;
 
-typedef struct NetworkContext {
-} NetworkContext;
-
 void* network_handle(NetworkContext* ctx, void* params);
+
+i32 network_platform_init(NetworkContext* ctx);
 
 void close_connection(NetworkContext* ctx, Connection* conn);
 
 i32 accept_connection(NetworkContext* ctx);
 i32 create_server_socket(NetworkContext* ctx, char* host, i32 port);
 
+enum IOCode read_bytes(Connection* conn);
+enum IOCode read_varint(Connection* conn);
+
+enum IOCode try_send(Socket socket, void* data, u64 size, u64* out_sent);
 
 
+
+void sockaddr_init(SocketAddress* addr, u16 family);
 bool sock_is_valid(Socket socket);
 i64 sock_recv(Socket socket, void* buf, u64 buf_len);
 i64 sock_recv_buf(Socket socket, ByteBuffer* output);
