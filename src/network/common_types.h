@@ -6,6 +6,8 @@
 #define COMMON_TYPES_H
 
 #include "memory/arena.h"
+#include "connection.h"
+#include "platform/mc_thread.h"
 
 #define IOEVENT_IN 1
 #define IOEVENT_OUT 2
@@ -29,7 +31,7 @@ typedef struct NetworkContext {
     u32 max_connections;
     u32 connection_count;
 
-    int serverfd;
+    socketfd server_socket;
     int epollfd;
     int eventfd;
     MCThread thread;

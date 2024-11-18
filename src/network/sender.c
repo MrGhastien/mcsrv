@@ -15,7 +15,7 @@
 
 #define MAX_PACKET_SIZE 2097151
 
-static enum IOCode send_bytebuf(ByteBuffer* buffer, Socket socket) {
+static enum IOCode send_bytebuf(ByteBuffer* buffer, socketfd socket) {
     if (buffer->size == 0) {
         log_warn("No data to send.");
         return IOC_OK;

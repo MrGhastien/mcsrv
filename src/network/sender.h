@@ -13,11 +13,9 @@
  * Encodes and tries to send a packet immediately.
  *
  * If it is not possible to send all of the packet's bytes without waiting,
- * the remaining bytes are put in the connection's sending queue. When the
- * underlying socket becomes writable again, the sender tries emptying the
- * queue as much as possible.
+ * the remaining bytes are put in the connection's sending queue.
  *
- * Packets are also compressed and/or encrypted if they are enabled.
+ * Packets are also compressed and/or encrypted if enabled.
  * @param[in] pkt The packet to send.
  * @param[in] conn The connection to send a packet through.
  */
