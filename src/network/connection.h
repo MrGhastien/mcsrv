@@ -13,6 +13,7 @@
 #include "memory/arena.h"
 #include "network/compression.h"
 #include "network/security.h"
+#include "network/common_types.h"
 #include "utils/string.h"
 
 #include "platform/mc_mutex.h"
@@ -61,7 +62,7 @@ typedef struct Connection {
     PeerEncryptionContext peer_enc_ctx; /**< Peer-specific encryption context. */
     CompressionContext cmprss_ctx;      /**< Compression context. */
 
-    int sockfd; /**< Linux file descriptor of the connection's socket.*/
+    socketfd peer_socket; /**< Linux file descriptor of the connection's socket.*/
 
     /** Keeps track of whether the last packet read operation read the packet's size or not. */
     bool has_read_size; 
@@ -76,7 +77,7 @@ typedef struct Connection {
     u8* verify_token;
 
     /** Index of the connection in the connection table */
-    u64 table_index;
+    i64 table_index;
 
     /** Name of the player connected to the server. */
     string player_name;
@@ -98,7 +99,7 @@ typedef struct Connection {
 * @return A new connection.
  */
 Connection
-conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
+conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
 
 /**
  * Indicates whether a previous packet read was stopped.

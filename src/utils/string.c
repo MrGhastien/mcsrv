@@ -57,7 +57,7 @@ string str_create(const char* cstr, Arena* arena) {
 }
 
 string str_create_const(const char* cstr) {
-    u64 len = strlen(cstr);
+    u64 len = cstr == NULL ? 0 : strlen(cstr);
     return (string){
         .base = (char*) cstr,
         .length = len,

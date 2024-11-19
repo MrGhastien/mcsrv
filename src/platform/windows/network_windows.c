@@ -12,10 +12,27 @@
 
 #include "network/common_functions.h"
 
+#define COMPL_KEY_ACCEPT 0
+#define COMPL_KEY_STOP 1
+
 struct IOEvent {
     i32 events;
     Connection* connection;
 };
+
+typedef struct PlatformNetworkCtx {
+    HANDLE completion_port;
+} PlatformNetworkCtx;
+
+static PlatformNetworkCtx platform_ctx;
+
+char* get_last_error(void) {
+    static char error_msg[256];
+    i32 error_code = WSAGetLastError();
+    FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error_code, 0, msg, 256, NULL);
+    return error_msg;
+}
+
 enum IOCode try_send(socketfd socket, void* data, u64 size, u64* out_sent) {
     u64 sent = 0;
     enum IOCode code = IOC_OK;
@@ -38,16 +55,85 @@ enum IOCode try_send(socketfd socket, void* data, u64 size, u64* out_sent) {
     return code;
 }
 
-i32 network_platform_init(NetworkContext* ctx);
+i32 network_platform_init(NetworkContext* ctx) {
+    WSADATA wsa_data;
+    i32 res = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if(res != 0) {
+        log_fatalf("Failed to initialize Winsock 2.2: %s", get_last_error());
+        return 1;
+    }
 
-void close_connection(NetworkContext* ctx, Connection* conn);
+    platform_ctx.completion_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0ull, 1);
 
-i32 accept_connection(NetworkContext* ctx);
-i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
-    socketfd server_socket = WSASocketA(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, 0);
-    if(!sock_is_valid(server_socket))
+    return 0;
+}
+i32 platform_socket_init(socketfd server_socket) {
+    if(CreateIoCompletionPort((HANDLE)server_socket, platform_ctx.completion_port, COMPL_KEY_ACCEPT, 1) == INVALID_HANDLE_VALUE) {
+        log_fatalf("Failed to create the server socket: %s", get_last_error());
+        return 6;
+    }
+    return 0;
+}
+i32 platform_accept_connection(socketfd peer_socket, Connection* connection) {
 
-    ctx->server_socket = server_socket;
+    if(CreateIoCompletionPort((HANDLE)peer_socket, platform_ctx.completion_port, (uintptr_t)conn, 1) != 0) {
+        log_errorf("Could not handle the connection to [%s:%u]: %s", connection->peer_addr.base, connection->peer_port, get_last_error());
+        return 3;
+    }
+
+    sock_recv_buf(peer_socket, &connection->recv_buffer);
+    return 0;
+}
+
+i32 accept_connection(NetworkContext* ctx) {
+
+    SocketAddress peer_address;
+
+    socketfd peer_socket = sock_accept(ctx->server_socket, &peer_address);
+    if(!sock_is_valid(peer_socket)) {
+        log_errorf("Failed to establish connection to peer: %s", get_last_error());
+        return 1;
+    }
+
+    Arena arena = ctx->arena;
+
+    u32 peer_port;
+    string peer_host = sockaddr_to_string(&peer_address, &arena, &peer_port);
+
+    i64 index;
+    Connection* conn = objpool_add(&ctx->connections, &index);
+    if(!conn) {
+        sock_close(peer_socket);
+        log_warn("Reached maximum connection amount, rejecting.");
+        return 2;
+    }
+
+    *conn = conn_create(peer_socket, index, &ctx->enc_ctx, peer_host, peer_port);
+
+    if(platform_accept_connection(peer_socket, conn) != 0) {
+        sock_close(peer_socket);
+        return 3;
+    }
+
+    log_infof("Accepted connection from [%s:%i].", peer_host.base, peer_port);
+    return 0;
+}
+void close_connection(NetworkContext* ctx, Connection* conn) {
+    log_infof("Closing connection to [%s:%i].", conn->peer_addr.base, conn->peer_port);
+    sock_close(conn->peer_socket);
+
+    arena_destroy(&conn->scratch_arena);
+    arena_destroy(&conn->persistent_arena);
+    mcmutex_destroy(&conn->mutex);
+    conn->peer_socket = SOCKFD_INVALID;
+    objpool_remove(&ctx->connections, conn->table_index);
+}
+
+i32 handle_connection_io(Connection* conn) {
+
+    // Resume processing the data
+
+    return 0;
 }
 
 void* network_handle(void* params) {
@@ -55,19 +141,35 @@ void* network_handle(void* params) {
 
     mcthread_set_name("network");
 
-    HANDLE completion_port = CreateIoCompletionPort(ctx->server_socket, NULL, 0ull, 1);
-
     while(ctx->should_continue) {
         unsigned long bytes_transferred;
         u64 key;
         WSAOVERLAPPED* overlapped;
-        if(!GetQueuedCompletionStatus(completion_port, &bytes_transferred, &key, &overlapped, INFINITE)) {
+        bool res = GetQueuedCompletionStatus(platform_ctx.completion_port, &bytes_transferred, &key, &overlapped, INFINITE);
+        if(res) {
+            if(key == COMPL_KEY_ACCEPT) {
+                // the server socket has received a connection
+                accept_connection(ctx);
+            } else if(key == COMPL_KEY_STOP) {
+                // Stop!
+                ctx->should_continue = FALSE;
+                break;
+            } else {
+                // all good.
+                Connection* conn = (Connection*) key;
+                ctx->code = handle_connection_io(conn);
+            }
+
+
+
+        } else if(overlapped) {
+            // A pending IO operation failed.
+        } else {
+            // GetQueuedCompletionStatus failed.
             ctx->should_continue = FALSE;
             break;
         }
 
-        struct IOEvent* event = (struct IOEvent*) key;
-        ctx->code = handle_connection_io(event->connection, event->events);
     }
 
     return NULL;
@@ -93,7 +195,6 @@ void sockaddr_init(SocketAddress* addr, u16 family) {
     }
 }
 bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
-    addr->length = sizeof(addr->data.ip4);
     char port_str[32];
     snprintf(port_str, 32, "%i", port);
     struct addrinfo* info;
@@ -102,7 +203,23 @@ bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
         log_error("Could not parse server address.");
         return FALSE;
     }
+
+    memcpy(&addr->data.storage, info->ai_addr, info->ai_addrlen);
+    addr->length = info->ai_addrlen;
+
     return TRUE;
+}
+string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
+    char host[NI_MAXHOST];
+    char serv[NI_MAXSERV];
+    if(getnameinfo(&addr->data.sa, addr->length, host, NI_MAXHOST, serv, NI_MAXSERV, 0) != 0) {
+        log_errorf("Could not convert address to string: %s", get_last_error());
+        return str_create_const(NULL);
+    }
+
+    *out_port = strtoul(serv, NULL, 0);
+
+    return str_create(host, arena);
 }
 
 bool sock_is_valid(socketfd socket) {
@@ -201,7 +318,7 @@ i64 sock_send_buf(socketfd socket, ByteBuffer* input) {
 socketfd sock_create(int address_family, int type, int protocol) {
     return WSASocketA(address_family, type, protocol, 0, 0, 0);
 }
-bool sock_bind(socketfd socket, SocketAddress* address) {
+bool sock_bind(socketfd socket, const SocketAddress* address) {
     return bind(socket, &address->data.sa, address->length) == 0;
 }
 bool sock_listen(socketfd socket, i32 backlog) {
@@ -250,6 +367,8 @@ socketfd sock_accept(socketfd socket, SocketAddress* out_address) {
 
     return accepted;
 }
-
+void sock_close(socketfd socket) {
+    closesocket(socket);
+}
 
 #endif

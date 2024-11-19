@@ -54,6 +54,8 @@ void objpool_clear(ObjectPool* pool) {
 
 void* objpool_add(ObjectPool* pool, i64* out_index) {
     i64 index = pool->next_available;
+    if(index < 0 || index > pool->capacity || pool->size == pool->capacity)
+        return NULL;
     void* ptr = get_obj(pool, index);
     set_allocated(pool, index, TRUE);
     if(out_index)

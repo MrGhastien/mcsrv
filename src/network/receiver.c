@@ -15,7 +15,7 @@ static enum IOCode read_varint(Connection* conn) {
     u8 byte;
 
     while (TRUE) {
-        ssize_t status = recv(conn->sockfd, &byte, sizeof byte, 0);
+        ssize_t status = recv(conn->peer_socket, &byte, sizeof byte, 0);
         if (status == -1)
             return errno == EWOULDBLOCK || errno == EAGAIN ? IOC_AGAIN : IOC_ERROR;
         else if (status == 0)
@@ -43,7 +43,7 @@ static enum IOCode read_bytes(Connection* conn) {
         void* ptr;
         u64 remaining = bytebuf_contiguous_write(&conn->recv_buffer, &ptr);
         while (remaining > 0) {
-            ssize_t immediate_read = recv(conn->sockfd, ptr, remaining, 0);
+            ssize_t immediate_read = recv(conn->peer_socket, ptr, remaining, 0);
             if (immediate_read < 0) {
                 bytebuf_unwrite(&conn->recv_buffer, remaining);
                 return errno == EAGAIN || errno == EWOULDBLOCK ? IOC_AGAIN : IOC_ERROR;

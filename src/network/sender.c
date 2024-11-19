@@ -90,7 +90,7 @@ void write_packet(const Packet* pkt, Connection* conn) {
     bytebuf_write_buffer(&conn->send_buffer, &scratch);
 
     if(conn->can_send)
-        send_bytebuf(&conn->send_buffer, conn->sockfd);
+        send_bytebuf(&conn->send_buffer, conn->peer_socket);
 
     arena_restore(&conn->scratch_arena);
     mcmutex_unlock(&conn->mutex);
@@ -99,7 +99,7 @@ void write_packet(const Packet* pkt, Connection* conn) {
 enum IOCode sender_send(Connection* conn) {
     mcmutex_lock(&conn->mutex);
 
-    enum IOCode code = send_bytebuf(&conn->send_buffer, conn->sockfd);
+    enum IOCode code = send_bytebuf(&conn->send_buffer, conn->peer_socket);
 
     mcmutex_unlock(&conn->mutex);
     return code;

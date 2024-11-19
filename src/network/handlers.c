@@ -155,7 +155,7 @@ static bool enable_compression(Connection* conn) {
         return FALSE;
 
     conn->compression = TRUE;
-    log_infof("Protocol compression successfully initialized for connection %i.", conn->sockfd);
+    log_infof("Protocol compression successfully initialized for connection %i.", conn->peer_socket);
     return TRUE;
 }
 
@@ -272,7 +272,7 @@ PKT_HANDLER(enc_res) {
 
     conn->encryption = TRUE;
 
-    log_infof("Protocol encryption successfully initialized for connection %i.", conn->sockfd);
+    log_infof("Protocol encryption successfully initialized for connection %i.", conn->peer_socket);
 
     JSON json;
     bool res = encryption_authenticate_player(conn, &json);

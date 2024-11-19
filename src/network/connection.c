@@ -127,7 +127,7 @@ bool conn_is_resuming_read(const Connection* conn) {
 }
 
 Connection
-conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr, u32 port) {
+conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port) {
     Connection conn = {
         .persistent_arena = arena_create(CONN_PARENA_SIZE),
         .scratch_arena = arena_create(CONN_SARENA_SIZE),
@@ -135,7 +135,7 @@ conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr
         .encryption = FALSE,
         .state = STATE_HANDSHAKE,
         .global_enc_ctx = enc_ctx,
-        .sockfd = sockfd,
+        .peer_socket = sockfd,
         .has_read_size = FALSE,
         .recv_buffer = {0},
         .can_send = TRUE,
@@ -150,5 +150,5 @@ conn_create(int sockfd, u64 table_index, EncryptionContext* enc_ctx, string addr
 }
 
 bool conn_is_closed(const Connection* conn) {
-    return conn->sockfd != -1;
+    return conn->peer_socket != -1;
 }

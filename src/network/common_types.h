@@ -5,9 +5,11 @@
 #ifndef COMMON_TYPES_H
 #define COMMON_TYPES_H
 
-#include "memory/arena.h"
 #include "connection.h"
+#include "memory/arena.h"
 #include "platform/mc_thread.h"
+
+#include "containers/object_pool.h"
 
 #define IOEVENT_IN 1
 #define IOEVENT_OUT 2
@@ -24,16 +26,14 @@ enum IOCode {
     IOC_CLOSED /**< The connection has been closed by the peer, stop handling it. */
 };
 
+typedef uintptr_t socketfd;
+
 typedef struct NetworkContext {
     Arena arena;
 
-    Connection* connections;
-    u32 max_connections;
-    u32 connection_count;
+    ObjectPool connections;
 
     socketfd server_socket;
-    int epollfd;
-    int eventfd;
     MCThread thread;
 
     EncryptionContext enc_ctx;
