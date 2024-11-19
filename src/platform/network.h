@@ -8,7 +8,6 @@
 #define NETWORK_PLATFORM_H
 
 #include "definitions.h"
-#include "network/connection.h"
 #include "network/common_types.h"
 
 #ifdef MC_PLATFORM_LINUX
@@ -42,6 +41,7 @@ void* network_handle(void* params);
 
 i32 network_platform_init(NetworkContext* ctx);
 i32 platform_socket_init(socketfd server_socket);
+void platform_network_stop(void);
 
 void close_connection(NetworkContext* ctx, Connection* conn);
 

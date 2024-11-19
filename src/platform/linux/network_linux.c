@@ -160,6 +160,22 @@ void close_connection(Connection* conn) {
     ctx.connection_count--;
 }
 
+static void network_finish(void) {
+
+    encryption_cleanup(&ctx.enc_ctx);
+
+    for (u32 i = 0; i < ctx.max_connections; i++) {
+        Connection* c = &ctx.connections[i];
+        if (c->sockfd >= 0)
+            close_connection(&ctx, c);
+    }
+
+    close(ctx.eventfd);
+    close(ctx.epollfd);
+    close(ctx.server_socket);
+    arena_destroy(&ctx.arena);
+}
+
 static void* network_handle(void* params) {
     (void) params;
     struct epoll_event events[10];
@@ -199,6 +215,11 @@ static void* network_handle(void* params) {
 
     network_finish();
     return NULL;
+}
+
+void platform_network_stop(void) {
+    i64 count = 1;
+    write(ctx.eventfd, &count, sizeof(count));
 }
 
 #endif

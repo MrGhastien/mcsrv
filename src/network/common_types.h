@@ -5,9 +5,9 @@
 #ifndef COMMON_TYPES_H
 #define COMMON_TYPES_H
 
-#include "connection.h"
 #include "memory/arena.h"
 #include "platform/mc_thread.h"
+#include "security.h"
 
 #include "containers/object_pool.h"
 

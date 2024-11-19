@@ -7,10 +7,9 @@
 #include "network/security.h"
 #include "packet.h"
 
-#include <platform/mc_mutex.h>
-#include <pthread.h>
-#include <string.h>
-#include <sys/socket.h>
+#include "platform/mc_mutex.h"
+#include "platform/network.h"
+
 
 #define CONN_PARENA_SIZE 33554432
 #define CONN_SARENA_SIZE 4194304
@@ -150,5 +149,5 @@ conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string
 }
 
 bool conn_is_closed(const Connection* conn) {
-    return conn->peer_socket != -1;
+    return sock_is_valid(conn->peer_socket);
 }

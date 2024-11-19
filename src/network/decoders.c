@@ -3,10 +3,8 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "packet.h"
-#include <netinet/in.h>
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 PKT_DECODER(dummy) {
     (void) packet;

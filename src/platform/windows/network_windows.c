@@ -24,12 +24,17 @@ typedef struct PlatformNetworkCtx {
     HANDLE completion_port;
 } PlatformNetworkCtx;
 
+
+
 static PlatformNetworkCtx platform_ctx;
+static WSAOVERLAPPED overlapped = {};
+
+
 
 char* get_last_error(void) {
     static char error_msg[256];
     i32 error_code = WSAGetLastError();
-    FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error_code, 0, msg, 256, NULL);
+    FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error_code, 0, error_msg, 256, NULL);
     return error_msg;
 }
 
@@ -76,7 +81,7 @@ i32 platform_socket_init(socketfd server_socket) {
 }
 i32 platform_accept_connection(socketfd peer_socket, Connection* connection) {
 
-    if(CreateIoCompletionPort((HANDLE)peer_socket, platform_ctx.completion_port, (uintptr_t)conn, 1) != 0) {
+    if(CreateIoCompletionPort((HANDLE)peer_socket, platform_ctx.completion_port, (uintptr_t)connection, 1) != 0) {
         log_errorf("Could not handle the connection to [%s:%u]: %s", connection->peer_addr.base, connection->peer_port, get_last_error());
         return 3;
     }
@@ -175,9 +180,14 @@ void* network_handle(void* params) {
     return NULL;
 }
 
+void platform_network_stop(void) {
+    if(!PostQueuedCompletionStatus(platform_ctx.completion_port, 0, COMPL_KEY_STOP, &overlapped)) {
+        log_errorf("Failed to stop the network thread : %s", get_last_error());
+    }
+}
 
 
-static WSAOVERLAPPED overlapped = {};
+
 
 void sockaddr_init(SocketAddress* addr, u16 family) {
     memset(&addr->data, 0, sizeof(addr->data));

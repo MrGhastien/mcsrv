@@ -9,4 +9,6 @@ typedef struct {
     struct ThreadInternal* internal;
 } MCThread;
 
+typedef i32 MCThreadKey;
+
 #endif /* ! MCTHREAD_WINDOWS_H */
