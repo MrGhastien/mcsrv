@@ -1,15 +1,16 @@
 #include "connection.h"
+
+#include "memory/arena.h"
+#include "logger.h"
+
 #include "decoders.h"
 #include "encoders.h"
 #include "handlers.h"
-#include "logger.h"
-#include "memory/arena.h"
-#include "network/security.h"
+#include "security.h"
 #include "packet.h"
 
+#include "platform/socket.h"
 #include "platform/mc_mutex.h"
-#include "platform/network.h"
-
 
 #define CONN_PARENA_SIZE 33554432
 #define CONN_SARENA_SIZE 4194304
@@ -135,10 +136,11 @@ conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string
         .state = STATE_HANDSHAKE,
         .global_enc_ctx = enc_ctx,
         .peer_socket = sockfd,
-        .has_read_size = FALSE,
-        .recv_buffer = {0},
-        .can_send = TRUE,
+        .pending_read = FALSE,
+        .pending_write = FALSE,
+        .recv_buffer = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.persistent_arena),
         .send_buffer = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.persistent_arena),
+        .packet_cache = NULL,
         .table_index = table_index,
         .peer_addr = str_create_copy(&addr, &conn.persistent_arena),
         .peer_port = port,

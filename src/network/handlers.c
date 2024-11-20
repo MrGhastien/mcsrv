@@ -13,17 +13,18 @@
 #include "utils/string.h"
 #include "json/json.h"
 
-#include "json/json_internal.h"
 #include <string.h>
 #include <zlib.h>
 
 PKT_HANDLER(dummy) {
-    (void) pkt;
-    (void) conn;
+    UNUSED(ctx);
+    UNUSED(pkt);
+    UNUSED(conn);
     return TRUE;
 }
 
 PKT_HANDLER(handshake) {
+    UNUSED(ctx);
     PacketHandshake* shake = pkt->payload;
     log_tracef("  - Protocol version: %i", shake->protocol_version);
     log_tracef("  - Server address: '%s'", shake->srv_addr.base);
@@ -42,8 +43,7 @@ PKT_HANDLER(handshake) {
 }
 
 PKT_HANDLER(status) {
-    (void) pkt;
-    (void) conn;
+    UNUSED(pkt);
     PacketStatusResponse response;
 
     JSON json;
@@ -89,24 +89,21 @@ PKT_HANDLER(status) {
     json_stringify(&json, &response.data, 2048, &conn->scratch_arena);
     log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
-    write_packet(&out_pkt, conn);
+    write_packet(ctx, &out_pkt, conn);
     json_destroy(&json);
     return TRUE;
 }
 
 PKT_HANDLER(ping) {
-    (void) pkt;
-    (void) conn;
     PacketPing* ping = pkt->payload;
     PacketPing pong = {.num = ping->num};
     Packet response = {.id = PKT_PING, .payload = &pong};
 
-    write_packet(&response, conn);
+    write_packet(ctx, &response, conn);
     return TRUE;
 }
 
 PKT_HANDLER(log_start) {
-    (void) conn;
     PacketLoginStart* payload = pkt->payload;
 
     conn->player_name = str_create_copy(&payload->player_name, &conn->persistent_arena);
@@ -133,12 +130,12 @@ PKT_HANDLER(log_start) {
         .payload = req,
     };
 
-    write_packet(&response, conn);
+    write_packet(ctx, &response, conn);
 
     return TRUE;
 }
 
-static bool enable_compression(Connection* conn) {
+static bool enable_compression(NetworkContext* ctx, Connection* conn) {
 
     PacketSetCompress payload = {
         .threshold = COMPRESS_THRESHOLD,
@@ -149,17 +146,18 @@ static bool enable_compression(Connection* conn) {
         .payload = &payload,
     };
 
-    write_packet(&cmprss_pkt, conn);
+    write_packet(ctx, &cmprss_pkt, conn);
 
     if (!compression_init(&conn->cmprss_ctx, &conn->persistent_arena))
         return FALSE;
 
     conn->compression = TRUE;
-    log_infof("Protocol compression successfully initialized for connection %i.", conn->peer_socket);
+    log_infof("Protocol compression successfully initialized for connection %i.",
+              conn->peer_socket);
     return TRUE;
 }
 
-static bool send_login_success(Connection* conn, JSON* json) {
+static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json) {
     JSONNode* json_id = json_get_obj_cstr(json->root, "id");
     JSONNode* json_name = json_get_obj_cstr(json->root, "name");
     JSONNode* json_properties = json_get_obj_cstr(json->root, "properties");
@@ -227,7 +225,7 @@ static bool send_login_success(Connection* conn, JSON* json) {
         .payload = &login_success,
     };
 
-    write_packet(&pkt, conn);
+    write_packet(ctx, &pkt, conn);
 
     return TRUE;
 }
@@ -279,11 +277,11 @@ PKT_HANDLER(enc_res) {
     if (!res)
         return FALSE;
 
-    res = enable_compression(conn);
+    res = enable_compression(ctx, conn);
     if (!res)
         return FALSE;
 
-    res = send_login_success(conn, &json);
+    res = send_login_success(ctx, conn, &json);
 
     json_destroy(&json);
 

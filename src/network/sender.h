@@ -19,7 +19,7 @@
  * @param[in] pkt The packet to send.
  * @param[in] conn The connection to send a packet through.
  */
-void write_packet(const Packet* pkt, Connection* conn);
+void write_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn);
 /**
  * Tries sending buffered bytes through the given connection.
  *

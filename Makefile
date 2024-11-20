@@ -15,6 +15,11 @@ export CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_$(detected_os)
 #export LDFLAGS = -fsanitize=address
 export LDLIBS := -lcrypto -lz -lcurl
 
+ifeq ($(detected_os),WINDOWS)
+	CPPFLAGS += -IC:\msys64\ucrt64\include\openssl
+	LDLIBS += -lws2_32 -lwsock32
+endif
+
 include sources.mk
 include headers.mk
 include tests.mk
@@ -48,7 +53,7 @@ $(CORE_LIB): $(OBJS) $(HDRS)
 	$(AR) rc $@ $(OBJS)
 
 $(MAIN_TARGET): $(MAIN_OBJ) $(CORE_LIB)
-	$(CC) $(LDFLAGS) $(LDLIBS) -o $@ $^
+	$(CC) $(LDFLAGS)  -o $@ $^ $(LDLIBS)
 
 $(TEST_TARGETS): $(CORE_LIB)
 	$(MAKE) -C $(dir $@)

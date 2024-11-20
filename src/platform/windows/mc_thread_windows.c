@@ -14,9 +14,10 @@
 struct ThreadInternal {
     void* arg;
     mcthread_routine routine;
+    void* res;
     HANDLE handle;
     i64 index;
-    u64 id;
+    unsigned long id;
 };
 
 // static Dict threads;
@@ -37,10 +38,16 @@ void mcthread_init(void) {
     initialized = TRUE;
 }
 
+void mcthread_cleanup(void) {
+    mcmutex_destroy(&internal_array_mutex);
+    arena_destroy(&arena);
+    initialized = FALSE;
+}
+
 static unsigned long routine_wrapper(void* arg) {
-    const struct ThreadInternal* wrapper = arg;
-    void* res = wrapper->routine(wrapper->arg);
-    return (unsigned long) res;
+    struct ThreadInternal* wrapper = arg;
+    wrapper->res = wrapper->routine(wrapper->arg);
+    return 0;
 }
 
 i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg) {
@@ -95,6 +102,7 @@ void mcthread_destroy(MCThread* thread) {
 }
 
 bool mcthread_set_name(const char* name) {
+    UNUSED(name);
     //TODO
     return FALSE;
 }
@@ -106,8 +114,11 @@ void* mcthread_get_data(MCThreadKey key);
 
 MCThread* mcthread_self(void) {
     //TODO;
+    abort();
 }
 bool mcthread_equals(MCThread* thread) {
+    UNUSED(thread);
+
     return FALSE;
 }
 bool mcthread_is_running(MCThread* thread) {
@@ -126,7 +137,7 @@ bool mcthread_join(MCThread* thread, void** out_return) {
 
     mcthread_destroy(thread);
 
-    *out_return = (void*)res;
+    *out_return = internal->res;
 
     return TRUE;
 }

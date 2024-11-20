@@ -93,4 +93,6 @@ STATIC_ASSERT(sizeof(i64) == sizeof(ssize_t), "size_t and u64 do not have the sa
 STATIC_ASSERT(sizeof(u64) >= sizeof(intptr_t), "Cannot convert pointers to long integers");
 STATIC_ASSERT(sizeof(i64) >= sizeof(void*), "Cannot convert pointers to long integers");
 
+#define UNUSED(x) ((void)(x))
+
 #endif /* ! DEFINITIONS_H */

@@ -6,13 +6,15 @@
 #define COMMON_TYPES_H
 
 #include "memory/arena.h"
-#include "platform/mc_thread.h"
 #include "security.h"
 
 #include "containers/object_pool.h"
+#include "platform/socket.h"
+#include "platform/mc_thread.h"
 
 #define IOEVENT_IN 1
 #define IOEVENT_OUT 2
+
 
 /**
  * Enumeration used internally to keep track of the state of connections.
@@ -23,10 +25,9 @@ enum IOCode {
     IOC_OK,    /**< No errors occurred, connection can stay open. */
     IOC_ERROR, /**< An error occurred, the connection must be closed. */
     IOC_AGAIN, /**< Data could not be read all at once, we should try reading more when possible. */
+    IOC_PENDING, /**< Read operations are pending. */
     IOC_CLOSED /**< The connection has been closed by the peer, stop handling it. */
 };
-
-typedef uintptr_t socketfd;
 
 typedef struct NetworkContext {
     Arena arena;

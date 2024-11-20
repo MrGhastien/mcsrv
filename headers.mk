@@ -23,8 +23,8 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/network/security.h \
 		$(SRC_DIR)/network/compression.h \
 		$(SRC_DIR)/network/common_types.h \
-		$(SRC_DIR)/network/common_functions.h \
 		$(SRC_DIR)/platform/platform.h \
+		$(SRC_DIR)/platform/socket.h \
 		$(SRC_DIR)/platform/network.h \
 		$(SRC_DIR)/platform/mc_thread.h \
 		$(SRC_DIR)/platform/mc_mutex.h \

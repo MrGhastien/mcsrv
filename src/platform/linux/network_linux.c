@@ -176,6 +176,48 @@ static void network_finish(void) {
     arena_destroy(&ctx.arena);
 }
 
+
+i32 handle_connection_io(Connection* conn, u32 events) {
+    enum IOCode io_code = IOC_OK;
+    if (events & IOEVENT_IN) {
+        while (io_code == IOC_OK) {
+            io_code = receive_packet(conn);
+        }
+        switch (io_code) {
+        case IOC_CLOSED:
+            log_warn("Peer closed connection.");
+            close_connection(&ctx, conn);
+            return 0;
+        case IOC_ERROR:
+            log_error("Errored connection.");
+            close_connection(&ctx, conn);
+            return 1;
+        default:
+            break;
+        }
+    }
+
+    if (events & IOEVENT_OUT) {
+        if (!conn->can_send) {
+            io_code = sender_send(conn);
+            switch (io_code) {
+            case IOC_CLOSED:
+            case IOC_ERROR:
+                close_connection(&ctx, conn);
+                break;
+            case IOC_AGAIN:
+                conn->can_send = FALSE;
+                break;
+            default:
+                break;
+            }
+        }
+        conn->can_send = TRUE;
+    }
+
+    return 0;
+}
+
 static void* network_handle(void* params) {
     (void) params;
     struct epoll_event events[10];

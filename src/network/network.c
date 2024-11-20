@@ -56,7 +56,14 @@ i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
 }
 
 i32 network_init(char* host, i32 port, u64 max_connections) {
-    i32 res = network_platform_init(&ctx);
+
+    ctx.arena = arena_create(40960);
+    objpool_init(&ctx.connections, &ctx.arena, max_connections, sizeof(Connection));
+    ctx.host = str_create_const(host);
+    ctx.port = port;
+    ctx.code = 0;
+
+    i32 res = network_platform_init(&ctx, max_connections);
     if (res)
         return res;
 
@@ -64,60 +71,14 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
     if (res)
         return res;
 
-    ctx.arena = arena_create(40960);
-    objpool_init(&ctx.connections, &ctx.arena, max_connections, sizeof(Connection));
-    ctx.host = str_create_const(host);
-    ctx.port = port;
-    ctx.code = 0;
-    ctx.should_continue = TRUE;
 
     if (!encryption_init(&ctx.enc_ctx))
         return 3;
 
+    ctx.should_continue = TRUE;
     log_debug("Network subsystem initialized.");
 
     mcthread_create(&ctx.thread, &network_handle, NULL);
-    return 0;
-}
-
-i32 handle_connection_io(Connection* conn, u32 events) {
-    enum IOCode io_code = IOC_OK;
-    if (events & IOEVENT_IN) {
-        while (io_code == IOC_OK) {
-            io_code = receive_packet(conn);
-        }
-        switch (io_code) {
-        case IOC_CLOSED:
-            log_warn("Peer closed connection.");
-            close_connection(&ctx, conn);
-            return 0;
-        case IOC_ERROR:
-            log_error("Errored connection.");
-            close_connection(&ctx, conn);
-            return 1;
-        default:
-            break;
-        }
-    }
-
-    if (events & IOEVENT_OUT) {
-        if (!conn->can_send) {
-            io_code = sender_send(conn);
-            switch (io_code) {
-            case IOC_CLOSED:
-            case IOC_ERROR:
-                close_connection(&ctx, conn);
-                break;
-            case IOC_AGAIN:
-                conn->can_send = FALSE;
-                break;
-            default:
-                break;
-            }
-        }
-        conn->can_send = TRUE;
-    }
-
     return 0;
 }
 

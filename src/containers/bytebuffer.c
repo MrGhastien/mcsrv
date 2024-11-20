@@ -39,18 +39,21 @@ static void ensure_capacity(ByteBuffer* buffer, u64 size) {
     buffer->capacity = new_cap;
 }
 
-static void bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data) {
+static i64 bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data) {
     if (!out_data)
-        return;
+        return 0;
     if (!is_fixed(buffer)) {
-        memcpy(out_data, buffer->buf, min_u64(size, buffer->size));
-        return;
+        i64 to_read = min_u64(size, buffer->size);
+        memcpy(out_data, buffer->buf, to_read);
+        return to_read;
     }
 
     u64 to_read = min_u64(size, buffer->capacity - buffer->read_head);
     memcpy(out_data, offset(buffer->buf, buffer->read_head), to_read);
     if (to_read < size)
         memcpy(offset(out_data, to_read), buffer->buf, size - to_read);
+
+    return to_read;
 }
 
 static u64 register_read(ByteBuffer* buffer, u64 size) {
@@ -236,9 +239,9 @@ i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
     i64 i = 0;
     u8 byte;
     while (TRUE) {
-        if (bytebuf_read(buffer, sizeof byte, &byte) != 1) {
+        if (bytebuf_read_const(buffer, sizeof byte, &byte) != 1) {
             log_error("Failed to decode varint: Invalid data.");
-            return -1;
+            return 0;
         }
         res |= (byte & SEGMENT_BITS) << position;
         i++;
@@ -251,14 +254,14 @@ i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
             return -1;
     }
     *out = res;
-    return i;
+    return register_read(buffer, i);
 }
 
 i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str) {
     i32 length = 0;
     i64 len_byte_count = bytebuf_read_varint(buffer, &length);
-    if (len_byte_count == -1)
-        return -1;
+    if (len_byte_count <= 0)
+        return len_byte_count;
 
     *out_str = str_create_from_buffer(offset(buffer->buf, buffer->read_head), length, arena);
 

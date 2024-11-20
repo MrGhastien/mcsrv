@@ -12,6 +12,7 @@ bool mcvar_create(MCCondVar* cond_var) {
     return TRUE;
 }
 bool mcvar_destroy(MCCondVar* cond_var) {
+    UNUSED(cond_var);
     // No Win32 function to destroy condition variables ??
     return TRUE;
 }

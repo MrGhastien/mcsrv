@@ -6,8 +6,8 @@
 
 #include "platform/mc_mutex.h"
 
-#include <containers/object_pool.h>
-#include <memory/arena.h>
+#include "containers/object_pool.h"
+
 #include <synchapi.h>
 
 bool mcmutex_create(MCMutex* mutex) {

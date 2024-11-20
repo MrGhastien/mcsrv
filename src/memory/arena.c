@@ -11,7 +11,7 @@ Arena arena_create(u64 size) {
         .block = malloc(size),
         .capacity = size,
         .length = 0,
-        .saved_length = 0,
+        .saved_length = ~0,
         .logging = TRUE,
     };
     if (!res.block)
@@ -27,7 +27,7 @@ Arena arena_create_silent(u64 size) {
         .block = malloc(size),
         .capacity = size,
         .length = 0,
-        .saved_length = 0,
+        .saved_length = ~0,
         .logging = FALSE,
     };
     if (!res.block)
@@ -92,6 +92,10 @@ void arena_free_ptr(Arena* arena, void* ptr) {
 }
 
 void arena_save(Arena* arena) {
+    if(arena->saved_length != ~0ULL) {
+        log_debug("Arena pointer save would discard previously saved pointer.");
+        return;
+    }
     arena->saved_length = arena->length;
 }
 
@@ -99,7 +103,7 @@ void arena_restore(Arena* arena) {
     if (arena->length >= arena->saved_length)
         arena_free(arena, arena->length - arena->saved_length);
 
-    arena->saved_length = arena->capacity;
+    arena->saved_length = ~0;
 }
 
 void* arena_recent_pos(Arena* arena) {

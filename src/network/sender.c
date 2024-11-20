@@ -15,29 +15,6 @@
 
 #define MAX_PACKET_SIZE 2097151
 
-static enum IOCode send_bytebuf(ByteBuffer* buffer, socketfd socket) {
-    if (buffer->size == 0) {
-        log_warn("No data to send.");
-        return IOC_OK;
-    }
-
-    void* region;
-    u64 size;
-    enum IOCode code;
-    do {
-        u64 sent;
-        size = bytebuf_contiguous_read(buffer, &region);
-        code = try_send(socket, region, size, &sent);
-        if(sent < size)
-            bytebuf_unread(buffer, size - sent);
-
-        sock_send_buf(socket, buffer);
-
-    } while (code == IOC_OK && size > 0);
-
-    return code;
-}
-
 static bool encrypt_bytebuf(ByteBuffer* buffer, PeerEncryptionContext* enc_ctx) {
     u64 to_cipher = min_u64(buffer->capacity - buffer->read_head, buffer->size);
 
@@ -52,7 +29,7 @@ static bool encrypt_bytebuf(ByteBuffer* buffer, PeerEncryptionContext* enc_ctx) 
     return TRUE;
 }
 
-void write_packet(const Packet* pkt, Connection* conn) {
+void write_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
     pkt_encoder encoder = get_pkt_encoder(pkt, conn);
     if (!encoder)
         return;
@@ -89,18 +66,10 @@ void write_packet(const Packet* pkt, Connection* conn) {
 
     bytebuf_write_buffer(&conn->send_buffer, &scratch);
 
-    if(conn->can_send)
-        send_bytebuf(&conn->send_buffer, conn->peer_socket);
+    if(!conn->pending_write)
+        empty_buffer(ctx, conn);
+
 
     arena_restore(&conn->scratch_arena);
     mcmutex_unlock(&conn->mutex);
-}
-
-enum IOCode sender_send(Connection* conn) {
-    mcmutex_lock(&conn->mutex);
-
-    enum IOCode code = send_bytebuf(&conn->send_buffer, conn->peer_socket);
-
-    mcmutex_unlock(&conn->mutex);
-    return code;
 }

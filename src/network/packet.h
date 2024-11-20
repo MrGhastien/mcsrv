@@ -222,11 +222,12 @@ typedef struct {
  *
  * Processing of packets is done by packet handlers. Most packet handlers
  * trigger events, or send other packets.
+ * @param ctx Context information of the network sub-system.
  * @param[in] pkt The packet to handle.
  * @param[in] conn The connection the packet was received on.
  * @return @ref TRUE if the packet was handled successfully, @ref FALSE otherwise.
  */
-typedef bool (*pkt_acceptor)(const Packet* pkt, Connection* conn);
+typedef bool (*pkt_acceptor)(NetworkContext* ctx, const Packet* pkt, Connection* conn);
 /**
  * Packet decoder function.
  *

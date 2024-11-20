@@ -8,14 +8,16 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include "containers/bytebuffer.h"
 #include "definitions.h"
+
 #include "memory/arena.h"
+#include "containers/bytebuffer.h"
+#include "network/common_types.h"
 #include "network/compression.h"
 #include "network/security.h"
-#include "network/common_types.h"
 #include "utils/string.h"
 
+#include "platform/network.h"
 #include "platform/mc_mutex.h"
 
 typedef struct Packet Packet;
@@ -65,13 +67,13 @@ typedef struct Connection {
     socketfd peer_socket; /**< Linux file descriptor of the connection's socket.*/
 
     /** Keeps track of whether the last packet read operation read the packet's size or not. */
-    bool has_read_size; 
+    bool pending_read;
+    bool pending_write;
     /** Buffer storing raw (possibly compressed or encrypted) packets. */
     ByteBuffer recv_buffer;
-    /** Keeps track of whether the underlying socket is writable or not. */
-    bool can_send;
     /** Encoded packet sending queue */
     ByteBuffer send_buffer;
+    Packet* packet_cache;
 
     u64 verify_token_size;
     u8* verify_token;

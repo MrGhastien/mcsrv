@@ -149,9 +149,15 @@ i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data);
 /**
  * Reads and decodes a MC VarInt from a byte buffer.
  *
+ * If the VarInt is invalid or there are not enough bytes inside the buffer,
+ * the read-head of the buffer is not incremented.
+ * This means attempting a new read will start at the same position.
+ *
  * @param buffer The buffer to read from.
- * @param[out] out A pointer to a 32-bit signed integer that will contained the decoded VarInt.
- * @return The number of bytes read and decoded.
+ * @param[out] out A pointer to a 32-bit signed integer that will contain the decoded VarInt.
+ * @return The number of bytes read and decoded, or :
+ * - `0` if there is not enough bytes inside the buffer to read the whole VarInt;
+ * - `-1` if the VarInt is invalid.
  */
 i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out);
 /**

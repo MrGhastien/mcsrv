@@ -1,3 +1,5 @@
+#ifdef MC_PLATFORM_LINUX
+
 #include "signal-handler.h"
 #include "definitions.h"
 #include "event/event.h"
@@ -72,3 +74,5 @@ void signal_system_cleanup(void) {
     pthread_join(thread, NULL);
     log_debug("Signal handler thread exited.");
 }
+
+#endif

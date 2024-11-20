@@ -3,28 +3,6 @@
 #include "utils/bitwise.h"
 
 #include <errno.h>
-#include <sys/socket.h>
-
-enum IOCode try_send(int sockfd, void* data, u64 size, u64* out_sent) {
-    u64 sent = 0;
-    enum IOCode code = IOC_OK;
-    while (sent < size) {
-        void* begin = offset(data, sent);
-        i64 res = send(sockfd, begin, size - sent, 0);
-
-        if (res == -1) {
-            code = errno == EAGAIN || errno == EWOULDBLOCK ? IOC_AGAIN : IOC_ERROR;
-            break;
-        } else if (res == 0) {
-            code = IOC_CLOSED;
-            break;
-        }
-
-        sent += res;
-    }
-    *out_sent = sent;
-    return code;
-}
 
 u64 encode_varint(i32 n, u8* buf) {
     u64 i = 0;
