@@ -123,7 +123,7 @@ const char* get_pkt_name(const Packet* pkt, const Connection* conn) {
 }
 
 bool conn_is_resuming_read(const Connection* conn) {
-    return conn->recv_buffer.capacity > 0;
+    return conn->packet_cache != NULL;
 }
 
 Connection

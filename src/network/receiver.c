@@ -5,6 +5,7 @@
 #include "memory/arena.h"
 #include "network.h"
 #include "packet.h"
+#include "utils.h"
 #include "utils/bitwise.h"
 
 #include <errno.h>
@@ -13,28 +14,35 @@
 static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* out_pkt) {
     // Read the packet size (ID + payload)
     i32 pkt_length;
-    i64 length_byte_count = bytebuf_read_varint(bytes, &pkt_length);
-    if(length_byte_count == 0)
-        return IOC_AGAIN;
-    if(length_byte_count < 0)
-        return IOC_ERROR;
+    if (out_pkt->total_length == 0) {
+        i64 length_byte_count = bytebuf_read_varint(bytes, &pkt_length);
+        if(length_byte_count == 0)
+            return IOC_AGAIN;
+        if(length_byte_count < 0)
+            return IOC_ERROR;
 
-    // Save the total length in the packet.
-    out_pkt->total_length = pkt_length + length_byte_count;
-
-    // Read the packet ID
-    i32 id;
-    i64 id_size = bytebuf_read_varint(bytes, &id);
-    if(id_size == 0)
-        return IOC_AGAIN;
-    if (id_size < 0) {
-        log_error("Received invalid packet id");
-        return IOC_ERROR;
+        // Save the total length in the packet.
+        out_pkt->total_length = pkt_length + length_byte_count;
+        out_pkt->data_length = pkt_length;
+    } else {
+        pkt_length = (i32)out_pkt->data_length;
     }
 
-    // Save the payload length and the packet ID
-    out_pkt->payload_length = pkt_length - id_size;
-    out_pkt->id = id;
+    // Read the packet ID
+    if(out_pkt->id == PKT_INVALID) {
+        i32 id;
+        i64 id_size = bytebuf_read_varint(bytes, &id);
+        if(id_size == 0)
+            return IOC_AGAIN;
+        if (id_size < 0) {
+            log_error("Received invalid packet id");
+            return IOC_ERROR;
+        }
+
+        // Save the payload length and the packet ID
+        out_pkt->payload_length = pkt_length - id_size;
+        out_pkt->id = id;
+    }
 
     if(bytes->size < out_pkt->payload_length)
         return IOC_AGAIN;
@@ -66,6 +74,7 @@ enum IOCode receive_packet(NetworkContext* ctx, Connection* conn) {
         if (!conn_is_resuming_read(conn)) {
             arena_save(&conn->scratch_arena);
             conn->packet_cache = arena_callocate(&conn->scratch_arena, sizeof *conn->packet_cache);
+            conn->packet_cache->id = PKT_INVALID;
         }
 
         code = decode_packet(&conn->recv_buffer, conn, conn->packet_cache);
@@ -75,6 +84,7 @@ enum IOCode receive_packet(NetworkContext* ctx, Connection* conn) {
         if (!handle_packet(ctx, conn->packet_cache, conn))
             return IOC_ERROR;
 
+        conn->packet_cache = NULL;
         arena_restore(&conn->scratch_arena);
     }
 

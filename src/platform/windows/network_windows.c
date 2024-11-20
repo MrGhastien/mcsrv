@@ -34,12 +34,14 @@ typedef struct PlatformNetworkCtx {
     WSAOVERLAPPED stop_overlapped;
 } PlatformNetworkCtx;
 
-static PlatformNetworkCtx platform_ctx;
+static PlatformNetworkCtx platform_ctx = {
+    .completion_port = INVALID_HANDLE_VALUE,
+};
 
 char* get_last_error(void) {
-    static char error_msg[256];
+    static char error_msg[2048];
     i32 error_code = WSAGetLastError();
-    FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error_code, 0, error_msg, 256, NULL);
+    FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error_code, 0, error_msg, 2048, NULL);
     return error_msg;
 }
 
@@ -170,10 +172,11 @@ static enum IOCode accept_connection(NetworkContext* ctx, socketfd* peer_socket)
     *pconn = (PlatformConnection){
         .connection = conn_create(*peer_socket, index, &ctx->enc_ctx, peer_host, peer_port),
         .read_overlapped = {0},
-        .write_overlapped = {0}};
+        .write_overlapped = {0},
+    };
 
     if (CreateIoCompletionPort(
-            (HANDLE) peer_socket, platform_ctx.completion_port, (uintptr_t) connection, 1) != 0) {
+            peer_socket, platform_ctx.completion_port, (uintptr_t) connection, 1) != 0) {
         log_errorf("Could not handle the connection to [%s:%u]: %s",
                    connection->peer_addr.base,
                    connection->peer_port,
@@ -277,7 +280,7 @@ enum IOCode fill_buffer(NetworkContext* ctx, Connection* conn) {
         return IOC_ERROR;
     }
 
-    while (conn->recv_buffer.size < conn->recv_buffer.capacity) {
+    if (conn->recv_buffer.size < conn->recv_buffer.capacity) {
         i64 size = sock_recv_buf(conn->peer_socket, &pconn->read_overlapped, &conn->recv_buffer);
         if (size == SOCKIO_ERROR)
             return IOC_ERROR;
@@ -368,10 +371,11 @@ i64 sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output
     u64 total_size = 0;
     i32 region_count = 0;
     while (size < output->capacity - output->size) {
-        void* cast_ptr = &regions[region_count].buf;
-        size = bytebuf_contiguous_write(output, cast_ptr);
+        void* ptr;
+        size = bytebuf_contiguous_write(output, &ptr);
         regions[region_count].len = size;
         total_size += size;
+        regions[region_count].buf = ptr;
         region_count++;
     }
 
@@ -379,12 +383,14 @@ i64 sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output
         return 0;
 
     unsigned long bytes = 0;
-    i32 res = WSARecv(socket, regions, region_count, &bytes, 0, overlapped, NULL);
+    unsigned long flags = 0;
+    i32 res = WSARecv(socket, regions, region_count, &bytes, &flags, overlapped, NULL);
     if (res != 0) {
         i32 error = WSAGetLastError();
         if (error == WSA_IO_PENDING)
             return SOCKIO_PENDING;
         bytebuf_unwrite(output, size);
+        log_errorf("Failed to fill the receive buffer: %s", get_last_error());
         return SOCKIO_ERROR;
     }
 
@@ -470,6 +476,7 @@ enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, SocketAddress* 
 
     out_address->length = peer_len;
     memcpy(&out_address->data.storage, peer, peer_len);
+    *out_accepted = accepted;
 
     return IOC_OK;
 }

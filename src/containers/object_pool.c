@@ -61,6 +61,7 @@ void* objpool_add(ObjectPool* pool, i64* out_index) {
     if(out_index)
         *out_index = index;
     update_next_available(pool);
+    pool->size++;
     return ptr;
 }
 
@@ -73,6 +74,7 @@ bool objpool_remove(ObjectPool* pool, i64 idx) {
 
     set_allocated(pool, idx, FALSE);
     pool->next_available = idx;
+    pool->size--;
     return TRUE;
 }
 

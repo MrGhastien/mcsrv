@@ -78,7 +78,7 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
     ctx.should_continue = TRUE;
     log_debug("Network subsystem initialized.");
 
-    mcthread_create(&ctx.thread, &network_handle, NULL);
+    mcthread_create(&ctx.thread, &network_handle, &ctx);
     return 0;
 }
 

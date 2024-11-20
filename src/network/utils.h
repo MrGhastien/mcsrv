@@ -13,6 +13,8 @@
  */
 u64 encode_varint(int n, u8* buf);
 
+i64 varint_length(i32 n);
+
 /**
  * Extracts an UUID from a given string.
  *

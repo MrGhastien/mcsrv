@@ -46,6 +46,7 @@
  * being local to the connection's state.
  */
 enum PacketType {
+    PKT_INVALID = -1,
     // === HANDSHAKE ===
     /** @name Handshake */
     /**@{*/
@@ -93,8 +94,10 @@ enum PacketType {
  */
 typedef struct Packet {
     enum PacketType id; /**< The packet identifier. */
-    u64 total_length;   /**< The length of the packet, including the ID and the payload. */
-    u64 payload_length; /**< The length of the payload. */
+    u32 total_length;   /**< The length of the packet, including the ID and the payload. */
+    u32 data_length;    /**< The length of the payload and packet ID (as a VarInt). Only used to
+                             resume packet decoding. */
+    u32 payload_length; /**< The length of the payload. */
     void* payload;      /**< A pointer to the payload. */
 } Packet;
 

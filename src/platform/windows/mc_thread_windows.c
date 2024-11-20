@@ -57,9 +57,6 @@ i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg) {
     // if(!threads.base)
     //     dict_init(&threads, NULL, sizeof(DWORD), sizeof(MCThread*));
 
-    if(!thread->internal)
-        return 2;
-
     i64 index;
     mcmutex_lock(&internal_array_mutex);
     struct ThreadInternal* internal = objpool_add(&threads, &index);

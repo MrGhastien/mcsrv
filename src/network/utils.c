@@ -18,6 +18,19 @@ u64 encode_varint(i32 n, u8* buf) {
     return i + 1;
 }
 
+i64 varint_length(i32 n) {
+    i64 i = 0;
+    while (i < VARINT_MAX_SIZE) {
+        if ((n & ~SEGMENT_BITS) != 0)
+            break;
+        i++;
+        n >>= 7;
+    }
+    if(n != 0)
+        return -1;
+    return i + 1;
+}
+
 static u8 parse_hex_digit(char c) {
     if (c >= '0' && c <= '9')
         return c - '0';

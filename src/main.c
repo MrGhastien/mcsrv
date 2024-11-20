@@ -15,8 +15,6 @@ typedef struct server_ctx {
 static ServerContext server_ctx;
 
 static i32 init(char* host, i32 port, u64 max_connections) {
-
-
     i32 code = 0;
 
     platform_init();
