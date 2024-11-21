@@ -10,6 +10,7 @@
 
 u64 ceil_two_pow(u64 num);
 void* offset(void* ptr, i64 offset);
+void* offsetu(void* ptr, u64 offset);
 
 u64 hton64(u64 x);
 u64 ntoh64(u64 x);

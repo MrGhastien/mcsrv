@@ -6,6 +6,8 @@
 ** Network
 *** FIXED Legacy ping request is sent after sending the status response
 CLOSED: [2024-06-15 sam. 00:20]
+*** BUG All bytes of a packet are read correctly, but ~has_read_all_bytes()~ aborts the program.
+The functions is invalid because the byte buffer might contain multiple raw packets.
 ** FIXED Properly handle termination signals (SIGINT)
 CLOSED: [2024-06-24 lun. 00:05]
 Trying to interrupt with Ctrl-C does nothing.

@@ -1,15 +1,15 @@
 #include "handlers.h"
-
-#include "containers/vector.h"
-#include "logger.h"
-#include "memory/arena.h"
+#include "compression.h"
+#include "connection.h"
 #include "network.h"
-#include "network/compression.h"
-#include "network/connection.h"
-#include "network/security.h"
-#include "network/utils.h"
 #include "packet.h"
-#include "sender.h"
+#include "packet_codec.h"
+#include "security.h"
+#include "utils.h"
+
+#include "logger.h"
+#include "containers/vector.h"
+#include "memory/arena.h"
 #include "utils/string.h"
 #include "json/json.h"
 
@@ -89,7 +89,7 @@ PKT_HANDLER(status) {
     json_stringify(&json, &response.data, 2048, &conn->scratch_arena);
     log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
-    write_packet(ctx, &out_pkt, conn);
+    send_packet(ctx, &out_pkt, conn);
     json_destroy(&json);
     return TRUE;
 }
@@ -99,7 +99,7 @@ PKT_HANDLER(ping) {
     PacketPing pong = {.num = ping->num};
     Packet response = {.id = PKT_PING, .payload = &pong};
 
-    write_packet(ctx, &response, conn);
+    send_packet(ctx, &response, conn);
     return TRUE;
 }
 
@@ -130,7 +130,7 @@ PKT_HANDLER(log_start) {
         .payload = req,
     };
 
-    write_packet(ctx, &response, conn);
+    send_packet(ctx, &response, conn);
 
     return TRUE;
 }
@@ -146,7 +146,7 @@ static bool enable_compression(NetworkContext* ctx, Connection* conn) {
         .payload = &payload,
     };
 
-    write_packet(ctx, &cmprss_pkt, conn);
+    send_packet(ctx, &cmprss_pkt, conn);
 
     if (!compression_init(&conn->cmprss_ctx, &conn->persistent_arena))
         return FALSE;
@@ -225,7 +225,7 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
         .payload = &login_success,
     };
 
-    write_packet(ctx, &pkt, conn);
+    send_packet(ctx, &pkt, conn);
 
     return TRUE;
 }

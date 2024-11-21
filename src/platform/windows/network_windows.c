@@ -1,17 +1,14 @@
 //
 // Created by bmorino on 14/11/2024.
 //
-
-#include <logger.h>
-#include <network/receiver.h>
-#include <network/sender.h>
-#include <stdio.h>
 #ifdef MC_PLATFORM_WINDOWS
 
+#include "logger.h"
+#include "network/packet_codec.h"
 #include "platform/mc_thread.h"
 #include "platform/network.h"
-#include "utils/bitwise.h"
 
+#include <stdio.h>
 #include <mswsock.h>
 
 #define COMPL_KEY_ACCEPT 0

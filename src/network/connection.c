@@ -1,13 +1,13 @@
 #include "connection.h"
-
-#include "memory/arena.h"
-#include "logger.h"
-
 #include "decoders.h"
 #include "encoders.h"
 #include "handlers.h"
 #include "security.h"
 #include "packet.h"
+#include "packet_codec.h"
+
+#include "memory/arena.h"
+#include "logger.h"
 
 #include "platform/socket.h"
 #include "platform/mc_mutex.h"

@@ -56,6 +56,18 @@ static i64 bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data
     return to_read;
 }
 
+static bool peek_byte(const ByteBuffer* buffer, u64 index, u8* out_byte) {
+    if(buffer->size == 0)
+        return 0;
+    if(index >= buffer->size)
+        return FALSE;
+
+    if(out_byte)
+        *out_byte = *(u8*)offsetu(buffer->buf, is_fixed(buffer) ? buffer->read_head + index : index);
+
+    return TRUE;
+}
+
 static u64 register_read(ByteBuffer* buffer, u64 size) {
 
     if (size > buffer->size)
@@ -239,7 +251,7 @@ i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
     i64 i = 0;
     u8 byte;
     while (TRUE) {
-        if (bytebuf_read_const(buffer, sizeof byte, &byte) != 1) {
+        if (!peek_byte(buffer, i, &byte)) {
             log_error("Failed to decode varint: Invalid data.");
             return 0;
         }

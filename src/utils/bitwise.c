@@ -16,6 +16,12 @@ void* offset(void* ptr, i64 offset) {
     return (void*)a;
 }
 
+void* offsetu(void* ptr, u64 offset) {
+    u64 a = (u64)ptr;
+    a += offset;
+    return (void*)a;
+}
+
 static u64 swap_bytes(u64 x) {
     u8* array = (u8*)&x;
 

@@ -1,10 +1,9 @@
+#include "packet.h"
 #include "packet_codec.h"
 #include "connection.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
-#include "network.h"
-#include "packet.h"
 
 #include <stdio.h>
 

@@ -5,8 +5,8 @@
  * @brief Structure representing a connection.
  */
 
-#ifndef CONTEXT_H
-#define CONTEXT_H
+#ifndef CONNECTION_H
+#define CONNECTION_H
 
 #include "definitions.h"
 
@@ -122,4 +122,4 @@ bool conn_is_resuming_read(const Connection* conn);
  */
 bool conn_is_closed(const Connection* conn);
 
-#endif /* ! CONTEXT_H */
+#endif /* ! CONNECTION_H */

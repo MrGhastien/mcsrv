@@ -27,9 +27,8 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#include "connection.h"
-#include "containers/vector.h"
 #include "definitions.h"
+#include "containers/vector.h"
 #include "utils/string.h"
 
 #include <stddef.h>
