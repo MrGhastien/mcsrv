@@ -16,7 +16,7 @@ export CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_$(detected_os)
 export LDLIBS := -lcrypto -lz -lcurl
 
 ifeq ($(detected_os),WINDOWS)
-	CPPFLAGS += -IC:\msys64\ucrt64\include\openssl
+	CPPFLAGS += -IC:\msys64\ucrt64\include
 	LDLIBS += -lws2_32 -lwsock32
 endif
 

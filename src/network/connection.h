@@ -10,17 +10,16 @@
 
 #include "definitions.h"
 
+#include "common_types.h"
+#include "compression.h"
+#include "security.h"
+#include "packet.h"
+
 #include "memory/arena.h"
 #include "containers/bytebuffer.h"
-#include "network/common_types.h"
-#include "network/compression.h"
-#include "network/security.h"
 #include "utils/string.h"
 
-#include "platform/network.h"
 #include "platform/mc_mutex.h"
-
-typedef struct Packet Packet;
 
 /**
  * Enumeration of connection states.
@@ -100,8 +99,7 @@ typedef struct Connection {
  * @param port the TCP port through which the peer is connected.
 * @return A new connection.
  */
-Connection
-conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
+Connection conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
 
 /**
  * Indicates whether a previous packet read was stopped.

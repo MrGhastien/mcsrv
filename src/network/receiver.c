@@ -1,14 +1,11 @@
-#include "receiver.h"
+#include "packet_codec.h"
 #include "connection.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "network.h"
 #include "packet.h"
-#include "utils.h"
-#include "utils/bitwise.h"
 
-#include <errno.h>
 #include <stdio.h>
 
 static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* out_pkt) {

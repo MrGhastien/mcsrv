@@ -6,15 +6,13 @@
  */
 
 #include "network.h"
+#include "common_types.h"
+#include "connection.h"
 
 #include "logger.h"
 
-#include "common_types.h"
 #include "platform/mc_thread.h"
 #include "platform/network.h"
-
-#include "receiver.h"
-#include "sender.h"
 
 static NetworkContext ctx;
 

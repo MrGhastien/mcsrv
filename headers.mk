@@ -15,8 +15,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/network/decoders.h \
 		$(SRC_DIR)/network/utils.h \
 		$(SRC_DIR)/network/connection.h \
-		$(SRC_DIR)/network/receiver.h \
-		$(SRC_DIR)/network/sender.h \
+		$(SRC_DIR)/network/packet_codec.h \
 		$(SRC_DIR)/network/network.h \
 		$(SRC_DIR)/network/handlers.h \
 		$(SRC_DIR)/network/encoders.h \

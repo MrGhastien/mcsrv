@@ -1,17 +1,14 @@
-#include "sender.h"
+#include "packet_codec.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "network.h"
-#include "network/compression.h"
-#include "network/security.h"
+#include "compression.h"
+#include "security.h"
 #include "packet.h"
-#include "utils.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
 #include "platform/network.h"
-
-#include <pthread.h>
 
 #define MAX_PACKET_SIZE 2097151
 
@@ -29,7 +26,7 @@ static bool encrypt_bytebuf(ByteBuffer* buffer, PeerEncryptionContext* enc_ctx) 
     return TRUE;
 }
 
-void write_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
+void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
     pkt_encoder encoder = get_pkt_encoder(pkt, conn);
     if (!encoder)
         return;
