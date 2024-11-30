@@ -57,39 +57,16 @@ static i64 bytebuf_read_const(const ByteBuffer* buffer, u64 size, void* out_data
 }
 
 static bool peek_byte(const ByteBuffer* buffer, u64 index, u8* out_byte) {
-    if(buffer->size == 0)
+    if (buffer->size == 0)
         return 0;
-    if(index >= buffer->size)
+    if (index >= buffer->size)
         return FALSE;
 
-    if(out_byte)
-        *out_byte = *(u8*)offsetu(buffer->buf, is_fixed(buffer) ? buffer->read_head + index : index);
+    if (out_byte)
+        *out_byte =
+            *(u8*) offsetu(buffer->buf, is_fixed(buffer) ? buffer->read_head + index : index);
 
     return TRUE;
-}
-
-static u64 register_read(ByteBuffer* buffer, u64 size) {
-
-    if (size > buffer->size)
-        size = buffer->size;
-
-    if (is_fixed(buffer)) {
-        buffer->read_head += size;
-        buffer->read_head %= buffer->capacity;
-    }
-    buffer->size -= size;
-    return size;
-}
-
-static u64 register_write(ByteBuffer* buffer, u64 size) {
-
-    ensure_capacity(buffer, buffer->size + size);
-    if (is_fixed(buffer)) {
-        buffer->write_head += size;
-        buffer->write_head %= buffer->capacity;
-    }
-    buffer->size += size;
-    return size;
 }
 
 static void write_at_position(ByteBuffer* buffer, const void* data, i64 position, u64 size) {
@@ -111,6 +88,113 @@ static void write_at_position(ByteBuffer* buffer, const void* data, i64 position
         size -= writable;
         position = (position + writable) % buffer->capacity;
     }
+}
+
+static u64 get_read_region_size(const ByteBuffer* buffer, i64 start_offset) {
+    if (buffer->size == 0)
+        return 0;
+    if (buffer->read_head == buffer->write_head)
+        return buffer->capacity - start_offset;
+
+    /*
+            #2         #3         #1
+            v          v          v
+        ---------------------------------------------------
+        |rrrrrr|wwwwwwwwwwwwwww|rrrrrrrrrrrrrrrrrrrrrrrrrr|
+        ---------------------------------------------------
+               ^               ^
+           write_head      read_head
+     */
+
+    if (buffer->read_head > buffer->write_head) {
+        if (start_offset >= buffer->read_head)
+            return buffer->capacity - start_offset; // #1
+        if (start_offset < buffer->write_head)
+            return buffer->write_head - start_offset; // #2
+        return 0;                                     // #3
+    }
+
+    /*
+                     #2                #3            #1
+                     v                 v             v
+        ---------------------------------------------------
+        |wwwwwwwwwwwwwwwwwwwwwwwwww|rrrrrrrrrrrr|wwwwwwwww|
+        ---------------------------------------------------
+                                   ^            ^
+                               read_head    write_head
+     */
+
+    if (start_offset >= buffer->write_head)
+        return 0; // #1
+    if (start_offset < buffer->read_head)
+        return 0;                             // #2
+    return buffer->write_head - start_offset; // #3
+}
+
+static u64 get_write_region_size(const ByteBuffer* buffer, i64 start_offset) {
+    if (buffer->size == buffer->capacity)
+        return 0;
+    if (buffer->read_head == buffer->write_head)
+        return buffer->capacity - start_offset;
+
+    /*
+            #2         #3         #1
+            v          v          v
+        ---------------------------------------------------
+        |rrrrrr|wwwwwwwwwwwwwww|rrrrrrrrrrrrrrrrrrrrrrrrrr|
+        ---------------------------------------------------
+               ^               ^
+           write_head      read_head
+     */
+
+    if (buffer->read_head > buffer->write_head) {
+        if (start_offset >= buffer->read_head)
+            return 0; // #1
+        if (start_offset < buffer->write_head)
+            return 0;                            // #2
+        return buffer->read_head - start_offset; // #3
+    }
+
+    /*
+                     #2                #3            #1
+                     v                 v             v
+        ---------------------------------------------------
+        |wwwwwwwwwwwwwwwwwwwwwwwwww|rrrrrrrrrrrr|wwwwwwwww|
+        ---------------------------------------------------
+                                   ^            ^
+                               read_head    write_head
+     */
+
+    if (start_offset >= buffer->write_head)
+        return buffer->capacity - start_offset; // #1
+    if (start_offset < buffer->read_head)
+        return buffer->read_head - start_offset; // #2
+    return 0;                                    // #3
+}
+
+static inline bool has_more_regions(const ByteBuffer* buffer, u64 total, bool writable) {
+    return writable ? total < buffer->capacity - buffer->size : total < buffer->size;
+}
+
+static u64
+get_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, bool writable) {
+    u64 index = 0;
+    u64 total = 0;
+    i64 region_start = writable ? buffer->write_head : buffer->read_head;
+    while (index < *out_count && has_more_regions(buffer, total, writable)) {
+        u64 size = writable ? get_write_region_size(buffer, region_start)
+                            : get_read_region_size(buffer, region_start);
+        out_regions[index] = (BufferRegion){
+            .start = offset(buffer->buf, region_start),
+            .size = size,
+        };
+
+        region_start = (region_start + size) % buffer->capacity;
+        total += size;
+        index++;
+    }
+    *out_count = index;
+    return total;
 }
 
 // === Exported functions ===
@@ -168,13 +252,13 @@ void bytebuf_copy(ByteBuffer* dst, const ByteBuffer* src) {
 }
 
 void bytebuf_write_buffer(ByteBuffer* dst, const ByteBuffer* src) {
-    ByteBuffer cpy = *src;
-    void* tmp;
-    u64 size;
-    do {
-        size = bytebuf_contiguous_read(&cpy, &tmp);
-        bytebuf_write(dst, tmp, size);
-    } while (size > 0);
+    u64 region_count = 2;
+    BufferRegion regions[2];
+    bytebuf_get_read_regions(src, regions, &region_count);
+
+    for(u64 i = 0; i < region_count; i++) {
+        bytebuf_write(dst, regions[i].start, regions[i].size);
+    }
 }
 
 void bytebuf_write(ByteBuffer* buffer, const void* data, size_t size) {
@@ -185,7 +269,7 @@ void bytebuf_write(ByteBuffer* buffer, const void* data, size_t size) {
     else
         memcpy(offset(buffer->buf, buffer->size), data, size);
 
-    register_write(buffer, size);
+    bytebuf_register_write(buffer, size);
 }
 
 void bytebuf_write_i64(ByteBuffer* buffer, i64 num) {
@@ -242,7 +326,7 @@ i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
 
     if (!is_fixed(buffer))
         memmove(buffer->buf, offset(buffer->buf, size), buffer->size - size);
-    return register_read(buffer, size);
+    return bytebuf_register_read(buffer, size);
 }
 
 i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
@@ -252,7 +336,6 @@ i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
     u8 byte;
     while (TRUE) {
         if (!peek_byte(buffer, i, &byte)) {
-            log_error("Failed to decode varint: Invalid data.");
             return 0;
         }
         res |= (byte & SEGMENT_BITS) << position;
@@ -266,7 +349,7 @@ i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
             return -1;
     }
     *out = res;
-    return register_read(buffer, i);
+    return bytebuf_register_read(buffer, i);
 }
 
 i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str) {
@@ -277,7 +360,7 @@ i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str) {
 
     *out_str = str_create_from_buffer(offset(buffer->buf, buffer->read_head), length, arena);
 
-    return len_byte_count + register_read(buffer, length);
+    return len_byte_count + bytebuf_register_read(buffer, length);
 }
 
 i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data) {
@@ -287,47 +370,11 @@ i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data) {
     bytebuf_read_const(buffer, size, out_data);
     return size;
 }
-
-u64 bytebuf_contiguous_read(ByteBuffer* buffer, void** out_region) {
-    if (!is_fixed(buffer)) {
-        *out_region = buffer->buf;
-        u64 size = buffer->capacity - buffer->size;
-        bytebuf_read(buffer, size, NULL);
-        return size;
-    }
-
-    *out_region = offset(buffer->buf, buffer->read_head);
-    u64 size;
-
-    if (buffer->read_head < buffer->write_head)
-        size = buffer->write_head - buffer->read_head;
-    else if (buffer->read_head == buffer->write_head)
-        size = buffer->size;
-    else
-        size = buffer->capacity - buffer->read_head;
-
-    return register_read(buffer, size);
+u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count) {
+    return get_regions(buffer, out_regions, out_count, FALSE);
 }
-
-u64 bytebuf_contiguous_write(ByteBuffer* buffer, void** out_region) {
-    if (!is_fixed(buffer)) {
-        *out_region = buffer->buf;
-        u64 size = buffer->capacity - buffer->size;
-        buffer->size += size;
-        return size;
-    }
-
-    *out_region = offset(buffer->buf, buffer->write_head);
-    u64 size;
-
-    if (buffer->read_head < buffer->write_head)
-        size = buffer->capacity - buffer->write_head;
-    else if (buffer->read_head == buffer->write_head)
-        size = buffer->capacity - buffer->size;
-    else
-        size = buffer->read_head - buffer->write_head;
-
-    return register_write(buffer, size);
+u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count) {
+    return get_regions(buffer, out_regions, out_count, TRUE);
 }
 
 void bytebuf_unwrite(ByteBuffer* buffer, u64 size) {
@@ -350,17 +397,17 @@ void bytebuf_unwrite(ByteBuffer* buffer, u64 size) {
 }
 
 void bytebuf_unread(ByteBuffer* buffer, u64 size) {
-    if(size == 0)
+    if (size == 0)
         return;
 
     // Reading from a dynamic buffer immediately deletes the data.
-    if(!is_fixed(buffer)) {
+    if (!is_fixed(buffer)) {
         log_error("Cannot unread data from a dynamic byte buffer.");
         return;
     }
 
     u64 available = buffer->capacity - buffer->size;
-    if(size >= available) {
+    if (size >= available) {
         buffer->size = buffer->capacity;
         buffer->read_head = buffer->write_head;
         return;
@@ -368,7 +415,30 @@ void bytebuf_unread(ByteBuffer* buffer, u64 size) {
 
     buffer->size += size;
     buffer->read_head -= size;
-    if(buffer->read_head < 0)
+    if (buffer->read_head < 0)
         buffer->read_head += buffer->capacity;
+}
 
+u64 bytebuf_register_read(ByteBuffer* buffer, u64 size) {
+
+    if (size > buffer->size)
+        size = buffer->size;
+
+    if (is_fixed(buffer)) {
+        buffer->read_head += size;
+        buffer->read_head %= buffer->capacity;
+    }
+    buffer->size -= size;
+    return size;
+}
+
+u64 bytebuf_register_write(ByteBuffer* buffer, u64 size) {
+
+    ensure_capacity(buffer, buffer->size + size);
+    if (is_fixed(buffer)) {
+        buffer->write_head += size;
+        buffer->write_head %= buffer->capacity;
+    }
+    buffer->size += size;
+    return size;
 }

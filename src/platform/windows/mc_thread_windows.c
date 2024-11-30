@@ -29,7 +29,7 @@ static MCMutex internal_array_mutex;
 static bool initialized = FALSE;
 
 void mcthread_init(void) {
-    arena = arena_create(MAX_THREADS * (sizeof(struct ThreadInternal) + sizeof(bool)));
+    arena = arena_create_silent(MAX_THREADS * (sizeof(struct ThreadInternal) + sizeof(bool)));
     objpool_init(&threads, &arena, MAX_THREADS, sizeof(struct ThreadInternal));
     if(!mcmutex_create(&internal_array_mutex)) {
         log_fatal("Failed to prepare the platform layer for threading.");

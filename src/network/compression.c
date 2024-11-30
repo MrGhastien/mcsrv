@@ -77,10 +77,14 @@ static i64 zlib_execute(z_streamp stream,
                         zlib_action action,
                         zlib_resetter resetter) {
 
-    void* tmp;
     int flush;
 
     u8 outBuf[CHUNK];
+
+    u64 region_count = 2;
+    BufferRegion regions[2];
+    if(bytebuf_get_read_regions(in_buffer, regions, &region_count) == 0)
+        return 0;
 
     /*
       Here we don't copy any data from the input buffer.
@@ -90,9 +94,11 @@ static i64 zlib_execute(z_streamp stream,
     stream->next_out = outBuf;
 
     i32 res = Z_OK;
+    u64 region_index = 0;
     do {
-        stream->avail_in = bytebuf_contiguous_read(in_buffer, &tmp);
-        stream->next_in = tmp;
+        stream->avail_in = regions[region_index].size;
+        stream->next_in = regions[region_index].start;
+        region_index++;
         /*
           We have to tell ZLib that it reached the end of the input data !
           */

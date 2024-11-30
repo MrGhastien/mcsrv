@@ -42,6 +42,11 @@ typedef struct byte_buffer {
     u64 capacity;   /**< @private The maximum capacity of the buffer. */
 } ByteBuffer;
 
+typedef struct BufferRegion {
+    void* start;
+    u64 size;
+} BufferRegion;
+
 /**
  * Creates a dynamic byte buffer, starting with the given size.
  *
@@ -183,6 +188,9 @@ i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str);
  */
 i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data);
 
+u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count);
+u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count);
+
 /**
  * Get the size of the next contiguous readable region of the buffer,
  * after the read head.
@@ -191,7 +199,7 @@ i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data);
  * @param[out] out_region Where the region's pointer is copied at.
  * @return The size of the readable region
  */
-u64 bytebuf_contiguous_read(ByteBuffer* buffer, void** out_region);
+//u64 bytebuf_contiguous_read(ByteBuffer* buffer, void** out_region);
 
 /**
  * Get the size of the next contiguous writable region of the buffer,
@@ -201,7 +209,7 @@ u64 bytebuf_contiguous_read(ByteBuffer* buffer, void** out_region);
  * @param[in] out_region Where the region's pointer is copied at.
  * @return The size of the writable region
  */
-u64 bytebuf_contiguous_write(ByteBuffer* buffer, void** out_region);
+//u64 bytebuf_contiguous_write(ByteBuffer* buffer, void** out_region);
 
 /**
  * Removes written data from the specified byte buffer.
@@ -222,5 +230,10 @@ void bytebuf_unwrite(ByteBuffer* buffer, u64 size);
  * @param[in] size The number of bytes to make readable.
  */
 void bytebuf_unread(ByteBuffer* buffer, u64 size);
+
+u64 bytebuf_register_read(ByteBuffer* buffer, u64 size);
+
+u64 bytebuf_register_write(ByteBuffer* buffer, u64 size);
+
 
 #endif /* ! BYTEBUFFER_H */

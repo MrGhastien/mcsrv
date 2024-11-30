@@ -1,27 +1,13 @@
 #include "decoders.h"
 #include "containers/bytebuffer.h"
-#include "logger.h"
 #include "memory/arena.h"
 #include "packet.h"
 
-#include <stdio.h>
 
 PKT_DECODER(dummy) {
     (void) packet;
     (void) arena;
     (void) bytes;
-}
-
-static bool has_read_all_bytes(Packet* pkt, const ByteBuffer* bytes) {
-    if (bytes->size == 0)
-        return TRUE;
-
-    log_errorf("Mismatched read (%zu) vs expected (%zu) data size.",
-               pkt->payload_length - bytes->size,
-               pkt->payload_length);
-    pkt->payload = NULL;
-    abort();
-    return FALSE;
 }
 
 PKT_DECODER(handshake) {
@@ -43,9 +29,6 @@ PKT_DECODER(handshake) {
         return;
     }
 
-    if (!has_read_all_bytes(packet, bytes))
-        return;
-
     packet->payload = hshake;
 }
 
@@ -63,9 +46,6 @@ PKT_DECODER(log_start) {
     bytebuf_read_mcstring(bytes, arena, &payload->player_name);
     bytebuf_read(bytes, 16, &payload->uuid);
 
-    if (!has_read_all_bytes(packet, bytes))
-        return;
-
     packet->payload = payload;
 }
 
@@ -79,10 +59,6 @@ PKT_DECODER(enc_res) {
     bytebuf_read_varint(bytes, &payload->verify_token_length);
     payload->verify_token = arena_allocate(arena, payload->verify_token_length);
     bytebuf_read(bytes, payload->verify_token_length, payload->verify_token);
-
-    if (!has_read_all_bytes(packet, bytes)) {
-        return;
-    }
 
     packet->payload = payload;
 }

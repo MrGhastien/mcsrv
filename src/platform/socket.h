@@ -43,7 +43,7 @@ bool sock_is_valid(socketfd socket);
 socketfd sock_create(int address_family, int type, int protocol);
 bool sock_bind(socketfd socket, const SocketAddress* address);
 bool sock_listen(socketfd socket, i32 backlog);
-enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, SocketAddress* out_address);
+//enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, SocketAddress* out_address);
 bool sock_get_peer_address(socketfd socket, SocketAddress* out_address);
 
 void sock_close(socketfd socket);

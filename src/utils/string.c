@@ -21,12 +21,13 @@ static size_t strlcat(char *dst, const char *src, size_t size) {
     while(dst[dstlen] != '\0') {
         dstlen++;
     }
-    u64 total = dstlen;
-    for(; total < size; total++) {
-        dst[total] = src[total - dstlen];
+    u64 srclen = 0;
+    for(; dstlen + srclen < size && src[srclen]; srclen++) {
+        dst[dstlen + srclen] = src[srclen];
     }
-    dst[size - 1] = '\0';
-    return total - dstlen;
+    dst[dstlen + srclen] = '\0';
+    return dstlen + srclen;
+
 }
 #endif
 

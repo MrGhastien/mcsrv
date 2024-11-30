@@ -66,8 +66,8 @@ typedef struct Connection {
     socketfd peer_socket; /**< Linux file descriptor of the connection's socket.*/
 
     /** Keeps track of whether the last packet read operation read the packet's size or not. */
-    bool pending_read;
-    bool pending_write;
+    bool pending_send;
+    bool pending_recv;
     /** Buffer storing raw (possibly compressed or encrypted) packets. */
     ByteBuffer recv_buffer;
     /** Encoded packet sending queue */

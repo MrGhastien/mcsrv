@@ -63,8 +63,14 @@ void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
 
     bytebuf_write_buffer(&conn->send_buffer, &scratch);
 
-    if(!conn->pending_write)
-        empty_buffer(ctx, conn);
+    if(!conn->pending_send) {
+        enum IOCode code;
+        do {
+            code = empty_buffer(ctx, conn);
+        } while(code == IOC_OK && conn->send_buffer.size > 0);
+        if(code == IOC_PENDING)
+            conn->pending_send = TRUE;
+    }
 
 
     arena_restore(&conn->scratch_arena);

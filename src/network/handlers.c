@@ -47,8 +47,8 @@ PKT_HANDLER(status) {
     PacketStatusResponse response;
 
     JSON json;
-    arena_save(&conn->scratch_arena);
-    json_create(&json, &conn->scratch_arena);
+    Arena arena = conn->scratch_arena;
+    json_create(&json, &arena);
     json_set_root(&json, json_node_create(&json, JSON_OBJECT));
 
     JSONNode* nodes[4];
@@ -86,7 +86,7 @@ PKT_HANDLER(status) {
     nodes[0] = json_node_put(&json, json.root, "previewsChat", JSON_BOOL);
     json_set_bool(nodes[0], FALSE);
 
-    json_stringify(&json, &response.data, 2048, &conn->scratch_arena);
+    json_stringify(&json, &response.data, 4096, &arena);
     log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     send_packet(ctx, &out_pkt, conn);

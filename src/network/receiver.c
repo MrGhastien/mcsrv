@@ -1,34 +1,35 @@
-#include "packet.h"
-#include "packet_codec.h"
 #include "connection.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
+#include "packet.h"
+#include "packet_codec.h"
 
 #include <stdio.h>
 
-static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* out_pkt) {
-    // Read the packet size (ID + payload)
+static enum IOCode decode_common_data(ByteBuffer* buffer, Packet* out_pkt) {
+    // Decode the packet size (ID + payload)
     i32 pkt_length;
     if (out_pkt->total_length == 0) {
-        i64 length_byte_count = bytebuf_read_varint(bytes, &pkt_length);
-        if(length_byte_count == 0)
+        i64 length_byte_count = bytebuf_read_varint(buffer, &pkt_length);
+        if (length_byte_count == 0)
             return IOC_AGAIN;
-        if(length_byte_count < 0)
+        if (length_byte_count < 0)
             return IOC_ERROR;
 
         // Save the total length in the packet.
         out_pkt->total_length = pkt_length + length_byte_count;
         out_pkt->data_length = pkt_length;
     } else {
-        pkt_length = (i32)out_pkt->data_length;
+        // Restore the packet length from the cache.
+        pkt_length = (i32) out_pkt->data_length;
     }
 
-    // Read the packet ID
-    if(out_pkt->id == PKT_INVALID) {
+    // Decode the packet ID
+    if (out_pkt->id == PKT_INVALID) {
         i32 id;
-        i64 id_size = bytebuf_read_varint(bytes, &id);
-        if(id_size == 0)
+        i64 id_size = bytebuf_read_varint(buffer, &id);
+        if (id_size == 0)
             return IOC_AGAIN;
         if (id_size < 0) {
             log_error("Received invalid packet id");
@@ -39,14 +40,33 @@ static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* ou
         out_pkt->payload_length = pkt_length - id_size;
         out_pkt->id = id;
     }
+    return IOC_OK;
+}
 
-    if(bytes->size < out_pkt->payload_length)
+static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* out_pkt) {
+    enum IOCode ioc = decode_common_data(bytes, out_pkt);
+    if(ioc != IOC_OK)
+        return ioc;
+
+    // Ensure there are enough bytes available to decode the whole payload
+    if (bytes->size < out_pkt->payload_length)
         return IOC_AGAIN;
 
     pkt_decoder decoder = get_pkt_decoder(out_pkt, conn);
     if (!decoder)
         return IOC_ERROR;
+
+    u64 previous_size = bytes->size;
     decoder(out_pkt, &conn->scratch_arena, bytes);
+    u64 total_read = previous_size - bytes->size;
+
+    if (total_read != out_pkt->payload_length) {
+        log_errorf("Mismatched read (%zu) vs expected (%zu) data size.",
+                   total_read,
+                   out_pkt->payload_length);
+        out_pkt->payload = NULL;
+        abort();
+    }
 
     log_debugf("Packet IN: %s", get_pkt_name(out_pkt, conn));
 
@@ -64,7 +84,7 @@ enum IOCode receive_packet(NetworkContext* ctx, Connection* conn) {
 
     enum IOCode code = IOC_OK;
 
-    //TODO: HANDLE DECOMPRESSION & DECRYPTION !
+    // TODO: HANDLE DECOMPRESSION & DECRYPTION !
 
     while (code == IOC_OK) {
         if (!conn_is_resuming_read(conn)) {
@@ -73,9 +93,12 @@ enum IOCode receive_packet(NetworkContext* ctx, Connection* conn) {
             conn->packet_cache->id = PKT_INVALID;
         }
 
+        log_debug("Trying to receive packet.");
         code = decode_packet(&conn->recv_buffer, conn, conn->packet_cache);
-        if(code != IOC_OK)
+        log_debugf("RESULT : %i", code);
+        if (code != IOC_OK)
             return code;
+
 
         if (!handle_packet(ctx, conn->packet_cache, conn))
             return IOC_ERROR;
