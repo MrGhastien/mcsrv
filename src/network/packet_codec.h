@@ -85,10 +85,12 @@ pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn);
  *
  * @param[in] pkt The packet.
  * @param[in] conn The connection.
+ * @param[in] clientbound @ref TRUE if the client-bound name should be returned, @ref FALSE if the
+ *                        server-bound name should be taken.
  * @return The name of the packet's type, or NULL if no name was registered
  * for this packet - connection combination.
  */
-const char* get_pkt_name(const Packet* pkt, const Connection* conn);
+const char* get_pkt_name(const Packet* pkt, const Connection* conn, bool clientbound);
 
 
 /**

@@ -188,8 +188,8 @@ i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str);
  */
 i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data);
 
-u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count);
-u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count);
+u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset);
+u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset);
 
 /**
  * Get the size of the next contiguous readable region of the buffer,
@@ -234,6 +234,12 @@ void bytebuf_unread(ByteBuffer* buffer, u64 size);
 u64 bytebuf_register_read(ByteBuffer* buffer, u64 size);
 
 u64 bytebuf_register_write(ByteBuffer* buffer, u64 size);
+
+u64 bytebuf_size(const ByteBuffer* buffer);
+u64 bytebuf_available(const ByteBuffer* buffer);
+u64 bytebuf_cap(const ByteBuffer* buffer);
+i64 bytebuf_current_pos(const ByteBuffer* buffer);
+
 
 
 #endif /* ! BYTEBUFFER_H */

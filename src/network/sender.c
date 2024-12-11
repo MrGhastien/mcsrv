@@ -1,4 +1,5 @@
 #include "compression.h"
+#include "network/common_types.h"
 #include "security.h"
 #include "packet.h"
 #include "packet_codec.h"
@@ -12,20 +13,6 @@
 
 #define MAX_PACKET_SIZE 2097151
 
-static bool encrypt_bytebuf(ByteBuffer* buffer, PeerEncryptionContext* enc_ctx) {
-    u64 to_cipher = min_u64(buffer->capacity - buffer->read_head, buffer->size);
-
-    if (encryption_cipher(enc_ctx, offset(buffer->buf, buffer->read_head), to_cipher) == -1)
-        return FALSE;
-
-    if (to_cipher < buffer->size) {
-        if (encryption_cipher(enc_ctx, buffer->buf, buffer->size - to_cipher) == -1)
-            return FALSE;
-    }
-
-    return TRUE;
-}
-
 void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
     pkt_encoder encoder = get_pkt_encoder(pkt, conn);
     if (!encoder)
@@ -38,7 +25,7 @@ void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
     bytebuf_write_varint(&scratch, pkt->id);
     encoder(pkt, &scratch);
 
-    log_debugf("Packet OUT: %s", get_pkt_name(pkt, conn));
+    log_debugf("Packet OUT: %s", get_pkt_name(pkt, conn, TRUE));
 
     if (conn->compression) {
         if (scratch.size >= conn->cmprss_ctx.threshold) {
@@ -57,7 +44,7 @@ void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
     bytebuf_prepend_varint(&scratch, scratch.size);
 
     if (conn->encryption) {
-        if (!encrypt_bytebuf(&scratch, &conn->peer_enc_ctx))
+        if (!encryption_cipher(&conn->peer_enc_ctx, &scratch, 0))
             return;
     }
 
@@ -68,7 +55,7 @@ void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
         do {
             code = empty_buffer(ctx, conn);
         } while(code == IOC_OK && conn->send_buffer.size > 0);
-        if(code == IOC_PENDING)
+        if(code == IOC_PENDING || code == IOC_AGAIN)
             conn->pending_send = TRUE;
     }
 

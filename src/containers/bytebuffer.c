@@ -177,17 +177,22 @@ static inline bool has_more_regions(const ByteBuffer* buffer, u64 total, bool wr
 }
 
 static u64
-get_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, bool writable) {
+get_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, bool writable, i64 start_offset) {
+    u64 max_size =  writable ? bytebuf_available(buffer) : bytebuf_size(buffer);
     u64 index = 0;
     u64 total = 0;
-    i64 region_start = writable ? buffer->write_head : buffer->read_head;
+    if(start_offset < 0)
+        start_offset = 0;
+    if((u64)start_offset > max_size)
+        start_offset = max_size;
+    i64 region_start = start_offset + (writable ? buffer->write_head : buffer->read_head);
+
     while (index < *out_count && has_more_regions(buffer, total, writable)) {
         u64 size = writable ? get_write_region_size(buffer, region_start)
                             : get_read_region_size(buffer, region_start);
-        out_regions[index] = (BufferRegion){
-            .start = offset(buffer->buf, region_start),
-            .size = size,
-        };
+
+        out_regions[index].start = offset(buffer->buf, region_start);
+        out_regions[index].size = size;
 
         region_start = (region_start + size) % buffer->capacity;
         total += size;
@@ -229,6 +234,25 @@ void bytebuf_destroy(ByteBuffer* buffer) {
     free(buffer->buf);
 }
 
+u64 bytebuf_size(const ByteBuffer* buffer) {
+    return buffer->size;
+}
+
+u64 bytebuf_available(const ByteBuffer* buffer) {
+    return buffer->capacity - buffer->size;
+}
+
+u64 bytebuf_cap(const ByteBuffer* buffer) {
+    return buffer->capacity;
+}
+
+i64 bytebuf_current_pos(const ByteBuffer* buffer) {
+    i64 res = buffer->write_head - buffer->read_head;
+    if(res < 0)
+        res += buffer->capacity;
+    return res;
+}
+
 void* bytebuf_reserve(ByteBuffer* buffer, u64 size) {
     if (is_fixed(buffer)) {
         log_error("Cannot reserve a contiguous memory area inside the byte buffer.");
@@ -254,7 +278,7 @@ void bytebuf_copy(ByteBuffer* dst, const ByteBuffer* src) {
 void bytebuf_write_buffer(ByteBuffer* dst, const ByteBuffer* src) {
     u64 region_count = 2;
     BufferRegion regions[2];
-    bytebuf_get_read_regions(src, regions, &region_count);
+    bytebuf_get_read_regions(src, regions, &region_count, 0);
 
     for(u64 i = 0; i < region_count; i++) {
         bytebuf_write(dst, regions[i].start, regions[i].size);
@@ -370,11 +394,11 @@ i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data) {
     bytebuf_read_const(buffer, size, out_data);
     return size;
 }
-u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count) {
-    return get_regions(buffer, out_regions, out_count, FALSE);
+u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset) {
+    return get_regions(buffer, out_regions, out_count, FALSE, start_offset);
 }
-u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count) {
-    return get_regions(buffer, out_regions, out_count, TRUE);
+u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset) {
+    return get_regions(buffer, out_regions, out_count, TRUE, start_offset);
 }
 
 void bytebuf_unwrite(ByteBuffer* buffer, u64 size) {

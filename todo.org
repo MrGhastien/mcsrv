@@ -6,7 +6,8 @@
 ** Network
 *** FIXED Legacy ping request is sent after sending the status response
 CLOSED: [2024-06-15 sam. 00:20]
-*** BUG All bytes of a packet are read correctly, but ~has_read_all_bytes()~ aborts the program.
+*** FIXED All bytes of a packet are read correctly, but ~has_read_all_bytes()~ aborts the program.
+CLOSED: [2024-12-08 dim. 18:01]
 The functions is invalid because the byte buffer might contain multiple raw packets.
 ** FIXED Properly handle termination signals (SIGINT)
 CLOSED: [2024-06-24 lun. 00:05]
@@ -14,9 +15,11 @@ Trying to interrupt with Ctrl-C does nothing.
 
 * Features                                                            :mcsrv:
 ** Network
-*** TODO Decompression & decryption of packets
-*** TODO Abstraction over Linux and Windows sockets
-*** TODO Windows implementation of the main network loop
+*** DONE Decompression & decryption of packets
+CLOSED: [2024-12-08 dim. 17:53]
+*** TODO Abstraction over Linux and Windows for the network sub-system [1/2]
+- [X] Linux sub-system
+- [ ] Windows sub-system
 
 ** DONE Proper threading
 CLOSED: [2024-06-27 jeu. 00:21]
@@ -41,6 +44,7 @@ CLOSED: [2024-09-21 sam. 22:04]
 - [X] Mojang Auth
 - [X] Encryption with OpenSSL
 - [X] Compression with ZLib
+*** TODO Send a `DISCONNECT` packet when a connection is closed
 *** TODO Data loading / saving
 - [ ] Anvil map saver & loader
   Try to come up with a better format?

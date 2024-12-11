@@ -220,7 +220,7 @@ void sock_close(socketfd socket) {
 
 /* ===== Networking subsystem ===== */
 
-char* get_last_error(void) {
+const char* get_last_error(void) {
     static char error_msg[2048];
     i32 error_code = WSAGetLastError();
     FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -335,7 +335,7 @@ static enum IOCode handle_connection_io(NetworkContext* ctx,
     Connection* conn = &pconn->connection;
 
     // Resume processing the data
-    if (overlapped == &pconn->read_overlapped) {
+    if (overlapped == &pconn->read_overlapped && conn->pending_recv) {
         // READ complete
         conn->pending_recv = FALSE;
         bytebuf_register_write(&conn->recv_buffer, transferred);
@@ -345,14 +345,12 @@ static enum IOCode handle_connection_io(NetworkContext* ctx,
             if (code == IOC_AGAIN && !conn->pending_recv)
                 code = fill_buffer(ctx, conn);
         }
-    } else if (overlapped == &pconn->write_overlapped) {
+    } else if (overlapped == &pconn->write_overlapped && conn->pending_send) {
         // WRITE complete
         conn->pending_send = FALSE;
         bytebuf_register_read(&conn->send_buffer, transferred);
 
-        while (code == IOC_OK && conn->send_buffer.size > 0 && !conn->pending_send) {
-            code = empty_buffer(ctx, conn);
-        }
+        code = empty_buffer(ctx, conn);
     }
 
     if (code == IOC_ERROR) {

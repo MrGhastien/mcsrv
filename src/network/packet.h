@@ -69,7 +69,7 @@ enum PacketType {
     PKT_ENC_REQ = 0x1,
     PKT_LOG_SUCCESS = 0x2,
     PKT_COMPRESS = 0x3,
-    PKT_LOG_PLUGIN_REQ = 0x4,
+    PKT_LOG_PLUGIN_PAYLOAD_C = 0x4,
     PKT_COOKIE_REQ = 0x5,
     /**@}*/
     // Server-bound
@@ -77,10 +77,12 @@ enum PacketType {
     /** @ref State#STATE_LOGIN "Log-in" phase (Server-bound) */
     PKT_LOG_START = 0x0,
     PKT_ENC_RES = 0x1,
-    PKG_LOG_PLUGIN_RES = 0x2,
+    PKT_LOG_PLUGIN_PAYLOAD_S = 0x2,
     PKT_LOG_ACK = 0x3,
     PKT_COOKIE_RES = 0x4,
     /**@}*/
+
+    _PKT_TYPE_COUNT = 6
 };
 
 /**
@@ -91,8 +93,7 @@ enum PacketType {
  */
 typedef struct Packet {
     enum PacketType id; /**< The packet identifier. */
-    u32 total_length;   /**< The length of the packet, including the ID and the payload. */
-    u32 data_length;    /**< The length of the payload and packet ID (as a VarInt). Only used to
+    u32 total_length;    /**< The length of the payload and packet ID (as a VarInt). Only used to
                              resume packet decoding. */
     u32 payload_length; /**< The length of the payload. */
     void* payload;      /**< A pointer to the payload. */

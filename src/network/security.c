@@ -148,26 +148,50 @@ void encryption_cleanup_peer(PeerEncryptionContext* ctx) {
     EVP_CIPHER_CTX_free(ctx->decipher_ctx);
 }
 
-i32 encryption_cipher(PeerEncryptionContext* ctx, u8* in, i32 in_size) {
+bool encryption_cipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 offset) {
 
-    if (!EVP_EncryptUpdate(ctx->cipher_ctx, in, &in_size, in, in_size)) {
-        encryption_get_errors();
-        log_error("Could not encrypt data.");
-        return -1;
+    u64 region_count = 2;
+    BufferRegion regions[2];
+    bytebuf_get_read_regions(buffer, regions, &region_count, offset);
+
+    for (u64 i = 0; i < region_count; i++) {
+        BufferRegion* reg = &regions[i];
+        i32 reg_new_size;
+        if (!EVP_EncryptUpdate(ctx->cipher_ctx, reg->start, &reg_new_size, reg->start, reg->size)) {
+            encryption_get_errors();
+            log_error("Could not encrypt data.");
+            return FALSE;
+        }
+        if ((u64) reg_new_size != reg->size) {
+            log_fatalf("Encryption buffer size mismatch: %zu -> %i", reg->size, reg_new_size);
+            abort();
+        }
     }
 
-    return in_size;
+    return TRUE;
 }
 
-i32 encryption_decipher(PeerEncryptionContext* ctx, u8* in, i32 in_size) {
+bool encryption_decipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 offset) {
 
-    if (!EVP_DecryptUpdate(ctx->decipher_ctx, in, &in_size, in, in_size)) {
-        encryption_get_errors();
-        log_error("Could not decrypt data.");
-        return -1;
+    u64 region_count = 2;
+    BufferRegion regions[2];
+    bytebuf_get_read_regions(buffer, regions, &region_count, offset);
+
+    for (u64 i = 0; i < region_count; i++) {
+        BufferRegion* reg = &regions[i];
+        i32 reg_new_size;
+        if (!EVP_DecryptUpdate(ctx->decipher_ctx, reg->start, &reg_new_size, reg->start, reg->size)) {
+            encryption_get_errors();
+            log_error("Could not decrypt data.");
+            return FALSE;
+        }
+        if ((u64) reg_new_size != reg->size) {
+            log_fatalf("Encryption buffer size mismatch: %zu -> %i", reg->size, reg_new_size);
+            abort();
+        }
     }
 
-    return in_size;
+    return TRUE;
 }
 
 static void hash_to_string(u8* hash, u32 hash_size, Arena* arena, string* out) {
@@ -234,6 +258,8 @@ encryption_hash(Arena* arena, EncryptionContext* global_ctx, PeerEncryptionConte
 
     hash_to_string(buf, size, arena, &out);
 
+    EVP_MD_CTX_destroy(md_ctx);
+
     return out;
 }
 
@@ -285,11 +311,10 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
         log_errorf("Failed request to sessionserver.mojang.com: %li", res_code);
     }
 
-
     bytebuf_write_varint(&buffer, 0);
 
     *json = json_parse(&buffer, &scratch);
-    if(json->arena == NULL)
+    if (json->arena == NULL)
         return FALSE;
 
 #ifdef TRACE

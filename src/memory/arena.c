@@ -1,7 +1,9 @@
 #include "arena.h"
 #include "logger.h"
 #include "utils/bitwise.h"
+#include "utils/math.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +47,10 @@ void arena_destroy(Arena* arena) {
 }
 
 void* arena_allocate(Arena* arena, u64 bytes) {
+
+    //Alignment
+    bytes = ceil_u64(bytes, sizeof(uintptr_t));
+    
     u64 remaining = arena->capacity - arena->length;
     if (bytes > remaining) {
         if (arena->logging)

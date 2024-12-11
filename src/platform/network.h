@@ -14,7 +14,7 @@
 #define SOCKIO_PENDING -1
 #define SOCKIO_ERROR -2
 
-char* get_last_error(void);
+const char* get_last_error(void);
 
 void* network_handle(void* params);
 

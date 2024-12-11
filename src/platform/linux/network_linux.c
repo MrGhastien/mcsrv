@@ -1,225 +1,410 @@
-//
-// Created by bmorino on 14/11/2024.
-//
-
 #ifdef MC_PLATFORM_LINUX
+
+#include "containers/bytebuffer.h"
+#include "containers/object_pool.h"
+#include "definitions.h"
+#include "logger.h"
+#include "network/common_types.h"
+#include "network/connection.h"
+#include "network/packet_codec.h"
+#include "network/security.h"
+
+#include "platform/network.h"
+#include "platform/socket.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+typedef struct PlatformNetworkCtx {
+    int eventfd;
+    int epollfd;
+} PlatformNetworkCtx;
+
+static PlatformNetworkCtx platform_ctx = {
+    .eventfd = -1,
+    .epollfd = -1,
+};
+
+/* ===== Socket functions ===== */
+
+socketfd sock_create(int address_family, int type, int protocol) {
+    return socket(address_family, type, protocol);
+}
+
+bool sock_is_valid(socketfd socket) {
+    return (int) socket >= 0;
+}
+
+bool sock_bind(socketfd socket, const SocketAddress* address) {
+    return bind(socket, &address->data.sa, address->length) == 0;
+}
+bool sock_listen(socketfd socket, i32 backlog) {
+    return listen(socket, backlog) == 0;
+}
+void sock_close(socketfd socket) {
+    close(socket);
+}
+
+enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, SocketAddress* out_address) {
+    socklen_t addr_len = sizeof(out_address->data.storage);
+    socketfd peer_socket = accept(socket, &out_address->data.sa, &addr_len);
+    if (!sock_is_valid(peer_socket)) {
+        return IOC_ERROR;
+    }
+
+    out_address->length = addr_len;
+
+    int flags = fcntl(peer_socket, F_GETFL, 0);
+    if (fcntl(peer_socket, F_SETFL, flags | O_NONBLOCK) == -1) {
+        sock_close(peer_socket);
+        log_error("Could not set connection socket to non-blocking mode.");
+        return IOC_ERROR;
+    }
+
+    *out_accepted = peer_socket;
+
+    return IOC_OK;
+}
+
+enum IOCode sock_recv_buf(socketfd socket, ByteBuffer* output, u64* out_byte_count) {
+    if (output->capacity == output->size)
+        return IOC_OK;
+    u64 region_count = 2;
+    BufferRegion regions[2];
+    bytebuf_get_write_regions(output, regions, &region_count, 0);
+
+    struct iovec iov_regions[2];
+
+    for (u64 i = 0; i < region_count; i++) {
+        iov_regions[i].iov_len = regions[i].size;
+        iov_regions[i].iov_base = regions[i].start;
+    }
+
+    struct msghdr header = {
+        .msg_name = NULL,
+        .msg_namelen = 0,
+        .msg_iov = iov_regions,
+        .msg_iovlen = region_count,
+        .msg_control = NULL,
+        .msg_controllen = 0,
+    };
+
+    i64 res = recvmsg(socket, &header, 0);
+    if (res == -1) {
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+            return IOC_AGAIN;
+        return IOC_ERROR;
+    }
+    if (res == 0)
+        return IOC_CLOSED;
+
+    bytebuf_register_write(output, res);
+    *out_byte_count = res;
+
+    return IOC_OK;
+}
+
+enum IOCode sock_send_buf(socketfd socket, ByteBuffer* input, u64* out_byte_count) {
+    if (input->size == 0)
+        return IOC_OK;
+    u64 region_count = 2;
+    BufferRegion regions[2];
+    bytebuf_get_read_regions(input, regions, &region_count, 0);
+
+    struct iovec iov_regions[2];
+
+    for (u64 i = 0; i < region_count; i++) {
+        iov_regions[i].iov_len = regions[i].size;
+        iov_regions[i].iov_base = regions[i].start;
+    }
+
+    struct msghdr header = {
+        .msg_name = NULL,
+        .msg_namelen = 0,
+        .msg_iov = iov_regions,
+        .msg_iovlen = region_count,
+        .msg_control = NULL,
+        .msg_controllen = 0,
+    };
+
+    i64 res = sendmsg(socket, &header, 0);
+    if (res == -1) {
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+            return IOC_AGAIN;
+        return IOC_ERROR;
+    } else if (res == 0)
+        return IOC_CLOSED;
+
+    bytebuf_register_read(input, res);
+    *out_byte_count = res;
+
+    return IOC_OK;
+}
 
 void sockaddr_init(SocketAddress* addr, u16 family) {
     addr->data.family = family;
     switch (family) {
-           case AF_INET:
-               addr->length = sizeof addr->data.ip4;
-               break;
-           case AF_INET6:
-               addr->length = sizeof addr->data.ip6;
-               break;
-           default:
-               addr->length = sizeof addr->data.sa;
-               break;
+    case AF_INET:
+        addr->length = sizeof addr->data.ip4;
+        break;
+    case AF_INET6:
+        addr->length = sizeof addr->data.ip6;
+        break;
+    default:
+        addr->length = sizeof addr->data.sa;
+        break;
     }
 }
 
-enum IOCode try_send(Socket socket, void* data, u64 size, u64* out_sent) {
-    u64 sent = 0;
-    enum IOCode code = IOC_OK;
-    while (sent < size) {
-        void* begin = offset(data, sent);
-        i64 res = send(socket, begin, size - sent, 0);
-
-        if (res == -1) {
-            code = errno == EAGAIN || errno == EWOULDBLOCK ? IOC_AGAIN : IOC_ERROR;
-            break;
-        } else if (res == 0) {
-            code = IOC_CLOSED;
-            break;
-        }
-
-        sent += res;
+bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
+    char port_str[32];
+    snprintf(port_str, 32, "%i", port);
+    struct addrinfo* info;
+    i32 res = getaddrinfo(host, port_str, NULL, &info);
+    if (res != 0) {
+        log_errorf("Could not parse address : %s", gai_strerror(res));
+        return FALSE;
     }
-    *out_sent = sent;
+
+    memcpy(&addr->data.storage, info->ai_addr, info->ai_addrlen);
+    addr->length = info->ai_addrlen;
+
+    freeaddrinfo(info);
+
+    return TRUE;
+}
+string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
+    char host[NI_MAXHOST];
+    char serv[NI_MAXSERV];
+    if (getnameinfo(&addr->data.sa, addr->length, host, NI_MAXHOST, serv, NI_MAXSERV, 0) != 0) {
+        log_errorf("Could not convert address to string: %s", get_last_error());
+        return str_create_const(NULL);
+    }
+
+    *out_port = strtoul(serv, NULL, 0);
+
+    return str_create(host, arena);
+}
+
+/* ===== Networking sub-system ===== */
+
+const char* get_last_error(void) {
+    return strerror(errno);
+}
+
+enum IOCode fill_buffer(NetworkContext* ctx, Connection* conn) {
+    UNUSED(ctx);
+    enum IOCode res = IOC_AGAIN;
+    enum IOCode code = IOC_OK;
+
+    i64 starting_pos = bytebuf_current_pos(&conn->recv_buffer);
+
+    while (conn->recv_buffer.size < conn->recv_buffer.capacity && code == IOC_OK) {
+        u64 size = 0;
+        code = sock_recv_buf(conn->peer_socket, &conn->recv_buffer, &size);
+        if (code < res)
+            res = code;
+        if (code == IOC_AGAIN)
+            conn->pending_recv = TRUE;
+    }
+
+    if(conn->encryption) {
+        encryption_decipher(&conn->peer_enc_ctx, &conn->recv_buffer, starting_pos);
+    }
+
+    /*
+      Because decompression increases the size of the data, we have to make sure we have enough room
+      inside the connection's recv buffer.
+      I think we can use the packet cache to get the next packet's size.
+
+      Maybe the idea of reading as much bytes as possible in one go is not so good.
+      Reading the right amount of bytes each time we decode a packet might be simpler (and probably as fast). 
+     */
+    /* if (conn->compression) { */
+    /*     if(compression_decompress(&conn->cmprss_ctx, &conn->recv_buffer, dst_buffer) < 0) */
+    /*         return IOC_ERROR; */
+    /* } */
+    // I think i will only decrypt here, and decompress when receiving a packet
+    // This works well !
+
+    return res;
+}
+
+enum IOCode empty_buffer(NetworkContext* ctx, Connection* conn) {
+    UNUSED(ctx);
+    enum IOCode code = IOC_OK;
+    while (conn->send_buffer.size > 0 && code == IOC_OK) {
+        u64 size;
+        code = sock_send_buf(conn->peer_socket, &conn->send_buffer, &size);
+        if (code == IOC_AGAIN)
+            conn->pending_send = TRUE;
+    }
     return code;
 }
 
-i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    ctx.serverfd = sockfd;
-    if (sockfd == -1) {
-        log_fatalf("Failed to create the server socket: %s", strerror(errno));
-        return 1;
-    }
-
-    int option = 1;
-    // Let the socket reuse the address, to avoid errors when quickly rerunning the server
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof option);
-
-    struct sockaddr_in saddr = {0};
-    saddr.sin_family = AF_INET;
-    if (!inet_aton(host, &saddr.sin_addr)) {
-        log_fatal("The server address is invalid.");
-        return 2;
-    }
-
-    saddr.sin_port = htons(port);
-
-    if (bind(sockfd, (struct sockaddr*) &saddr, sizeof saddr) == -1) {
-        log_fatal("Could not bind server socket.");
-        return 3;
-    }
-
-    if (listen(sockfd, 0) == -1) {
-        log_fatal("Socket cannot listen");
-        return 4;
-    }
-    return 0;
-}
-
-i32 network_platform_init(NetworkContext* ctx) {
-    int epollfd = epoll_create1(0);
-    ctx.epollfd = epollfd;
-    if (epollfd == -1) {
-        log_fatalf("Failed to create the epoll instance: %s", strerror(errno));
-        return 1;
-    }
+i32 platform_socket_init(socketfd server_socket) {
 
     struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.fd = -1};
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, ctx.serverfd, &event_in) == -1) {
-        log_fatalf("Could not register the server socket to epoll: %s", strerror(errno));
+    if (epoll_ctl(platform_ctx.epollfd, EPOLL_CTL_ADD, server_socket, &event_in) == -1) {
+        log_fatalf("Could not register the server socket to epoll: %s", get_last_error());
         return 1;
     }
 
-    ctx.eventfd = eventfd(0, 0);
-    if (ctx.eventfd == -1) {
-        log_fatalf("Failed to create the stopping event file descriptor: %s", strerror(errno));
-        return 1;
-    }
-
-    event_in.data.fd = ctx.eventfd;
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, ctx.eventfd, &event_in) == -1) {
-        log_fatalf("Could not register the event file descriptor to epoll: %s", strerror(errno));
-        return 1;
-    }
     return 0;
 }
 
-i32 accept_connection(void) {
-    struct sockaddr_in peer_addr;
-    socklen_t peer_addr_length = sizeof peer_addr;
-    int peerfd = accept(ctx.serverfd, (struct sockaddr*) &peer_addr, &peer_addr_length);
-    if (peerfd == -1) {
-        log_error("Invalid connection received.");
-        return 1;
-    }
-    int flags = fcntl(peerfd, F_GETFL, 0);
-    if (fcntl(peerfd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        log_error("Could not set connection socket to non-blocking mode.");
+i32 network_platform_init(NetworkContext* ctx, u64 max_connections) {
+    int epollfd = epoll_create1(0);
+    platform_ctx.epollfd = epollfd;
+    if (epollfd == -1) {
+        log_fatalf("Failed to create the epoll instance: %s", get_last_error());
         return 1;
     }
 
-    i64 idx = -1;
-    for (u64 i = 0; i < ctx.max_connections; i++) {
-        if (ctx.connections[i].sockfd == -1) {
-            idx = i;
-            break;
-        }
-    }
-    if (idx == -1) {
-        fputs("Max number of connections reached! Try again later.", stderr);
+    platform_ctx.eventfd = eventfd(0, 0);
+    if (platform_ctx.eventfd == -1) {
+        log_fatalf("Failed to create the stopping event file descriptor: %s", get_last_error());
         return 1;
     }
 
-    struct epoll_event event_in = {.events = EPOLLIN | EPOLLOUT | EPOLLET, .data.u64 = idx};
-    if (epoll_ctl(ctx.epollfd, EPOLL_CTL_ADD, peerfd, &event_in) == -1) {
-        log_error("Could not register the connection inside the network loop.");
+    struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.fd = -2};
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, platform_ctx.eventfd, &event_in) == -1) {
+        log_fatalf("Could not register the event file descriptor to epoll: %s", get_last_error());
         return 1;
     }
 
-    char addr_str[16];
-    inet_ntop(AF_INET, &peer_addr.sin_addr, addr_str, 16);
-
-    ctx.connections[idx] =
-        conn_create(peerfd, idx, &ctx.enc_ctx, str_create_const(addr_str), peer_addr.sin_port);
-
-    log_infof("Accepted connection from %s:%i.", addr_str, peer_addr.sin_port);
+    objpool_init(&ctx->connections, &ctx->arena, max_connections, sizeof(Connection));
     return 0;
 }
 
-void close_connection(Connection* conn) {
+static enum IOCode accept_connection(NetworkContext* ctx) {
+    SocketAddress peer_address;
+    socketfd peer_socket;
+    enum IOCode code = sock_accept(ctx->server_socket, &peer_socket, &peer_address);
+    switch (code) {
+    case IOC_ERROR:
+        log_errorf("Failed to establish connection to peer: %s", get_last_error());
+        return code;
+    case IOC_AGAIN:
+        return code;
+    default:
+        break;
+    }
+
+    i64 index;
+    Connection* conn = objpool_add(&ctx->connections, &index);
+    if (!conn) {
+        log_warn("Reached maximum connection amount, rejecting.");
+        sock_close(peer_socket);
+        return IOC_CLOSED;
+    }
+
+    struct epoll_event event_in = {.events = EPOLLIN | EPOLLOUT | EPOLLET, .data.u64 = index};
+    if (epoll_ctl(platform_ctx.epollfd, EPOLL_CTL_ADD, peer_socket, &event_in) == -1) {
+        log_errorf("Could not register the connection inside the network loop : %s",
+                   get_last_error());
+        return 1;
+    }
+
+    Arena arena = ctx->arena;
+
+    u32 peer_port;
+    string peer_host = sockaddr_to_string(&peer_address, &arena, &peer_port);
+
+    *conn = conn_create(peer_socket, index, &ctx->enc_ctx, peer_host, peer_port);
+    conn->pending_recv = TRUE;
+    conn->pending_send = TRUE;
+
+    log_infof("Accepted connection from [%s:%i].", peer_host.base, peer_port);
+    return IOC_OK;
+}
+
+void close_connection(NetworkContext* ctx, Connection* conn) {
     struct epoll_event placeholder;
-    log_infof("Closing connection %i.", conn->sockfd);
+    log_infof("Closing connection to [%s:%i].", conn->peer_addr.base, conn->peer_port);
+
+    //TODO: Send a `DISCONNECT` packet when closing a connection.
 
     if (conn->encryption) {
         encryption_cleanup_peer(&conn->peer_enc_ctx);
     }
 
-    close(conn->sockfd);
-    epoll_ctl(ctx.epollfd, EPOLL_CTL_DEL, conn->sockfd, &placeholder);
+    sock_close(conn->peer_socket);
+    epoll_ctl(platform_ctx.epollfd, EPOLL_CTL_DEL, conn->peer_socket, &placeholder);
     arena_destroy(&conn->scratch_arena);
     arena_destroy(&conn->persistent_arena);
     mcmutex_destroy(&conn->mutex);
-    conn->sockfd = -1;
-    ctx.connection_count--;
+    conn->peer_socket = SOCKFD_INVALID;
+    objpool_remove(&ctx->connections, conn->table_index);
 }
 
-static void network_finish(void) {
+static void network_finish(NetworkContext* ctx) {
 
-    encryption_cleanup(&ctx.enc_ctx);
+    encryption_cleanup(&ctx->enc_ctx);
 
-    for (u32 i = 0; i < ctx.max_connections; i++) {
-        Connection* c = &ctx.connections[i];
-        if (c->sockfd >= 0)
-            close_connection(&ctx, c);
+    for (i64 i = 0; i < ctx->connections.capacity; i++) {
+        Connection* conn = objpool_get(&ctx->connections, i);
+        if (conn)
+            close_connection(ctx, conn);
     }
 
-    close(ctx.eventfd);
-    close(ctx.epollfd);
-    close(ctx.server_socket);
-    arena_destroy(&ctx.arena);
+    sock_close(ctx->server_socket);
+
+    close(platform_ctx.epollfd);
+    close(platform_ctx.eventfd);
+    arena_destroy(&ctx->arena);
 }
 
-
-i32 handle_connection_io(Connection* conn, u32 events) {
+static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i32 events) {
     enum IOCode io_code = IOC_OK;
-    if (events & IOEVENT_IN) {
+    if (events & EPOLLIN && conn->pending_recv) {
+        conn->pending_recv = FALSE;
+        io_code = fill_buffer(ctx, conn);
         while (io_code == IOC_OK) {
-            io_code = receive_packet(conn);
+            io_code = receive_packet(ctx, conn);
+            if (io_code == IOC_AGAIN && !conn->pending_recv)
+                io_code = fill_buffer(ctx, conn);
         }
         switch (io_code) {
         case IOC_CLOSED:
             log_warn("Peer closed connection.");
-            close_connection(&ctx, conn);
-            return 0;
+            close_connection(ctx, conn);
+            break;
         case IOC_ERROR:
             log_error("Errored connection.");
-            close_connection(&ctx, conn);
-            return 1;
+            close_connection(ctx, conn);
+            break;
         default:
             break;
         }
     }
 
-    if (events & IOEVENT_OUT) {
-        if (!conn->can_send) {
-            io_code = sender_send(conn);
-            switch (io_code) {
-            case IOC_CLOSED:
-            case IOC_ERROR:
-                close_connection(&ctx, conn);
-                break;
-            case IOC_AGAIN:
-                conn->can_send = FALSE;
-                break;
-            default:
-                break;
-            }
+    if (events & EPOLLOUT && conn->pending_send) {
+        conn->pending_send = FALSE;
+        io_code = empty_buffer(ctx, conn);
+        switch (io_code) {
+        case IOC_CLOSED:
+        case IOC_ERROR:
+            close_connection(ctx, conn);
+            break;
+        default:
+            break;
         }
-        conn->can_send = TRUE;
     }
 
-    return 0;
+    return io_code;
 }
 
-static void* network_handle(void* params) {
-    (void) params;
+void* network_handle(void* params) {
+    NetworkContext* ctx = params;
     struct epoll_event events[10];
     i32 eventCount = 0;
 
@@ -229,18 +414,19 @@ static void* network_handle(void* params) {
     sigfillset(&sigmask);
     sigdelset(&sigmask, SIGTERM);
 
-    log_infof("Listening for connections on %s:%u...", ctx.host.base, ctx.port);
-    while (ctx.should_continue) {
-        eventCount = epoll_wait(ctx.epollfd, events, 10, -1);
+    log_infof("Listening for connections on %s:%u...", ctx->host.base, ctx->port);
+    while (ctx->should_continue) {
+        log_trace("Waiting for EPoll notifications...");
+        eventCount = epoll_wait(platform_ctx.epollfd, events, 10, -1);
         for (i32 i = 0; i < eventCount; i++) {
             struct epoll_event* e = &events[i];
-            if (e->data.fd == -1)
-                accept_connection();
-            else if (e->data.fd == ctx.eventfd)
-                ctx.should_continue = FALSE;
+            if (e->data.fd == -1) // server socket
+                accept_connection(ctx);
+            else if (e->data.fd == -2) // eventfd
+                ctx->should_continue = FALSE;
             else {
-                Connection* conn = &ctx.connections[e->data.u64];
-                ctx.code = handle_connection_io(conn, e->events);
+                Connection* conn = objpool_get(&ctx->connections, e->data.u64);
+                handle_connection_io(ctx, conn, e->events);
             }
         }
     }
@@ -250,18 +436,21 @@ static void* network_handle(void* params) {
         case EINTR:
             break;
         default:
-            log_fatalf("Network error: %s", strerror(errno));
+            log_fatalf("Network error: %s", get_last_error());
             break;
         }
     }
 
-    network_finish();
+    network_finish(ctx);
     return NULL;
 }
 
 void platform_network_stop(void) {
     i64 count = 1;
-    write(ctx.eventfd, &count, sizeof(count));
+    i64 res = 0;
+    while (res <= 0) {
+        res = write(platform_ctx.eventfd, &count, sizeof(count));
+    }
 }
 
 #endif

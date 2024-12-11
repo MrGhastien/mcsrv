@@ -3,14 +3,10 @@
 #include "logger.h"
 #include "memory/arena.h"
 
+#include <stdlib.h>
 #include <zlib.h>
 
 #define CHUNK 16384
-
-// WARNING: Notchian client initializes and resets ZLib streams each time
-// a packet is sent / received.
-// This is not the case here, as streams are initialized and reset once per connection !
-// This works now, but this needs to be monitored.
 
 typedef i32 (*zlib_action)(z_streamp stream, int flush);
 typedef i32 (*zlib_resetter)(z_streamp stream);
@@ -83,35 +79,46 @@ static i64 zlib_execute(z_streamp stream,
 
     u64 region_count = 2;
     BufferRegion regions[2];
-    if(bytebuf_get_read_regions(in_buffer, regions, &region_count) == 0)
+    if (bytebuf_get_read_regions(in_buffer, regions, &region_count, 0) == 0)
         return 0;
+
+    stream->avail_out = CHUNK;
+    stream->next_out = outBuf;
 
     /*
       Here we don't copy any data from the input buffer.
       Pointers to areas inside the buffers are given to ZLib to read.
      */
-    stream->avail_out = CHUNK;
-    stream->next_out = outBuf;
-
     i32 res = Z_OK;
-    u64 region_index = 0;
+    u64 region_index = 1;
+    stream->avail_in = regions[0].size;
+    stream->next_in = regions[0].start;
     do {
-        stream->avail_in = regions[region_index].size;
-        stream->next_in = regions[region_index].start;
-        region_index++;
+
         /*
           We have to tell ZLib that it reached the end of the input data !
           */
-        flush = in_buffer->size == 0 ? Z_FINISH : Z_NO_FLUSH;
+        flush = region_index >= region_count ? Z_FINISH : Z_NO_FLUSH;
 
         while (res == Z_OK) {
             res = action(stream, flush);
         }
         switch (res) {
         case Z_BUF_ERROR:
-            bytebuf_write(out_buffer, outBuf, CHUNK - stream->avail_out);
-            stream->avail_out = CHUNK;
-            stream->next_out = outBuf;
+            if (stream->avail_out == 0) {
+                bytebuf_write(out_buffer, outBuf, CHUNK - stream->avail_out);
+                stream->avail_out = CHUNK;
+                stream->next_out = outBuf;
+            }
+            if (stream->avail_in == 0) {
+                if (flush == Z_FINISH) {
+                    log_fatal("ZLib has no more output but we told it we have no more input WTF ?");
+                    abort();
+                }
+                stream->avail_in = regions[region_index].size;
+                stream->next_in = regions[region_index].start;
+                region_index++;
+            }
             break;
 
         case Z_STREAM_ERROR:

@@ -5,8 +5,13 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
+#include "definitions.h"
+#include "utils/string.h"
+
+#include <stdint.h>
+
 #ifdef MC_PLATFORM_LINUX
-#incude <arpa/inet.h>
+#include <arpa/inet.h>
 #define SOCKFD_INVALID (-1)
 #elif defined MC_PLATFORM_WINDOWS
 #include <winsock2.h>

@@ -96,8 +96,8 @@ void encryption_cleanup_peer(PeerEncryptionContext* ctx);
  * @param[in] in The buffer containing the data do encrypt.
  * @param in_size The size of the input buffer.
  */
-i32 encryption_cipher(PeerEncryptionContext* ctx, u8* in, i32 in_size);
-i32 encryption_decipher(PeerEncryptionContext* ctx, u8* in, i32 in_size);
+bool encryption_cipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 offset);
+bool encryption_decipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 offset);
 
 bool encryption_authenticate_player(Connection* conn, JSON* json);
 
