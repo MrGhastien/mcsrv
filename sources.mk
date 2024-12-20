@@ -36,8 +36,10 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/platform/windows/mc_thread_windows.c \
 		$(SRC_DIR)/platform/windows/mc_mutex_windows.c \
 		$(SRC_DIR)/platform/windows/mc_cond_var_windows.c \
-		$(SRC_DIR)/json/json.c \
-		$(SRC_DIR)/json/json_parse.c \
+		$(SRC_DIR)/data/json/json.c \
+		$(SRC_DIR)/data/json/json_parse.c \
+		$(SRC_DIR)/data/nbt/nbt.c \
+		$(SRC_DIR)/data/nbt/serial.c \
 		$(SRC_DIR)/registry/registry.c \
 		$(SRC_DIR)/resource/resource_id.c \
 		$(SRC_DIR)/event/event.c

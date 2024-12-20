@@ -15,4 +15,8 @@ void* offsetu(void* ptr, u64 offset);
 u64 hton64(u64 x);
 u64 ntoh64(u64 x);
 
+i16 big_endian16(i16 x);
+i32 big_endian32(i32 x);
+i64 big_endian64(i64 x);
+
 #endif /* ! BITWISE_H */

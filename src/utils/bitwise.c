@@ -22,41 +22,66 @@ void* offsetu(void* ptr, u64 offset) {
     return (void*)a;
 }
 
-static u64 swap_bytes(u64 x) {
-    u8* array = (u8*)&x;
+static void swap_bytes(void* x, u64 size) {
+    u8* array = x;
 
-    for (i64 i = 0; i < 4; i++) {
-        u8 tmp = array[i];
-        array[i] = array[7 - i];
-        array[7 - i] = tmp;
+    for (u64 lo = 0, hi = size - 1; lo < size; lo++, hi--) {
+        u8 tmp = array[lo];
+        array[lo] = array[hi];
+        array[hi] = tmp;
     }
-    return x;
 }
 
 u64 hton64(u64 x) {
-#ifdef __LITTLE_ENDIAN__
-    return swap_bytes(x);
-#elif defined(__BIG_ENDIAN__)
-    return x;
-#else
+#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
+    swap_bytes(&x, sizeof x);
+#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
     int n = 1;
-    if (((char*)&n)[0] == 1)
-        return swap_bytes(x);
-    else
-        return x;
+    if (((u8*)&n)[0] == 1)
+        swap_bytes(&x, sizeof x);
 #endif
+    return x;
 }
 
 u64 ntoh64(u64 x) {
-#ifdef __LITTLE_ENDIAN__
-    return swap_bytes(x);
-#elif defined(__BIG_ENDIAN__)
-    return x;
-#else
+#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
+    swap_bytes(&x, sizeof x);
+#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
     int n = 1;
-    if (((char*)&n)[0] == 1)
-        return swap_bytes(x);
-    else
-        return x;
+    if (((u8*)&n)[0] == 1)
+        swap_bytes(&x, sizeof x);
 #endif
+    return x;
+}
+
+i16 big_endian16(i16 x) {
+#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
+    swap_bytes(&x, sizeof x);
+#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
+    int n = 1;
+    if (((u8*)&n)[0] == 1)
+        swap_bytes(&x, sizeof x);
+#endif
+    return x;
+
+}
+i32 big_endian32(i32 x) {
+#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
+    swap_bytes(&x, sizeof x);
+#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
+    int n = 1;
+    if (((u8*)&n)[0] == 1)
+        swap_bytes(&x, sizeof x);
+#endif
+    return x;
+}
+i64 big_endian64(i64 x) {
+#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
+    swap_bytes(&x, sizeof x);
+#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
+    int n = 1;
+    if (((u8*)&n)[0] == 1)
+        swap_bytes(&x, sizeof x);
+#endif
+    return x;
 }

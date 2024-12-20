@@ -1,7 +1,7 @@
 #ifndef JSON_INTERNAL_H
 #define JSON_INTERNAL_H
 
-#include "json.h"
+#include "data/json.h"
 
 void json_node_destroy(JSONNode* node);
 

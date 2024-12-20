@@ -12,8 +12,12 @@ The functions is invalid because the byte buffer might contain multiple raw pack
 ** FIXED Properly handle termination signals (SIGINT)
 CLOSED: [2024-06-24 lun. 00:05]
 Trying to interrupt with Ctrl-C does nothing.
+** BUG Memory leak when building a new JSON object.
 
 * Features                                                            :mcsrv:
+** Internals
+*** TODO Scattered vector
+  Vector with a dynamic size using blocks of memory to resize itself.
 ** Network
 *** DONE Decompression & decryption of packets
 CLOSED: [2024-12-08 dim. 17:53]

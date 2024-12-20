@@ -340,6 +340,7 @@ static enum IOCode handle_connection_io(NetworkContext* ctx,
         conn->pending_recv = FALSE;
         bytebuf_register_write(&conn->recv_buffer, transferred);
 
+        code = fill_buffer(ctx, conn);
         while (code == IOC_OK) {
             code = receive_packet(ctx, conn);
             if (code == IOC_AGAIN && !conn->pending_recv)

@@ -74,11 +74,11 @@ bool vector_pop(Vector* vector, void* out) {
     return vector_remove(vector, vector->size - 1, out);
 }
 
-bool vector_peek(Vector* vector, void* out) {
+bool vector_peek(const Vector* vector, void* out) {
     return vector_get(vector, vector->size - 1, out);
 }
 
-bool vector_get(Vector* vector, size_t index, void* out) {
+bool vector_get(const Vector* vector, size_t index, void* out) {
     size_t size = vector->size;
     if (index >= size)
         return FALSE;
@@ -90,7 +90,7 @@ bool vector_get(Vector* vector, size_t index, void* out) {
     return TRUE;
 }
 
-void* vector_ref(Vector* vector, size_t index) {
+void* vector_ref(const Vector* vector, size_t index) {
     size_t size = vector->size;
     if (index >= size)
         return NULL;

@@ -46,9 +46,9 @@ void *vector_reserve(Vector *vector);
 
 bool vector_remove(Vector *vector, size_t idx, void *out);
 bool vector_pop(Vector *vector, void *out);
-bool vector_peek(Vector *vector, void *out);
+bool vector_peek(const Vector* vector, void* out);
 
-bool vector_get(Vector *vector, size_t index, void *out);
-void *vector_ref(Vector *vector, size_t index);
+bool vector_get(const Vector* vector, size_t index, void* out);
+void *vector_ref(const Vector* vector, size_t index);
 
 #endif /* ! VECTOR_H */

@@ -31,8 +31,10 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/platform/linux/signal-handler.h \
 		$(SRC_DIR)/platform/linux/mc_thread_linux.h \
 		$(SRC_DIR)/platform/linux/mc_mutex_linux.h \
-		$(SRC_DIR)/json/json.h \
-		$(SRC_DIR)/json/json_internal.h \
+		$(SRC_DIR)/data/json.h \
+		$(SRC_DIR)/data/json/json_internal.h \
+		$(SRC_DIR)/data/nbt.h \
+		$(SRC_DIR)/data/nbt/nbt_types.h \
 		$(SRC_DIR)/registry/registry.h \
 		$(SRC_DIR)/resource/resource_id.h \
 		$(SRC_DIR)/event/event.h
