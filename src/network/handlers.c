@@ -195,11 +195,11 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
     if (property_count == -1)
         return FALSE;
 
-    vector_init(
+    vect_init(
         &login_success.properties, &conn->scratch_arena, property_count, sizeof(PlayerProperty));
 
     for (i64 i = 0; i < property_count; i++) {
-        PlayerProperty* property = vector_reserve(&login_success.properties);
+        PlayerProperty* property = vect_reserve(&login_success.properties);
         JSONNode* json_property = json_get_array(json_properties, i);
         if (!json_property)
             return FALSE;

@@ -15,7 +15,7 @@ static bool ensure_capacity(Vector* vector, u64 size) {
     return FALSE;
 }
 
-void vector_add(Vector* vector, void* element) {
+void vect_add(Vector* vector, void* element) {
     u64 stride = vector->stride;
 
     if (!ensure_capacity(vector, vector->size + 1))
@@ -25,7 +25,7 @@ void vector_add(Vector* vector, void* element) {
     vector->size++;
 }
 
-void vector_insert(Vector* vector, void* element, u64 idx) {
+void vect_insert(Vector* vector, void* element, u64 idx) {
     u64 size = vector->size;
     u64 stride = vector->stride;
 
@@ -39,7 +39,7 @@ void vector_insert(Vector* vector, void* element, u64 idx) {
     vector->size++;
 }
 
-void* vector_reserve(Vector* vector) {
+void* vect_reserve(Vector* vector) {
     if (!ensure_capacity(vector, vector->size + 1))
         return NULL;
     void* ptr = offset(vector->data, vector->size * vector->stride);
@@ -47,7 +47,7 @@ void* vector_reserve(Vector* vector) {
     return ptr;
 }
 
-bool vector_remove(Vector* vector, u64 idx, void* out) {
+bool vect_remove(Vector* vector, u64 idx, void* out) {
     u64 size = vector->size;
     if (idx >= size)
         return FALSE;
@@ -65,15 +65,15 @@ bool vector_remove(Vector* vector, u64 idx, void* out) {
     return TRUE;
 }
 
-bool vector_pop(Vector* vector, void* out) {
-    return vector_remove(vector, vector->size - 1, out);
+bool vect_pop(Vector* vector, void* out) {
+    return vect_remove(vector, vector->size - 1, out);
 }
 
-bool vector_peek(Vector* vector, void* out) {
-    return vector_get(vector, vector->size - 1, out);
+bool vect_peek(Vector* vector, void* out) {
+    return vect_get(vector, vector->size - 1, out);
 }
 
-bool vector_get(Vector* vector, u64 index, void* out) {
+bool vect_get(Vector* vector, u64 index, void* out) {
     u64 size = vector->size;
     if (index >= size)
         return FALSE;
@@ -85,7 +85,7 @@ bool vector_get(Vector* vector, u64 index, void* out) {
     return TRUE;
 }
 
-void* vector_ref(Vector* vector, u64 index) {
+void* vect_ref(Vector* vector, u64 index) {
     u64 size = vector->size;
     if (index >= size)
         return NULL;
