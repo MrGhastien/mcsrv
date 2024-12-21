@@ -92,7 +92,7 @@ void event_register_event(u32 code, string name) {
     }
     EventEntry e;
     e.name = name;
-    vector_init_fixed(&e.listeners, &ctx.arena, 256, sizeof(EventListener));
+    vector_init(&e.listeners, &ctx.arena, 256, sizeof(EventListener));
     dict_put(&ctx.event_registry, &code, &e);
 
     pthread_mutex_unlock(&ctx.mutex);

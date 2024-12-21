@@ -23,7 +23,7 @@ typedef struct json_node {
     enum JSONType type;
     union {
         string string;
-        Vector *array;
+        DynVector *array;
         bool boolean;
         long number;
         double fnumber;

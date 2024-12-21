@@ -1,54 +1,83 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include "../memory/arena.h"
-#include "../definitions.h"
+#include "definitions.h"
+#include "memory/arena.h"
 
 #include <stddef.h>
 
-typedef struct vector
-{
-    void *array;
+struct vector_block;
+
+typedef struct dvector {
+    struct vector_block* start;   /**< Array of blocks storing elements of this vector. */
+    struct vector_block* current; /**< The next block in which a new element is inserted. */
+    u32 next_insert_index;        /**< The next index of the current block at which a new element is
+                                     inserted. */
+    u32 capacity;                 /**< The total capacity of this vector. */
+    u32 size;                     /**< The number of elements stored inside this vector. */
+    u32 stride;                   /**< The size in bytes of elements. */
+    Arena* arena;                 /**< The arena used to allocate new blocks to grow the vector. */
+} DynVector;
+
+typedef struct vector {
+    void* data;
     u32 capacity;
     u32 size;
     u32 stride;
-    bool fixed;
 } Vector;
 
-void vector_init(Vector *vector, size_t initial_capacity, size_t stride);
-void vector_init_fixed(Vector *vector, Arena* arena, size_t capacity, size_t stride);
+void vector_init(Vector* vector, Arena* arena, u64 capacity, u64 stride);
 
-void vector_destroy(Vector *vector);
-void vector_clear(Vector *vector);
+void vector_clear(Vector* vector);
 
-/**
- * Free all elements stored inside the vector.
- * /!\\ The elements must be malloc'd pointers. /!\\
- */
-void vector_deep_destroy(Vector *vector);
-void vector_deep_clear(Vector *vector);
-
-#define vector_add_imm(vector, elem, type)                                     \
-    {                                                                          \
-        typeof(elem) holder = elem;                                                    \
-        vector_add(vector, &holder);                                           \
+#define vector_add_imm(vector, elem, type)                                                         \
+    {                                                                                              \
+        typeof(elem) holder = elem;                                                                \
+        vector_add(vector, &holder);                                                               \
     }
 
-#define vector_insert_imm(vector, elem, idx, type)                             \
-    {                                                                          \
-        type holder = elem;                                                    \
-        vector_insert(vector, &holder, idx);                                   \
+#define vector_insert_imm(vector, elem, idx, type)                                                 \
+    {                                                                                              \
+        typeof(elem) holder = elem;                                                                \
+        vector_insert(vector, &holder, idx);                                                       \
     }
 
-void vector_add(Vector *vector, void *element);
-void vector_insert(Vector *vector, void *element, size_t idx);
-void *vector_reserve(Vector *vector);
+void vector_add(Vector* vector, void* element);
+void vector_insert(Vector* vector, void* element, u64 idx);
+void* vector_reserve(Vector* vector);
 
-bool vector_remove(Vector *vector, size_t idx, void *out);
-bool vector_pop(Vector *vector, void *out);
-bool vector_peek(Vector *vector, void *out);
+bool vector_remove(Vector* vector, u64 idx, void* out);
+bool vector_pop(Vector* vector, void* out);
+bool vector_peek(Vector* vector, void* out);
 
-bool vector_get(Vector *vector, size_t index, void *out);
-void *vector_ref(Vector *vector, size_t index);
+bool vector_get(Vector* vector, u64 index, void* out);
+void* vector_ref(Vector* vector, u64 index);
+
+void dvect_init(DynVector* vector, Arena* arena, u64 initial_capacity, u64 stride);
+
+void dvect_clear(DynVector* vector);
+
+#define dvect_add_imm(vector, elem, type)                                                         \
+    {                                                                                              \
+        typeof(elem) holder = elem;                                                                \
+        dvect_add(vector, &holder);                                                               \
+    }
+
+#define dvect_insert_imm(vector, elem, idx, type)                                                 \
+    {                                                                                              \
+        typeof(elem) holder = elem;                                                                \
+        dvect_insert(vector, &holder, idx);                                                       \
+    }
+
+void dvect_add(DynVector* vector, void* element);
+void dvect_insert(DynVector* vector, void* element, u64 idx);
+void* dvect_reserve(DynVector* vector);
+
+bool dvect_remove(DynVector* vector, u64 idx, void* out);
+bool dvect_pop(DynVector* vector, void* out);
+bool dvect_peek(DynVector* vector, void* out);
+
+bool dvect_get(DynVector* vector, u64 index, void* out);
+void* dvect_ref(DynVector* vector, u64 index);
 
 #endif /* ! VECTOR_H */

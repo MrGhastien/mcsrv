@@ -31,8 +31,8 @@ JSONNode* json_node_create(JSON* json, enum JSONType type) {
         dict_init(node->data.obj, &CMP_STRING, sizeof(string), sizeof(JSONNode*));
         break;
     case JSON_ARRAY:
-        node->data.array = arena_allocate(arena, sizeof(Vector));
-        vector_init(node->data.array, 4, sizeof(JSONNode*));
+        node->data.array = arena_allocate(arena, sizeof(DynVector));
+        dvect_init(node->data.array, arena, 4, sizeof(JSONNode*));
         break;
     case JSON_STRING:
         node->data.string = (string){0};
@@ -44,6 +44,7 @@ JSONNode* json_node_create(JSON* json, enum JSONType type) {
         node->data.number = 0;
         break;
     default:
+        log_errorf("JSON: Invalid JSON type %i", type);
         break;
     }
     return node;
@@ -80,10 +81,9 @@ void json_node_destroy(JSONNode* node) {
     case JSON_ARRAY:
         for (size_t i = 0; i < node->data.array->size; i++) {
             JSONNode* subnode;
-            vector_get(node->data.array, i, &subnode);
+            dvect_get(node->data.array, i, &subnode);
             json_node_destroy(subnode);
         }
-        vector_destroy(node->data.array);
         break;
     case JSON_STRING:
         str_destroy(&node->data.string);
@@ -140,7 +140,7 @@ JSONNode* json_node_add(JSON* json, JSONNode* array, enum JSONType type) {
         return NULL;
 
     JSONNode* node = json_node_create(json, type);
-    vector_add(array->data.array, &node);
+    dvect_add(array->data.array, &node);
     return node;
 }
 
@@ -148,7 +148,7 @@ void json_node_addn(JSONNode* array, JSONNode* element) {
     if (!json_check_type(array, JSON_ARRAY))
         return;
 
-    vector_add(array->data.array, &element);
+    dvect_add(array->data.array, &element);
 }
 
 void json_set_str_direct(JSONNode* node, string* value) {
@@ -209,13 +209,13 @@ static void add_padding(string* str, size_t level) {
 }
 
 static void json_array_stringify(JSON* json, const JSONNode* array, string* str, size_t level) {
-    Vector* vector = array->data.array;
+    DynVector* vector = array->data.array;
     str_append(str, "[");
     for (size_t i = 0; i < vector->size; i++) {
         JSONNode* elem;
         str_append(str, "\n");
         add_padding(str, level + 1);
-        if (vector_get(vector, i, &elem))
+        if (dvect_get(vector, i, &elem))
             json_node_stringify(json, elem, str, level + 1);
         if (i < vector->size - 1)
             str_append(str, ",");
@@ -320,7 +320,7 @@ JSONNode* json_get_array(const JSONNode* node, u64 idx) {
         return NULL;
 
     JSONNode* out;
-    if (!vector_get(node->data.array, idx, &out))
+    if (!dvect_get(node->data.array, idx, &out))
         return NULL;
     return out;
 }

@@ -7,8 +7,8 @@
 #include "security.h"
 #include "utils.h"
 
-#include "logger.h"
 #include "containers/vector.h"
+#include "logger.h"
 #include "memory/arena.h"
 #include "utils/string.h"
 #include "json/json.h"
@@ -167,6 +167,7 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
     string str;
     json_stringify(json, &str, 1 << 12, &conn->scratch_arena);
 
+    log_trace("Login success response: ");
     log_trace(str.base);
 
 #endif
@@ -194,7 +195,7 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
     if (property_count == -1)
         return FALSE;
 
-    vector_init_fixed(
+    vector_init(
         &login_success.properties, &conn->scratch_arena, property_count, sizeof(PlayerProperty));
 
     for (i64 i = 0; i < property_count; i++) {

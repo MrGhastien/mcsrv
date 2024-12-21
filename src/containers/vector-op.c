@@ -1,43 +1,39 @@
-#include "../definitions.h"
+#include "definitions.h"
 #include <stdlib.h>
 #include <string.h>
 
-#include "../containers/vector.h"
-#include "../utils/bitwise.h"
+#include "containers/vector.h"
+#include "logger.h"
+#include "utils/bitwise.h"
 
-static bool ensure_capacity(Vector* vector, size_t size) {
-    if (vector->fixed || size <= vector->capacity)
+static bool ensure_capacity(Vector* vector, u64 size) {
+    if (size <= vector->capacity)
         return TRUE;
 
-    size_t new_cap = ceil_two_pow(size);
-    void* new_array = realloc(vector->array, new_cap * vector->stride);
-    if (!new_array)
-        return FALSE;
-
-    vector->array = new_array;
-    vector->capacity = new_cap;
-    return TRUE;
+    log_error("Cannot resize a fixed vector !");
+    abort();
+    return FALSE;
 }
 
 void vector_add(Vector* vector, void* element) {
-    size_t stride = vector->stride;
+    u64 stride = vector->stride;
 
     if (!ensure_capacity(vector, vector->size + 1))
         return;
 
-    memcpy(offset(vector->array, vector->size * stride), element, stride);
+    memcpy(offset(vector->data, vector->size * stride), element, stride);
     vector->size++;
 }
 
-void vector_insert(Vector* vector, void* element, size_t idx) {
-    size_t size = vector->size;
-    size_t stride = vector->stride;
+void vector_insert(Vector* vector, void* element, u64 idx) {
+    u64 size = vector->size;
+    u64 stride = vector->stride;
 
     if (!ensure_capacity(vector, size + 1))
         return;
 
-    void* target_addr = offset(vector->array, idx * stride);
-    void* next_addr = offset(vector->array, (idx + 1) * stride);
+    void* target_addr = offset(vector->data, idx * stride);
+    void* next_addr = offset(vector->data, (idx + 1) * stride);
     memmove(next_addr, target_addr, stride * (size - idx));
     memcpy(target_addr, element, stride);
     vector->size++;
@@ -46,20 +42,19 @@ void vector_insert(Vector* vector, void* element, size_t idx) {
 void* vector_reserve(Vector* vector) {
     if (!ensure_capacity(vector, vector->size + 1))
         return NULL;
-    void* ptr = offset(vector->array, vector->size * vector->stride);
+    void* ptr = offset(vector->data, vector->size * vector->stride);
     vector->size++;
     return ptr;
 }
 
-bool vector_remove(Vector* vector, size_t idx, void* out) {
-    size_t size = vector->size;
+bool vector_remove(Vector* vector, u64 idx, void* out) {
+    u64 size = vector->size;
     if (idx >= size)
         return FALSE;
 
-    size_t stride = vector->stride;
+    u64 stride = vector->stride;
 
-
-    void* address = offset(vector->array, idx * stride);
+    void* address = offset(vector->data, idx * stride);
 
     if (out)
         memcpy(out, address, stride);
@@ -78,24 +73,24 @@ bool vector_peek(Vector* vector, void* out) {
     return vector_get(vector, vector->size - 1, out);
 }
 
-bool vector_get(Vector* vector, size_t index, void* out) {
-    size_t size = vector->size;
+bool vector_get(Vector* vector, u64 index, void* out) {
+    u64 size = vector->size;
     if (index >= size)
         return FALSE;
 
-    size_t stride = vector->stride;
+    u64 stride = vector->stride;
 
     if (out)
-        memcpy(out, offset(vector->array, index * stride), stride);
+        memcpy(out, offset(vector->data, index * stride), stride);
     return TRUE;
 }
 
-void* vector_ref(Vector* vector, size_t index) {
-    size_t size = vector->size;
+void* vector_ref(Vector* vector, u64 index) {
+    u64 size = vector->size;
     if (index >= size)
         return NULL;
 
-    size_t stride = vector->stride;
+    u64 stride = vector->stride;
 
-    return offset(vector->array, index * stride);
+    return offset(vector->data, index * stride);
 }

@@ -9,6 +9,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/memory/dyn_arena.c \
 		$(SRC_DIR)/memory/arena.c \
 		$(SRC_DIR)/containers/vector-init.c \
+		$(SRC_DIR)/containers/dynvector.c \
 		$(SRC_DIR)/containers/dict-op.c \
 		$(SRC_DIR)/containers/vector-op.c \
 		$(SRC_DIR)/containers/dict-init.c \
