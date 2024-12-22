@@ -1,5 +1,20 @@
 #include "bitwise.h"
 
+#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
+#define CONVERT_ENDIANNESS(x)                                                                      \
+    swap_bytes(&(x), sizeof(x));                                                                   \
+    return x
+#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
+#define CONVERT_ENDIANNESS(x) return (x)
+#else
+#define CONVERT_ENDIANNESS(x)                                                                      \
+    int n = 1;                                                                                     \
+    if (((u8*) &n)[0] == 1) {                                                                      \
+        swap_bytes(&(x), sizeof(x));                                                               \
+    }                                                                                              \
+    return x
+#endif
+
 u64 ceil_two_pow(u64 num) {
     num |= num >> 1;
     num |= num >> 2;
@@ -11,77 +26,72 @@ u64 ceil_two_pow(u64 num) {
 }
 
 void* offset(void* ptr, i64 offset) {
-    u64 a = (u64)ptr;
+    u64 a = (u64) ptr;
     a += offset;
-    return (void*)a;
+    return (void*) a;
 }
 
 void* offsetu(void* ptr, u64 offset) {
-    u64 a = (u64)ptr;
+    u64 a = (u64) ptr;
     a += offset;
-    return (void*)a;
+    return (void*) a;
 }
 
 static void swap_bytes(void* x, u64 size) {
     u8* array = x;
 
-    for (u64 lo = 0, hi = size - 1; lo < size; lo++, hi--) {
+    for (u64 lo = 0, hi = size - 1; lo < (size >> 1); lo++, hi--) {
         u8 tmp = array[lo];
         array[lo] = array[hi];
         array[hi] = tmp;
     }
 }
 
-u64 hton64(u64 x) {
-#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
-    swap_bytes(&x, sizeof x);
-#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
-    int n = 1;
-    if (((u8*)&n)[0] == 1)
-        swap_bytes(&x, sizeof x);
-#endif
-    return x;
+NTOH(64) {
+    CONVERT_ENDIANNESS(x);
 }
 
-u64 ntoh64(u64 x) {
-#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
-    swap_bytes(&x, sizeof x);
-#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
-    int n = 1;
-    if (((u8*)&n)[0] == 1)
-        swap_bytes(&x, sizeof x);
-#endif
-    return x;
+NTOH(32) {
+    CONVERT_ENDIANNESS(x);
 }
 
-i16 big_endian16(i16 x) {
-#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
-    swap_bytes(&x, sizeof x);
-#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
-    int n = 1;
-    if (((u8*)&n)[0] == 1)
-        swap_bytes(&x, sizeof x);
-#endif
-    return x;
+NTOH(16) {
+    CONVERT_ENDIANNESS(x);
+}
 
+UNTOH(64) {
+    CONVERT_ENDIANNESS(x);
 }
-i32 big_endian32(i32 x) {
-#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
-    swap_bytes(&x, sizeof x);
-#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
-    int n = 1;
-    if (((u8*)&n)[0] == 1)
-        swap_bytes(&x, sizeof x);
-#endif
-    return x;
+
+UNTOH(32) {
+    CONVERT_ENDIANNESS(x);
 }
-i64 big_endian64(i64 x) {
-#if defined __LITTLE_ENDIAN__ || defined __ORDER_LITTLE_ENDIAN__
-    swap_bytes(&x, sizeof x);
-#elif defined __ORDER_LITTLE_ENDIAN__ || defined __BIG_ENDIAN__
-    int n = 1;
-    if (((u8*)&n)[0] == 1)
-        swap_bytes(&x, sizeof x);
-#endif
-    return x;
+
+UNTOH(16) {
+    CONVERT_ENDIANNESS(x);
+}
+
+
+HTON(64) {
+    CONVERT_ENDIANNESS(x);
+}
+
+HTON(32) {
+    CONVERT_ENDIANNESS(x);
+}
+
+HTON(16) {
+    CONVERT_ENDIANNESS(x);
+}
+
+UHTON(64) {
+    CONVERT_ENDIANNESS(x);
+}
+
+UHTON(32) {
+    CONVERT_ENDIANNESS(x);
+}
+
+UHTON(16) {
+    CONVERT_ENDIANNESS(x);
 }

@@ -7,7 +7,7 @@
 #include "security.h"
 #include "utils.h"
 
-#include "../data"
+#include "data/json.h"
 #include "containers/vector.h"
 #include "logger.h"
 #include "memory/arena.h"

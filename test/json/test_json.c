@@ -1,7 +1,7 @@
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
-#include "json/json.h"
+#include "data/json.h"
 
 #include <dirent.h>
 #include <errno.h>

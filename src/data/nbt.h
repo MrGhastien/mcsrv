@@ -23,6 +23,7 @@ enum NBTTagType {
     NBT_COMPOUND,
     NBT_INT_ARRAY,
     NBT_LONG_ARRAY,
+    _NBT_COUNT
 };
 
 union NBTSimpleValue {
@@ -181,7 +182,7 @@ void nbt_write(const NBT* nbt, const string* path);
 
 /* === Parsing part === */
 
-NBT nbt_parse(Arena* arena, i64 max_token_count, const string* path);
+bool nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
 
 void nbt_move_to_name(NBT* nbt, const string* name);
 void nbt_move_to_index(NBT* nbt, i32 index);

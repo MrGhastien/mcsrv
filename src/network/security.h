@@ -9,7 +9,7 @@
 
 #include "definitions.h"
 #include "memory/arena.h"
-#include "json/json.h"
+#include "data/json.h"
 
 #include <openssl/encoder.h>
 #include <openssl/evp.h>
