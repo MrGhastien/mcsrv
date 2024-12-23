@@ -57,8 +57,8 @@ static i32 get_total_length(const NBTTag* tag) {
 }
 
 bool is_list_or_array(const enum NBTTagType type) {
-    return !(type == NBT_LIST || type == NBT_BYTE_ARRAY ||
-             type == NBT_INT_ARRAY || type == NBT_LONG_ARRAY);
+    return !(type == NBT_LIST || type == NBT_BYTE_ARRAY || type == NBT_INT_ARRAY ||
+             type == NBT_LONG_ARRAY);
 }
 
 NBT nbt_create(Arena* arena, u64 max_token_count) {
@@ -79,29 +79,29 @@ NBT nbt_create(Arena* arena, u64 max_token_count) {
     return nbt;
 }
 
-void nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value) {
+enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value) {
     NBTTag* tag = get_current_tag(nbt);
     switch (tag->type) {
     case NBT_LIST:
         if (tag->data.list.elem_type == NBT_END)
             tag->data.list.elem_type = type;
         else if (tag->data.list.elem_type != type)
-            return;
+            return NBTE_INCOMPATIBLE_TYPE;
         break;
     case NBT_BYTE_ARRAY:
         if (type != NBT_BYTE)
-            return;
+            return NBTE_INCOMPATIBLE_TYPE;
         break;
     case NBT_INT_ARRAY:
         if (type != NBT_INT)
-            return;
+            return NBTE_INCOMPATIBLE_TYPE;
         break;
     case NBT_LONG_ARRAY:
         if (type != NBT_LONG)
-            return;
+            return NBTE_INCOMPATIBLE_TYPE;
         break;
     default:
-        return;
+        return NBTE_INVALID_TYPE;
     }
 
     NBTTag new_tag = {
@@ -111,16 +111,17 @@ void nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value)
     vector_add(&nbt->tags, &new_tag);
     tag->data.list.size++;
     increment_parent_total_lengths(nbt);
+    return TRUE;
 }
-void nbt_push_str(NBT* nbt, const string* str) {
+enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_LIST)
-        return;
+        return NBTE_INVALID_PARENT;
 
     if (tag->data.list.elem_type == NBT_END)
         tag->data.list.elem_type = NBT_STRING;
     if (tag->data.list.elem_type != NBT_STRING)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     NBTTag new_tag = {
         .type = tag->data.list.elem_type,
@@ -128,31 +129,33 @@ void nbt_push_str(NBT* nbt, const string* str) {
     };
     vector_add(&nbt->tags, &new_tag);
     tag->data.list.size++;
+    return NBTE_OK;
 }
-void nbt_push(NBT* nbt, enum NBTTagType type) {
+enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_LIST)
-        return;
+        return NBTE_INVALID_PARENT;
 
     if (tag->data.list.elem_type == NBT_END)
         tag->data.list.elem_type = type;
     else if (tag->data.list.elem_type != type)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     NBTTag new_tag = {
         .type = tag->data.list.elem_type,
     };
     vector_add(&nbt->tags, &new_tag);
     tag->data.list.size++;
+    return NBTE_OK;
 }
 
-void nbt_put_simple(NBT* nbt,
+enum NBTStatus nbt_put_simple(NBT* nbt,
                     const string* name,
                     enum NBTTagType type,
                     union NBTSimpleValue value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_COMPOUND)
-        return;
+        return NBTE_INVALID_PARENT;
 
     NBTTag new_tag = {
         .type = type,
@@ -161,11 +164,12 @@ void nbt_put_simple(NBT* nbt,
     };
     vector_add(&nbt->tags, &new_tag);
     tag->data.compound.size++;
+    return NBTE_OK;
 }
-void nbt_put_str(NBT* nbt, const string* name, const string* str) {
+enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_COMPOUND)
-        return;
+        return NBTE_INVALID_PARENT;
 
     NBTTag new_tag = {
         .type = tag->data.list.elem_type,
@@ -174,80 +178,89 @@ void nbt_put_str(NBT* nbt, const string* name, const string* str) {
     };
     vector_add(&nbt->tags, &new_tag);
     tag->data.compound.size++;
+    return NBTE_OK;
 }
 
-void nbt_put(NBT* nbt, const string* name, enum NBTTagType type) {
+enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_COMPOUND)
-        return;
+        return NBTE_INVALID_PARENT;
 
     NBTTag new_tag = {
         .type = type,
         .name = str_create_copy(name, nbt->arena),
     };
-    if(type == NBT_COMPOUND)
+    if (type == NBT_COMPOUND)
         new_tag.data.compound.total_tag_length = 1;
     else if (type == NBT_LIST)
         new_tag.data.list.total_tag_length = 1;
     vector_add(&nbt->tags, &new_tag);
     tag->data.compound.size++;
+    return NBTE_OK;
 }
 
-void nbt_set_byte(NBT* nbt, i32 value) {
+enum NBTStatus nbt_set_byte(NBT* nbt, i32 value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_BYTE)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     tag->data.simple.byte = (i8) (value & 0xff);
+    return NBTE_OK;
 }
-void nbt_set_bool(NBT* nbt, bool value) {
+enum NBTStatus nbt_set_bool(NBT* nbt, bool value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_BYTE)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     tag->data.simple.byte = value == 0 ? 0 : 1;
+    return NBTE_OK;
 }
-void nbt_set_short(NBT* nbt, i32 value) {
+enum NBTStatus nbt_set_short(NBT* nbt, i32 value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_SHORT)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     tag->data.simple.short_num = (i16) (value & 0xffff);
+    return NBTE_OK;
 }
-void nbt_set_int(NBT* nbt, i32 value) {
+enum NBTStatus nbt_set_int(NBT* nbt, i32 value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_INT)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     tag->data.simple.integer = value;
+    return NBTE_OK;
 }
-void nbt_set_long(NBT* nbt, i64 value) {
+enum NBTStatus nbt_set_long(NBT* nbt, i64 value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_LONG)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     tag->data.simple.long_num = value;
+    return NBTE_OK;
 }
-void nbt_set_float(NBT* nbt, f32 value) {
+enum NBTStatus nbt_set_float(NBT* nbt, f32 value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_FLOAT)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     tag->data.simple.float_num = value;
+    return NBTE_OK;
 }
-void nbt_set_double(NBT* nbt, f64 value) {
+enum NBTStatus nbt_set_double(NBT* nbt, f64 value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_DOUBLE)
-        return;
+        return NBTE_INCOMPATIBLE_TYPE;
 
     tag->data.simple.double_num = value;
+    return NBTE_OK;
 }
 
-void nbt_move_to_name(NBT* nbt, const string* name) {
+enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
     NBTTag* tag = get_current_tag(nbt);
 
     if (tag->type != NBT_COMPOUND)
-        return;
+        return NBTE_INVALID_PARENT;
 
     i64 idx;
     vector_peek(&nbt->stack, &idx);
@@ -256,23 +269,24 @@ void nbt_move_to_name(NBT* nbt, const string* name) {
         NBTTag* child_tag = vector_ref(&nbt->tags, idx);
         if (str_compare(&child_tag->name, name) == 0) {
             vector_add(&nbt->stack, &idx);
-            return;
+            return NBTE_OK;
         }
 
         idx += get_total_length(child_tag);
     }
 
     log_errorf("Could not find NBTag with name %s.", name->base);
+    return NBTE_NOT_FOUND;
 }
-void nbt_move_to_index(NBT* nbt, i32 index) {
+enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index) {
     NBTTag* tag = get_current_tag(nbt);
 
-    if (tag->type != NBT_COMPOUND)
-        return;
+    if (tag->type != NBT_LIST)
+        return NBTE_INVALID_PARENT;
 
     if (index >= tag->data.list.size) {
         log_errorf("NBT: Index %i is out of the list's bounds.", index);
-        return;
+        return NBTE_NOT_FOUND;
     }
 
     i64 idx;
@@ -282,20 +296,24 @@ void nbt_move_to_index(NBT* nbt, i32 index) {
         idx += get_total_length(child_tag);
     }
     vector_add(&nbt->stack, &idx);
+    return NBTE_OK;
 }
-void nbt_move_to_parent(NBT* nbt) {
-    vector_pop(&nbt->stack, NULL);
+enum NBTStatus nbt_move_to_parent(NBT* nbt) {
+    return vector_pop(&nbt->stack, NULL) ? NBTE_OK : NBTE_NOT_FOUND;
 }
-void nbt_move_to_next_sibling(NBT* nbt) {
+enum NBTStatus nbt_move_to_next_sibling(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     i64 prev_index;
-    vector_pop(&nbt->stack, &prev_index);
+    if(!vector_pop(&nbt->stack, &prev_index))
+        return NBTE_NOT_FOUND;
     prev_index += get_total_length(tag);
     vector_add(&nbt->stack, &prev_index);
+    return NBTE_OK;
 }
-void nbt_move_to_prev_sibling(NBT* nbt) {
+enum NBTStatus nbt_move_to_prev_sibling(NBT* nbt) {
     UNUSED(nbt);
     abort();
+    return NBTE_NOT_FOUND;
 }
 i8 nbt_get_byte(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
@@ -354,8 +372,8 @@ f64 nbt_get_double(NBT* nbt) {
 }
 string* nbt_get_name(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
-    NBTTag *parent = vector_ref(&nbt->stack, nbt->stack.size - 1);
-    if(!parent || is_list_or_array(parent->type))
+    NBTTag* parent = vector_ref(&nbt->stack, nbt->stack.size - 1);
+    if (!parent || is_list_or_array(parent->type))
         return NULL;
     return &tag->name;
 }

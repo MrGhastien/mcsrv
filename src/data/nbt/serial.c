@@ -10,6 +10,8 @@
 #include "utils/bitwise.h"
 #include "utils/string.h"
 
+#include <errno.h>
+#include <string.h>
 #include <zlib.h>
 
 typedef struct NBTWriteContext {
@@ -36,11 +38,23 @@ static enum NBTTagType parse_type(gzFile fd, const NBTReadContext* ctx) {
 
     if (!parent_meta || is_list_or_array(parent_meta->type)) {
         u8 type_byte;
-        gzread(fd, &type_byte, sizeof type_byte);
+        if (gzread(fd, &type_byte, sizeof type_byte) <= 0) {
+            if (gzeof(fd))
+                log_error("NBT: Syntax error: reached unexpected end of file");
+            else {
+                i32 zlib_errnum;
+                const char* zlib_error_msg = gzerror(fd, &zlib_errnum);
+                if(zlib_errnum == Z_ERRNO)
+                    log_errorf("NBT: Syntax error: %s", strerror(errno));
+                else
+                    log_errorf("NBT: Syntax error: %s", zlib_error_msg);
+            }
+            return _NBT_COUNT;
+        }
         enum NBTTagType type = type_byte;
         if (type >= _NBT_COUNT) {
             log_errorf("NBT: Lexical error: Invalid tag type %i", type);
-            return FALSE;
+            return _NBT_COUNT;
         }
         return type;
     }
@@ -143,13 +157,9 @@ static bool prune_parsing_stack(NBTReadContext* ctx) {
 }
 
 static bool read_string(Arena* arena, gzFile fd, string* out_str) {
-    i16 name_length;
+    u16 name_length;
     gzread(fd, &name_length, sizeof name_length);
-    name_length = ntoh16(name_length);
-    if (name_length < 0) {
-        log_errorf("NBT: Syntax error: Invalid tag name length of %hi", name_length);
-        return FALSE;
-    }
+    name_length = untoh16(name_length);
     *out_str = str_alloc(name_length + 1, arena);
     gzread(fd, out_str->base, name_length);
     out_str->length = name_length;
@@ -157,8 +167,8 @@ static bool read_string(Arena* arena, gzFile fd, string* out_str) {
 }
 
 static void write_string(const string* str, gzFile fd) {
-    i16 clamped_length = str->length > 0x7fff ? 0x7fff : str->length;
-    const i16 big_endian_name = hton16(clamped_length);
+    u16 clamped_length = str->length > 0xffff ? 0xffff : str->length;
+    const u16 big_endian_name = uhton16(clamped_length);
     gzwrite(fd, &big_endian_name, sizeof big_endian_name);
     gzwrite(fd, str->base, clamped_length);
 }
@@ -259,7 +269,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, gzFile fd) {
     }
 }
 
-void nbt_write(const NBT* nbt, const string* path) {
+enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
     NBTWriteContext ctx = {
         .nbt = nbt,
     };
@@ -282,6 +292,7 @@ void nbt_write(const NBT* nbt, const string* path) {
         }
     }
     gzclose(fd);
+    return NBTE_OK;
 }
 
 static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) {
@@ -289,7 +300,7 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
     NBTTag new_tag = {
         .type = type,
     };
-    if (!parent_meta || is_list_or_array(parent_meta->type)) {
+    if ((!parent_meta || is_list_or_array(parent_meta->type)) && type != NBT_END) {
         if (!read_string(ctx->arena, fd, &new_tag.name))
             return FALSE;
     }
@@ -375,7 +386,7 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
     return TRUE;
 }
 
-bool nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt) {
+enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt) {
     gzFile fd = gzopen(path->base, "rb");
 
     NBTReadContext ctx = {
@@ -390,18 +401,20 @@ bool nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_n
 
     do {
         const enum NBTTagType type = parse_type(fd, &ctx);
+        if (type == _NBT_COUNT)
+            return NBTE_INVALID_TYPE;
 
         if (!nbt_parse_tag(fd, &ctx, type))
-            return FALSE;
+            return NBTE_INVALID_TYPE;
 
         if (!update_parents(&ctx, type))
-            return FALSE;
+            return NBTE_INVALID_TYPE;
 
         if (!prune_parsing_stack(&ctx))
-            return FALSE;
+            return NBTE_INVALID_TYPE;
 
     } while (ctx.stack.size > 0);
 
     gzclose(fd);
-    return TRUE;
+    return NBTE_OK;
 }

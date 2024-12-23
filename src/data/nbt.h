@@ -170,6 +170,15 @@
 
 #include <utils/string.h>
 
+enum NBTStatus {
+    NBTE_OK = 0,
+    NBTE_INVALID_TYPE,
+    NBTE_INCOMPATIBLE_TYPE,
+    NBTE_INVALID_PARENT,
+    NBTE_MAX_NESTING,
+    NBTE_NOT_FOUND
+};
+
 enum NBTTagType {
     NBT_END = 0,
     NBT_BYTE,
@@ -222,7 +231,7 @@ NBT nbt_create(Arena* arena, u64 max_token_count);
 * @param[in] type The type of tag to push.
 * @param[in] value An union containing the value to push. Ignored if @ref type is not an integer or floating point number.
 */
-void nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value);
+enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value);
 /**
 * Adds a string tag to the current NBT list.
 *
@@ -231,7 +240,7 @@ void nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value)
 * @param[in] nbt The NBT tree containing the list to push into.
 * @param[in] str The string to push.
 */
-void nbt_push_str(NBT* nbt, const string* str);
+enum NBTStatus nbt_push_str(NBT* nbt, const string* str);
 /**
 * Adds a tag to the current NBT list.
 *
@@ -241,7 +250,7 @@ void nbt_push_str(NBT* nbt, const string* str);
 * @param[in] nbt The NBT tree containing the list to push into.
 * @param[in] type The type of tag to push.
 */
-void nbt_push(NBT* nbt, enum NBTTagType type);
+enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type);
 
 /**
 * Adds a simple value tag to the current compound NBT.
@@ -253,7 +262,7 @@ void nbt_push(NBT* nbt, enum NBTTagType type);
 * @param[in] type The type of the tag.
 * @param[in] value A union containing the value to put. Ignored if @ref type is not an integer or floating point number type.
 */
-void nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimpleValue value);
+enum NBTStatus nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimpleValue value);
 /**
 * Adds a string tag to the current compound NBT.
 *
@@ -263,7 +272,7 @@ void nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NB
 * @param[in] name The name of the tag to put into the current compound.
 * @param[in] str The string value of the tag.
 */
-void nbt_put_str(NBT* nbt, const string* name, const string* str);
+enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str);
 /**
 * Adds a tag to the current compound NBT.
 *
@@ -273,7 +282,7 @@ void nbt_put_str(NBT* nbt, const string* name, const string* str);
 * @param[in] name The name of the tag to put into the current compound.
 * @param[in] type The type of the tag.
 */
-void nbt_put(NBT* nbt, const string* name, enum NBTTagType type);
+enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type);
 
 /**
 * Sets the value of the current byte tag.
@@ -281,7 +290,7 @@ void nbt_put(NBT* nbt, const string* name, enum NBTTagType type);
 * @param[in] nbt The NBT tree containing the tag to set.
 * @param[in] value The value to set the tag to.
 */
-void nbt_set_byte(NBT* nbt, i32 value);
+enum NBTStatus nbt_set_byte(NBT* nbt, i32 value);
 
 /**
 * Convenience function to set the current byte tag to a boolean value.
@@ -291,7 +300,7 @@ void nbt_set_byte(NBT* nbt, i32 value);
 * @param[in] nbt The NBT tree containing the tag to set.
 * @param[in] value The value to set the tag to.
 */
-void nbt_set_bool(NBT* nbt, bool value);
+enum NBTStatus nbt_set_bool(NBT* nbt, bool value);
 
 /**
 * Sets the value of the current short integer tag.
@@ -299,7 +308,7 @@ void nbt_set_bool(NBT* nbt, bool value);
 * @param[in] nbt The NBT tree containing the tag to set.
 * @param[in] value The value to set the tag to.
 */
-void nbt_set_short(NBT* nbt, i32 value);
+enum NBTStatus nbt_set_short(NBT* nbt, i32 value);
 
 /**
 * Sets the value of the current integer tag.
@@ -307,7 +316,7 @@ void nbt_set_short(NBT* nbt, i32 value);
 * @param[in] nbt The NBT tree containing the tag to set.
 * @param[in] value The value to set the tag to.
 */
-void nbt_set_int(NBT* nbt, i32 value);
+enum NBTStatus nbt_set_int(NBT* nbt, i32 value);
 
 /**
 * Sets the value of the current long integer tag.
@@ -315,7 +324,7 @@ void nbt_set_int(NBT* nbt, i32 value);
 * @param[in] nbt The NBT tree containing the tag to set.
 * @param[in] value The value to set the tag to.
 */
-void nbt_set_long(NBT* nbt, i64 value);
+enum NBTStatus nbt_set_long(NBT* nbt, i64 value);
 
 /**
 * Sets the value of the current floating-point number tag.
@@ -323,7 +332,7 @@ void nbt_set_long(NBT* nbt, i64 value);
 * @param[in] nbt The NBT tree containing the tag to set.
 * @param[in] value The value to set the tag to.
 */
-void nbt_set_float(NBT* nbt, f32 value);
+enum NBTStatus nbt_set_float(NBT* nbt, f32 value);
 
 /**
 * Sets the value of the current double-precision floating-point number tag.
@@ -331,7 +340,7 @@ void nbt_set_float(NBT* nbt, f32 value);
 * @param[in] nbt The NBT tree containing the tag to set.
 * @param[in] value The value to set the tag to.
 */
-void nbt_set_double(NBT* nbt, f64 value);
+enum NBTStatus nbt_set_double(NBT* nbt, f64 value);
 
 /**
 * Writes a NBT tree to a file.
@@ -339,7 +348,7 @@ void nbt_set_double(NBT* nbt, f64 value);
 * @param[in] nbt The NBT tree to save.
 * @param[in] path The path of the output file.
 */
-void nbt_write(const NBT* nbt, const string* path);
+enum NBTStatus nbt_write(const NBT* nbt, const string* path);
 
 /* === Parsing part === */
 
@@ -355,7 +364,7 @@ void nbt_write(const NBT* nbt, const string* path);
 * @param[out] out_nbt A pointer to an uninitialized NBT tree.
 * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occured.
 */
-bool nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
+enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
 
 /**
 * Moves the current tag pointer to the child tag with the given name.
@@ -365,7 +374,7 @@ bool nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_n
 * @param[in] nbt The NBT tree.
 * @param[in] name The name of the child tag to find.
 */
-void nbt_move_to_name(NBT* nbt, const string* name);
+enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name);
 /**
 * Moves the current tag pointer to the child tag at the given index.
 *
@@ -375,7 +384,7 @@ void nbt_move_to_name(NBT* nbt, const string* name);
 * @param[in] nbt The NBT tree.
 * @param[in] index The index of the child tag to find.
 */
-void nbt_move_to_index(NBT* nbt, i32 index);
+enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index);
 /**
 * Moves the current tag pointer to the parent of the current tag.
 *
@@ -383,7 +392,7 @@ void nbt_move_to_index(NBT* nbt, i32 index);
 *
 * @param[in] nbt The NBT tree.
 */
-void nbt_move_to_parent(NBT* nbt);
+enum NBTStatus nbt_move_to_parent(NBT* nbt);
 /**
 * Moves the current tag pointer to the next sibling of the current tag.
 *
@@ -392,7 +401,7 @@ void nbt_move_to_parent(NBT* nbt);
 *
 * @param[in] nbt The NBT tree.
 */
-void nbt_move_to_next_sibling(NBT* nbt);
+enum NBTStatus nbt_move_to_next_sibling(NBT* nbt);
 /**
 * Moves the current tag pointer to the previous sibling of the current tag.
 *
@@ -401,7 +410,7 @@ void nbt_move_to_next_sibling(NBT* nbt);
 *
 * @param[in] nbt The NBT tree.
 */
-void nbt_move_to_prev_sibling(NBT* nbt);
+enum NBTStatus nbt_move_to_prev_sibling(NBT* nbt);
 
 /**
 * Retrieves the byte value of the current tag.
