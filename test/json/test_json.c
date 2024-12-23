@@ -71,21 +71,21 @@ static void test_dir(const char* path, bool error_test) {
 
     DIR* dir = opendir(path);
 
-    char buf[PATH_MAX];
-
     struct dirent* element;
     while ((element = readdir(dir))) {
 
         if (!str_ends_with(element->d_name, ".json"))
             continue;
-        strlcpy(buf, path, PATH_MAX);
-        strlcat(buf, "/", PATH_MAX);
-        strlcat(buf, element->d_name, PATH_MAX);
-        log_debugf("JSON: Parsing %s...", buf);
+        string str_path = str_create_dynamic(path);
+        str_appendc(&str_path, '/');
+        str_append(&str_path, element->d_name);
+        log_debugf("JSON: Parsing %s...", str_path.base);
 
-        i32 res = parse_json(buf);
+        i32 res = parse_json(str_path.base);
         if ((res && !error_test) || (!res && error_test))
             error_count++;
+
+        str_destroy(&str_path);
     }
 
     closedir(dir);
