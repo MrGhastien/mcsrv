@@ -1,3 +1,8 @@
+/**
+ * @file
+ *
+ * test TODO
+ */
 #ifndef STRING_H
 #define STRING_H
 

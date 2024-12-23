@@ -4,7 +4,7 @@
 
 #include "data/nbt.h"
 #include "definitions.h"
-#include "nbt_types.h"
+#include "nbt_internal.h"
 
 #include "utils/string.h"
 
@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static NBTTag* get_current_tag(const NBT* nbt) {
+static NBTTag* get_current_tag(NBT* nbt) {
     i64 idx;
     if (!vector_peek(&nbt->stack, &idx))
         return NULL;
@@ -54,6 +54,11 @@ static i32 get_total_length(const NBTTag* tag) {
     default:
         return 1;
     }
+}
+
+bool is_list_or_array(const enum NBTTagType type) {
+    return !(type == NBT_LIST || type == NBT_BYTE_ARRAY ||
+             type == NBT_INT_ARRAY || type == NBT_LONG_ARRAY);
 }
 
 NBT nbt_create(Arena* arena, u64 max_token_count) {
@@ -349,6 +354,9 @@ f64 nbt_get_double(NBT* nbt) {
 }
 string* nbt_get_name(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
+    NBTTag *parent = vector_ref(&nbt->stack, nbt->stack.size - 1);
+    if(!parent || is_list_or_array(parent->type))
+        return NULL;
     return &tag->name;
 }
 string* nbt_get_string(NBT* nbt) {

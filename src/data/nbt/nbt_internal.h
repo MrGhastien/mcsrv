@@ -29,4 +29,6 @@ typedef struct NBTTag {
     string name;
 } NBTTag;
 
+bool is_list_or_array(const enum NBTTagType type);
+
 #endif /* ! NBT_TYPES_H */

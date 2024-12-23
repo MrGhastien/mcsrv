@@ -3,7 +3,7 @@
 //
 #include "containers/vector.h"
 #include "data/nbt.h"
-#include "data/nbt/nbt_types.h"
+#include "data/nbt/nbt_internal.h"
 #include "definitions.h"
 #include "logger.h"
 #include "memory/arena.h"
@@ -30,16 +30,11 @@ typedef struct NBTTagMetadata {
     i64 idx;
 } NBTTagMetadata;
 
-static bool nbt_has_name(const enum NBTTagType parent_type) {
-    return !(parent_type == NBT_LIST || parent_type == NBT_BYTE_ARRAY ||
-             parent_type == NBT_INT_ARRAY || parent_type == NBT_LONG_ARRAY);
-}
-
-static enum NBTTagType parse_type(gzFile fd, NBTReadContext* ctx) {
+static enum NBTTagType parse_type(gzFile fd, const NBTReadContext* ctx) {
 
     const NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
-    if (!parent_meta || nbt_has_name(parent_meta->type)) {
+    if (!parent_meta || is_list_or_array(parent_meta->type)) {
         u8 type_byte;
         gzread(fd, &type_byte, sizeof type_byte);
         enum NBTTagType type = type_byte;
@@ -129,7 +124,7 @@ static bool update_parents(NBTReadContext* ctx, enum NBTTagType current_type) {
 static bool prune_parsing_stack(NBTReadContext* ctx) {
     while (ctx->stack.size > 0) {
         const NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
-        if (parent_meta->size > 0 || nbt_has_name(parent_meta->type))
+        if (parent_meta->size > 0 || is_list_or_array(parent_meta->type))
             break;
 
         switch (parent_meta->type) {
@@ -208,7 +203,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, gzFile fd) {
     NBTTagMetadata* parent = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
     NBTTag* tag = vector_ref(&ctx->nbt->tags, ctx->current_index);
-    if (!parent || nbt_has_name(parent->type)) {
+    if (!parent || is_list_or_array(parent->type)) {
         i8 type_num = tag->type & 0xff;
         gzwrite(fd, &type_num, sizeof type_num);
         write_string(&tag->name, fd);
@@ -294,7 +289,7 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
     NBTTag new_tag = {
         .type = type,
     };
-    if (!parent_meta || nbt_has_name(parent_meta->type)) {
+    if (!parent_meta || is_list_or_array(parent_meta->type)) {
         if (!read_string(ctx->arena, fd, &new_tag.name))
             return FALSE;
     }
@@ -342,7 +337,6 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
         if (len == -1)
             return FALSE;
         new_tag.data.list.size = len;
-
         break;
     }
     case NBT_BYTE_ARRAY:
