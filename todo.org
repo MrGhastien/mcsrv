@@ -53,6 +53,11 @@ CLOSED: [2024-09-21 sam. 22:04]
 - [ ] Anvil map saver & loader
   Try to come up with a better format?
 - [ ] NBT saver & loader
+  - [X] NBT Parser
+  - [X] NBT Writer
+  - [ ] SNBT Parser
+  - [X] SNBT Writer
+  - [ ] Support for network NBTs
 - [ ] JSON loader
 
 
