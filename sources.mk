@@ -39,6 +39,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/data/json/json.c \
 		$(SRC_DIR)/data/json/json_parse.c \
 		$(SRC_DIR)/data/nbt/nbt.c \
+		$(SRC_DIR)/data/nbt/snbt.c \
 		$(SRC_DIR)/data/nbt/serial.c \
 		$(SRC_DIR)/registry/registry.c \
 		$(SRC_DIR)/resource/resource_id.c \

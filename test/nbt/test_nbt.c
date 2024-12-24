@@ -87,6 +87,8 @@ static int test_read3(const char* file) {
 
     string out_path = str_create_const("inout3.nbt.gz");
     nbt_write(&nbt, &out_path);
+    out_path = str_create_const("level.txt");
+    nbt_write_snbt(&nbt, &out_path);
 
     arena_destroy(&arena);
     return 0;

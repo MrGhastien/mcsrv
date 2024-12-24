@@ -176,7 +176,8 @@ enum NBTStatus {
     NBTE_INCOMPATIBLE_TYPE,
     NBTE_INVALID_PARENT,
     NBTE_MAX_NESTING,
-    NBTE_NOT_FOUND
+    NBTE_NOT_FOUND,
+    NBTE_IO
 };
 
 enum NBTTagType {
@@ -349,6 +350,9 @@ enum NBTStatus nbt_set_double(NBT* nbt, f64 value);
 * @param[in] path The path of the output file.
 */
 enum NBTStatus nbt_write(const NBT* nbt, const string* path);
+
+enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path);
+enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str);
 
 /* === Parsing part === */
 

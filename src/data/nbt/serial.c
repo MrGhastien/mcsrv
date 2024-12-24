@@ -32,19 +32,29 @@ typedef struct NBTTagMetadata {
     i64 idx;
 } NBTTagMetadata;
 
+static bool ensure_read(gzFile fd, void* buf, u64 size) {
+    while(size > 0) {
+        i32 res = gzread(fd, buf, size);
+        if(res <= 0)
+            return FALSE;
+        size -= res;
+    }
+    return TRUE;
+}
+
 static enum NBTTagType parse_type(gzFile fd, const NBTReadContext* ctx) {
 
     const NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
-    if (!parent_meta || is_list_or_array(parent_meta->type)) {
+    if (!parent_meta || is_not_array(parent_meta->type)) {
         u8 type_byte;
-        if (gzread(fd, &type_byte, sizeof type_byte) <= 0) {
+        if (!ensure_read(fd, &type_byte, sizeof type_byte)) {
             if (gzeof(fd))
                 log_error("NBT: Syntax error: reached unexpected end of file");
             else {
                 i32 zlib_errnum;
                 const char* zlib_error_msg = gzerror(fd, &zlib_errnum);
-                if(zlib_errnum == Z_ERRNO)
+                if(zlib_errnum == Z_ERRNO || zlib_error_msg == NULL)
                     log_errorf("NBT: Syntax error: %s", strerror(errno));
                 else
                     log_errorf("NBT: Syntax error: %s", zlib_error_msg);
@@ -118,7 +128,7 @@ static bool update_parents(NBTReadContext* ctx, enum NBTTagType current_type) {
     // Also remove metadata of tags which have all their elements parsed.
     for (i64 i = (i64) ctx->stack.size - 1; i >= 0; i--) {
         parent_meta = vector_ref(&ctx->stack, i);
-        NBTTag* parent_tag = vector_ref(&ctx->nbt->tags, parent_meta->idx);
+        NBTTag* parent_tag = nbt_mut_ref(ctx->nbt, parent_meta->idx);
 
         switch (parent_meta->type) {
         case NBT_COMPOUND:
@@ -126,6 +136,10 @@ static bool update_parents(NBTReadContext* ctx, enum NBTTagType current_type) {
             break;
         case NBT_LIST:
             parent_tag->data.list.total_tag_length++;
+            break;
+        case NBT_BYTE_ARRAY:
+        case NBT_INT_ARRAY:
+        case NBT_LONG_ARRAY:
             break;
         default:
             log_errorf("Invalid parent tag of type %i", parent_meta->type);
@@ -138,7 +152,7 @@ static bool update_parents(NBTReadContext* ctx, enum NBTTagType current_type) {
 static bool prune_parsing_stack(NBTReadContext* ctx) {
     while (ctx->stack.size > 0) {
         const NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
-        if (parent_meta->size > 0 || is_list_or_array(parent_meta->type))
+        if (parent_meta->size > 0 || is_not_array(parent_meta->type))
             break;
 
         switch (parent_meta->type) {
@@ -158,10 +172,12 @@ static bool prune_parsing_stack(NBTReadContext* ctx) {
 
 static bool read_string(Arena* arena, gzFile fd, string* out_str) {
     u16 name_length;
-    gzread(fd, &name_length, sizeof name_length);
+    if(!ensure_read(fd, &name_length, sizeof name_length))
+        return FALSE;
     name_length = untoh16(name_length);
     *out_str = str_alloc(name_length + 1, arena);
-    gzread(fd, out_str->base, name_length);
+    if(!ensure_read(fd, out_str->base, name_length))
+        return FALSE;
     out_str->length = name_length;
     return TRUE;
 }
@@ -175,12 +191,12 @@ static void write_string(const string* str, gzFile fd) {
 
 static i32 parse_array(gzFile fd, NBTTag* new_tag, NBTReadContext* ctx) {
     i32 num;
-    if (gzread(fd, &num, sizeof num) < 4) {
+    if (!ensure_read(fd, &num, sizeof num)) {
         int zlib_errnum;
         const char* zlib_error_msg = gzerror(fd, &zlib_errnum);
         int reached_eof = gzeof(fd);
         if (zlib_errnum == 0 && reached_eof)
-            log_error("NBT: Syntax error: reached unexpected end of file");
+            log_error("NBT: Syntax error: Reached unexpected end of file");
         else
             log_errorf("NBT: IO Error: Failed to read the input file: %s",
                        zlib_errnum == Z_ERRNO ? strerror(errno) : zlib_error_msg);
@@ -213,7 +229,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, gzFile fd) {
     NBTTagMetadata* parent = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
     NBTTag* tag = vector_ref(&ctx->nbt->tags, ctx->current_index);
-    if (!parent || is_list_or_array(parent->type)) {
+    if (!parent || is_not_array(parent->type)) {
         i8 type_num = tag->type & 0xff;
         gzwrite(fd, &type_num, sizeof type_num);
         write_string(&tag->name, fd);
@@ -270,18 +286,22 @@ static void nbt_write_tag(NBTWriteContext* ctx, gzFile fd) {
 }
 
 enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
+
+    gzFile fd = gzopen(path->base, "wb");
+    if(fd == NULL) {
+        log_errorf("NBT: IO Error: %s", strerror(errno));
+        return NBTE_IO;
+    }
+
     NBTWriteContext ctx = {
         .nbt = nbt,
     };
     vector_init_fixed(&ctx.stack, nbt->arena, 512, sizeof(NBTTagMetadata));
-
-    gzFile fd = gzopen(path->base, "wb");
-
     for (u32 i = 0; i < nbt->tags.size; i++) {
         ctx.current_index = i;
         nbt_write_tag(&ctx, fd);
 
-        NBTTagMetadata* parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
+        const NBTTagMetadata* parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
         while (parent && parent->size == 0) {
             vector_pop(&ctx.stack, NULL);
             if (parent->type == NBT_COMPOUND) {
@@ -300,38 +320,44 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
     NBTTag new_tag = {
         .type = type,
     };
-    if ((!parent_meta || is_list_or_array(parent_meta->type)) && type != NBT_END) {
+    if ((!parent_meta || is_not_array(parent_meta->type)) && type != NBT_END) {
         if (!read_string(ctx->arena, fd, &new_tag.name))
             return FALSE;
     }
 
     switch (type) {
     case NBT_BYTE:
-        gzread(fd, &new_tag.data.simple.byte, sizeof new_tag.data.simple.byte);
+        if(!ensure_read(fd, &new_tag.data.simple.byte, sizeof new_tag.data.simple.byte))
+            return FALSE;
         break;
     case NBT_SHORT: {
         i16 num;
-        gzread(fd, &num, sizeof num);
+        if(!ensure_read(fd, &num, sizeof num))
+            return FALSE;
         new_tag.data.simple.short_num = ntoh16(num);
         break;
     }
     case NBT_INT: {
         i32 num;
-        gzread(fd, &num, sizeof num);
+        if(!ensure_read(fd, &num, sizeof num))
+            return FALSE;
         new_tag.data.simple.integer = ntoh32(num);
         break;
     }
     case NBT_LONG: {
         i64 num;
-        gzread(fd, &num, sizeof num);
+        if(!ensure_read(fd, &num, sizeof num))
+            return FALSE;
         new_tag.data.simple.long_num = ntoh64(num);
         break;
     }
     case NBT_FLOAT:
-        gzread(fd, &new_tag.data.simple.float_num, sizeof new_tag.data.simple.float_num);
+        if(!ensure_read(fd, &new_tag.data.simple.float_num, sizeof new_tag.data.simple.float_num))
+            return FALSE;
         break;
     case NBT_DOUBLE:
-        gzread(fd, &new_tag.data.simple.double_num, sizeof new_tag.data.simple.double_num);
+        if(!ensure_read(fd, &new_tag.data.simple.double_num, sizeof new_tag.data.simple.double_num))
+            return FALSE;
         break;
     case NBT_STRING: {
 
@@ -341,7 +367,8 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
     }
     case NBT_LIST: {
         u8 type_byte;
-        gzread(fd, &type_byte, sizeof type_byte);
+        if(!ensure_read(fd, &type_byte, sizeof type_byte))
+            return FALSE;
         new_tag.data.list.elem_type = type_byte;
 
         i32 len = parse_array(fd, &new_tag, ctx);
@@ -373,7 +400,7 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
             log_errorf("Unexpected end of compound tag at position %zu", gztell(fd));
             return FALSE;
         }
-        NBTTag* parent_tag = vector_ref(&ctx->nbt->tags, parent_meta->idx);
+        NBTTag* parent_tag = nbt_mut_ref(ctx->nbt, parent_meta->idx);
         parent_tag->data.compound.size = parent_meta->size;
         vector_pop(&ctx->stack, NULL);
         return TRUE;
@@ -381,13 +408,17 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
         return TRUE;
     }
 
-    vector_add(&ctx->nbt->tags, &new_tag);
+    nbt_add_tag(ctx->nbt, &new_tag);
 
     return TRUE;
 }
 
 enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt) {
     gzFile fd = gzopen(path->base, "rb");
+    if(fd == NULL) {
+        log_errorf("NBT: IO Error: %s", strerror(errno));
+        return NBTE_IO;
+    }
 
     NBTReadContext ctx = {
         .arena = arena,
@@ -395,9 +426,7 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, 
     };
     vector_init_fixed(&ctx.stack, arena, 512, sizeof(NBTTagMetadata));
 
-    *out_nbt = nbt_create(arena, max_token_count);
-    out_nbt->tags.size = 0;
-    out_nbt->stack.size = 0;
+    nbt_init_empty(arena, max_token_count, out_nbt);
 
     do {
         const enum NBTTagType type = parse_type(fd, &ctx);

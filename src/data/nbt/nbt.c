@@ -56,16 +56,14 @@ static i32 get_total_length(const NBTTag* tag) {
     }
 }
 
-bool is_list_or_array(const enum NBTTagType type) {
+bool is_not_array(const enum NBTTagType type) {
     return !(type == NBT_LIST || type == NBT_BYTE_ARRAY || type == NBT_INT_ARRAY ||
              type == NBT_LONG_ARRAY);
 }
 
 NBT nbt_create(Arena* arena, u64 max_token_count) {
     NBT nbt;
-    nbt.arena = arena;
-    vector_init_fixed(&nbt.tags, arena, max_token_count, sizeof(NBTTag));
-    vector_init_fixed(&nbt.stack, arena, 512, sizeof(i64));
+    nbt_init_empty(arena, max_token_count, &nbt);
 
     NBTTag* root = vector_reserve(&nbt.tags);
     *root = (NBTTag){
@@ -77,6 +75,24 @@ NBT nbt_create(Arena* arena, u64 max_token_count) {
     vector_add_imm(&nbt.stack, 0LL, i64);
 
     return nbt;
+}
+
+void nbt_init_empty(Arena* arena, u64 max_token_count, NBT* out_nbt) {
+    out_nbt->arena = arena;
+    vector_init_fixed(&out_nbt->tags, arena, max_token_count, sizeof(NBTTag));
+    vector_init_fixed(&out_nbt->stack, arena, 512, sizeof(i64));
+}
+
+void nbt_add_tag(NBT* nbt, NBTTag* tag) {
+    vector_add(&nbt->tags, tag);
+}
+
+const NBTTag* nbt_ref(const NBT* nbt, i64 index) {
+    return vector_ref(&nbt->tags, index);
+}
+
+NBTTag* nbt_mut_ref(NBT* nbt, i64 index) {
+    return vector_ref(&nbt->tags, index);
 }
 
 enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value) {
@@ -149,10 +165,8 @@ enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {
     return NBTE_OK;
 }
 
-enum NBTStatus nbt_put_simple(NBT* nbt,
-                    const string* name,
-                    enum NBTTagType type,
-                    union NBTSimpleValue value) {
+enum NBTStatus
+nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimpleValue value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_COMPOUND)
         return NBTE_INVALID_PARENT;
@@ -304,7 +318,7 @@ enum NBTStatus nbt_move_to_parent(NBT* nbt) {
 enum NBTStatus nbt_move_to_next_sibling(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     i64 prev_index;
-    if(!vector_pop(&nbt->stack, &prev_index))
+    if (!vector_pop(&nbt->stack, &prev_index))
         return NBTE_NOT_FOUND;
     prev_index += get_total_length(tag);
     vector_add(&nbt->stack, &prev_index);
@@ -373,7 +387,7 @@ f64 nbt_get_double(NBT* nbt) {
 string* nbt_get_name(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     NBTTag* parent = vector_ref(&nbt->stack, nbt->stack.size - 1);
-    if (!parent || is_list_or_array(parent->type))
+    if (!parent || is_not_array(parent->type))
         return NULL;
     return &tag->name;
 }
