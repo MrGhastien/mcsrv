@@ -5,6 +5,8 @@
 #include <logger.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
+#include <inttypes.h>
 
 typedef struct SNBTContext {
     Vector stack;
@@ -80,7 +82,7 @@ static void write_snbt_tag(const NBTTag* tag, FILE* fd, SNBTContext* ctx) {
         fprintf(fd, "%i", tag->data.simple.integer);
         break;
     case NBT_LONG:
-        fprintf(fd, "%llil", tag->data.simple.long_num);
+        fprintf(fd, "%" PRIi64 "l", tag->data.simple.long_num);
         break;
     case NBT_FLOAT:
         fprintf(fd, "%f", tag->data.simple.float_num);
