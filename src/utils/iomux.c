@@ -3,7 +3,6 @@
 #include "containers/bytebuffer.h"
 #include "containers/object_pool.h"
 #include "memory/arena.h"
-#include "platform/socket.h"
 #include "utils/string.h"
 
 #include <errno.h>
@@ -20,7 +19,6 @@ static ObjectPool multiplexers;
 
 union IOBackend {
     ByteBuffer* buffer;
-    socketfd socket;
     FILE* file;
     gzFile gzFile;
 };

@@ -15,8 +15,8 @@
 #define UNTOH(size) u##size untoh##size(u##size x)
 
 u64 ceil_two_pow(u64 num);
-void* offset(void* ptr, i64 offset);
-void* offsetu(void* ptr, u64 offset);
+void* offset(const void* ptr, i64 offset);
+void* offsetu(const void* ptr, u64 offset);
 
 HTON(16);
 HTON(32);

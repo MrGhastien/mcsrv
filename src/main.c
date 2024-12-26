@@ -1,3 +1,4 @@
+#include "data/nbt.h"
 #include "event/event.h"
 #include "logger.h"
 #include "network/network.h"

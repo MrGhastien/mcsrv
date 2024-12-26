@@ -25,13 +25,13 @@ u64 ceil_two_pow(u64 num) {
     return num + 1;
 }
 
-void* offset(void* ptr, i64 offset) {
+void* offset(const void* ptr, i64 offset) {
     u64 a = (u64) ptr;
     a += offset;
     return (void*) a;
 }
 
-void* offsetu(void* ptr, u64 offset) {
+void* offsetu(const void* ptr, u64 offset) {
     u64 a = (u64) ptr;
     a += offset;
     return (void*) a;
@@ -53,6 +53,7 @@ NTOH(64) {
 
 NTOH(32) {
     CONVERT_ENDIANNESS(x);
+
 }
 
 NTOH(16) {

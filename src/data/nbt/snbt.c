@@ -1,12 +1,13 @@
 #include "data/nbt.h"
 #include "nbt_internal.h"
+#include "utils/iomux.h"
 #include "utils/string.h"
 
 #include <logger.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <string.h>
 
 typedef struct SNBTContext {
     Vector stack;
@@ -57,7 +58,7 @@ static void write_snbt_tag(const NBTTag* tag, FILE* fd, SNBTContext* ctx) {
     SNBTMetadata* parent = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
     if (ctx->pretty_print) {
-        if(parent) {
+        if (parent) {
             if (parent->size < get_tag_size(parent->tag))
                 fputc(',', fd);
             fputc('\n', fd);
@@ -120,7 +121,7 @@ static void write_snbt_tag(const NBTTag* tag, FILE* fd, SNBTContext* ctx) {
 
 enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
     FILE* fd = fopen(path->base, "w");
-    if(fd == NULL) {
+    if (fd == NULL) {
         log_errorf("NBT: IO Error: %s", strerror(errno));
         return NBTE_IO;
     }
