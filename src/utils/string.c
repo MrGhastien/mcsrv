@@ -16,22 +16,6 @@ const Comparator CMP_STRING = {
     .comp = &str_compare_raw,
 };
 
-#ifdef MC_PLATFORM_WINDOWS
-static size_t strlcat(char *dst, const char *src, size_t size) {
-    i64 dstlen = 0;
-    while(dst[dstlen] != '\0') {
-        dstlen++;
-    }
-    u64 srclen = 0;
-    for(; dstlen + srclen < size && src[srclen]; srclen++) {
-        dst[dstlen + srclen] = src[srclen];
-    }
-    dst[dstlen + srclen] = '\0';
-    return dstlen + srclen;
-
-}
-#endif
-
 string str_create(const char* cstr, Arena* arena) {
     size_t len = strlen(cstr);
     char* base = arena_allocate(arena, len + 1);
@@ -51,22 +35,22 @@ string str_create_const(const char* cstr) {
     };
 }
 
-string str_alloc(size_t capacity, Arena* arena) {
-    char* base = arena_callocate(arena, capacity);
+string str_alloc(u64 length, Arena* arena) {
+    char* base = arena_callocate(arena, length + 1);
     return (string){
         .base = base,
-        .length = 0,
+        .length = length,
     };
 }
 
 string str_create_copy(const string* str, Arena* arena) {
-    string copy = str_alloc(str->length + 1, arena);
+    string copy = str_alloc(str->length, arena);
     str_copy(&copy, str);
     return copy;
 }
 
 string str_create_from_buffer(const char* buf, u64 length, Arena* arena) {
-    string str = str_alloc(length + 1, arena);
+    string str = str_alloc(length, arena);
     memcpy(str.base, buf, length);
     str.base[length] = 0;
     str.length = length;
@@ -75,7 +59,7 @@ string str_create_from_buffer(const char* buf, u64 length, Arena* arena) {
 
 string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena) {
     u64 size = end - begin;
-    string sub = str_alloc(size + 1, arena);
+    string sub = str_alloc(size, arena);
     memcpy(sub.base, &str->base[begin], size);
     sub.base[size] = 0;
     return sub;
@@ -111,6 +95,10 @@ string str_concat(string* lhs, const string* rhs, Arena* arena) {
     memcpy(res.base, lhs->base, llen);
     memcpy(res.base + llen, rhs->base, rlen);
     return res;
+}
+
+const char* str_printable_buffer(const string* str) {
+    return str->base;
 }
 
 u64 str_hash(const void* str) {

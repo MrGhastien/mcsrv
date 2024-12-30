@@ -86,7 +86,7 @@ PKT_HANDLER(status) {
     nodes[0] = json_node_put(&json, json.root, "previewsChat", JSON_BOOL);
     json_set_bool(nodes[0], FALSE);
 
-    json_stringify(&json, &response.data, 4096, &arena);
+    json_stringify(&json, &response.data, &arena);
     log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     send_packet(ctx, &out_pkt, conn);
@@ -165,7 +165,7 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
 #ifdef DEBUG
 
     string str;
-    json_stringify(json, &str, 1 << 12, &conn->scratch_arena);
+    json_stringify(json, &str, &conn->scratch_arena);
 
     log_trace(str.base);
 

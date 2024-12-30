@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <utils/str_builder.h>
 
 #define JSON_MAX_NESTING 32
 
@@ -88,20 +89,20 @@ static bool token_has_value(enum JSONToken token) {
 
 static bool lex_string(ByteBuffer* buffer, TokenValue* value, Arena* arena) {
     char c;
-    string tmp = str_create_dynamic("");
+    Arena scratch = *arena;
+    StringBuilder builder = strbuild_create(&scratch);
     bytebuf_read(buffer, 1, NULL);
     while (bytebuf_read(buffer, 1, &c) == 1 && c != '"') {
-        str_appendc(&tmp, c);
+        strbuild_appendc(&builder, c);
         if (c == '\\') {
             bytebuf_read(buffer, 1, NULL);
-            str_appendc(&tmp, c);
+            strbuild_appendc(&builder, c);
         }
     }
     if (c != '"')
         return FALSE;
 
-    value->str = str_create_copy(&tmp, arena);
-    str_destroy(&tmp);
+    value->str = strbuild_to_string(&builder, arena);
 
     return TRUE;
 }
@@ -114,24 +115,32 @@ static enum JSONToken lex_number(ByteBuffer* buffer, TokenValue* value, Arena* a
     bool frac = FALSE;
     bool exponent = FALSE;
 
-    arena_save(arena);
-    string str = str_alloc(32, arena);
+    Arena scratch = *arena;
+    StringBuilder builder = strbuild_create(&scratch);
     char c;
     while (bytebuf_peek(buffer, 1, &c) == 1 && is_valid_number_char(c, frac, exponent)) {
         bytebuf_read(buffer, 1, &c);
-        str_appendc(&str, c);
+        strbuild_appendc(&builder, c);
     }
-    if (c == '.' && frac)
-        return TOK_ERROR;
-    if ((c == 'e' || c == 'E') && exponent)
-        return TOK_ERROR;
+    if (c == '.') {
+        if (frac)
+            return TOK_ERROR;
+        frac = TRUE;
+    }
+    if (c == 'e' || c == 'E') {
+        if(exponent)
+            return TOK_ERROR;
+        exponent = TRUE;
+    }
+
+    string parse_res = strbuild_to_string(&builder, &scratch);
 
     enum JSONToken token;
     if (frac) {
-        value->floating = strtod(str.base, NULL);
+        value->floating = strtod(str_printable_buffer(&parse_res), NULL);
         token = TOK_FLOAT;
     } else {
-        value->integer = strtol(str.base, NULL, 10);
+        value->integer = strtol(str_printable_buffer(&parse_res), NULL, 10);
         token = TOK_INT;
     }
 

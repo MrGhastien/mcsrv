@@ -80,11 +80,11 @@ string str_create_from_buffer(const char* buf, u64 length, Arena* arena);
  * (FILE*, gzFile, socket...).
  * You can also set the contents using @ref str_set.
  *
- * @param[in] capacity The number of characters to reserve.
+ * @param[in] length The number of characters to reserve.
  * @param[in] arena The arena to use to allocate the string.
  * @return The newly allocated string.
  */
-string str_alloc(u64 capacity, Arena* arena);
+string str_alloc(u64 length, Arena* arena);
 /**
  * Creates a copy of a subset of a string.
  *
@@ -110,8 +110,6 @@ string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena);
  * @return A substring of @p str.
  */
 string str_substring(const string* str, u64 begin, u64 end);
-
-void str_destroy(string* str);
 
 void str_set(string* str, const char* cstr);
 void str_copy(string* dst, const string* src);

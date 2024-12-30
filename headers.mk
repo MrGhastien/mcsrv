@@ -2,6 +2,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/logger.h \
 		$(SRC_DIR)/utils/bitwise.h \
 		$(SRC_DIR)/utils/string.h \
+		$(SRC_DIR)/utils/str_builder.h \
 		$(SRC_DIR)/utils/math.h \
 		$(SRC_DIR)/utils/hash.h \
 		$(SRC_DIR)/utils/iomux.h \

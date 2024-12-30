@@ -7,6 +7,7 @@
 #include "utils/string.h"
 
 #include <stdio.h>
+#include <utils/str_builder.h>
 
 static const char* TYPES[_JSON_COUNT] = {
     [JSON_NULL] = "JSON_NULL",
@@ -18,7 +19,7 @@ static const char* TYPES[_JSON_COUNT] = {
     [JSON_BOOL] = "JSON_BOOL",
 };
 
-static void json_node_stringify(JSON* json, const JSONNode* node, string* str, size_t level);
+static void json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level);
 
 JSONNode* json_node_create(JSON* json, enum JSONType type) {
     Arena* arena = json->arena;
@@ -84,9 +85,6 @@ void json_node_destroy(JSONNode* node) {
             json_node_destroy(subnode);
         }
         vector_destroy(node->data.array);
-        break;
-    case JSON_STRING:
-        str_destroy(&node->data.string);
         break;
     default:
         break;
@@ -202,32 +200,33 @@ void json_set_bool(JSONNode* node, bool value) {
     node->data.boolean = value;
 }
 
-static void add_padding(string* str, size_t level) {
+static void add_padding(StringBuilder* builder, size_t level) {
     for (size_t i = 0; i < level; i++) {
-        str_append(str, "    ");
+        strbuild_appends(builder, "    ");
     }
 }
 
-static void json_array_stringify(JSON* json, const JSONNode* array, string* str, size_t level) {
+static void
+json_array_stringify(JSON* json, const JSONNode* array, StringBuilder* builder, size_t level) {
     Vector* vector = array->data.array;
-    str_append(str, "[");
+    strbuild_appendc(builder, '[');
     for (size_t i = 0; i < vector->size; i++) {
         JSONNode* elem;
-        str_append(str, "\n");
-        add_padding(str, level + 1);
+        strbuild_appendc(builder, '\n');
+        add_padding(builder, level + 1);
         if (vector_get(vector, i, &elem))
-            json_node_stringify(json, elem, str, level + 1);
+            json_node_stringify(json, elem, builder, level + 1);
         if (i < vector->size - 1)
-            str_append(str, ",");
+            strbuild_appendc(builder, ',');
     }
-    str_append(str, "\n");
-    add_padding(str, level);
-    str_append(str, "]");
+    strbuild_appendc(builder, '\n');
+    add_padding(builder, level);
+    strbuild_appendc(builder, ']');
 }
 
 struct stringify_data {
     JSON* json;
-    string* out_str;
+    StringBuilder* builder;
     bool linebreaks;
     size_t level;
 };
@@ -238,54 +237,50 @@ static void foreach_stringify(const Dict* dict, size_t idx, void* key, void* val
     string* name = key;
     JSONNode* node = *(JSONNode**) value;
 
-    add_padding(sdata->out_str, sdata->level);
+    add_padding(sdata->builder, sdata->level);
 
-    str_append(sdata->out_str, "\"");
-    str_concat(sdata->out_str, name);
-    str_append(sdata->out_str, "\": ");
-    json_node_stringify(sdata->json, node, sdata->out_str, sdata->level);
+    strbuild_appendc(sdata->builder, '\"');
+    strbuild_append(sdata->builder, name);
+    strbuild_appends(sdata->builder, "\": ");
+    json_node_stringify(sdata->json, node, sdata->builder, sdata->level);
     if (idx < dict->size - 1)
-        str_append(sdata->out_str, ",");
-    str_append(sdata->out_str, "\n");
+        strbuild_appendc(sdata->builder, ',');
+    strbuild_appendc(sdata->builder, '\n');
 }
 
-static void json_node_stringify(JSON* json, const JSONNode* node, string* str, size_t level) {
+static void json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level) {
     if (!node)
         return;
     switch (node->type) {
     case JSON_BOOL:
-        str_append(str, node->data.boolean ? "true" : "false");
+        strbuild_appends(builder, node->data.boolean ? "true" : "false");
         break;
     case JSON_INT: {
-        char buf[32]; // longs are at most 20 decimal digits long
-        snprintf(buf, 20, "%li", node->data.number);
-        str_append(str, buf);
+        strbuild_appendf(builder, "%li", node->data.number);
         break;
     }
     case JSON_FLOAT: {
-        char buf[64];
-        snprintf(buf, 64, "%g", node->data.fnumber);
-        str_append(str, buf);
+        strbuild_appendf(builder, "%g", node->data.fnumber);
         break;
     }
     case JSON_NULL:
-        str_append(str, "null");
+        strbuild_appends(builder, "null");
         break;
     case JSON_STRING:
-        str_append(str, "\"");
-        str_concat(str, &node->data.string);
-        str_append(str, "\"");
+        strbuild_appendc(builder, '\"');
+        strbuild_append(builder, &node->data.string);
+        strbuild_appendc(builder, '\"');
         break;
     case JSON_ARRAY:
-        json_array_stringify(json, node, str, level);
+        json_array_stringify(json, node, builder, level);
         break;
 
     case JSON_OBJECT: {
-        struct stringify_data data = {.json = json, .out_str = str, .level = level + 1};
-        str_append(str, "{\n");
+        struct stringify_data data = {.json = json, .builder = builder, .level = level + 1};
+        strbuild_appends(builder, "{\n");
         dict_foreach(node->data.obj, &foreach_stringify, &data);
-        add_padding(str, level);
-        str_append(str, "}");
+        add_padding(builder, level);
+        strbuild_appendc(builder, '}');
         break;
     }
     default:
@@ -293,10 +288,12 @@ static void json_node_stringify(JSON* json, const JSONNode* node, string* str, s
     }
 }
 
-void json_stringify(JSON* json, string* out, u64 capacity, Arena* arena) {
-    *out = str_alloc(capacity, arena);
-    json_node_stringify(json, json->root, out, 0);
-    str_append(out, "\n");
+void json_stringify(JSON* json, string* out, Arena* arena) {
+    Arena scratch = *arena;
+    StringBuilder builder = strbuild_create(&scratch);
+    json_node_stringify(json, json->root, &builder, 0);
+    strbuild_appendc(&builder, '\n');
+    *out = strbuild_to_string(&builder, arena);
 }
 
 JSONNode* json_get_obj(const JSONNode* node, const string* name) {

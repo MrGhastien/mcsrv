@@ -2,6 +2,7 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "data/json.h"
+#include "utils/str_builder.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -70,22 +71,24 @@ static void test_dir(const char* path, bool error_test) {
     i32 error_count = 0;
 
     DIR* dir = opendir(path);
+    Arena arena = arena_create(1 << 15);
 
     struct dirent* element;
     while ((element = readdir(dir))) {
 
         if (!str_ends_with(element->d_name, ".json"))
             continue;
-        string str_path = str_create_dynamic(path);
-        str_appendc(&str_path, '/');
-        str_append(&str_path, element->d_name);
+        StringBuilder builder = strbuild_create(&arena);
+        strbuild_appends(&builder, path);
+        strbuild_appendc(&builder, '/');
+        strbuild_appends(&builder, element->d_name);
+        string str_path = strbuild_to_string(&builder, &arena);
         log_debugf("JSON: Parsing %s...", str_path.base);
 
         i32 res = parse_json(str_path.base);
         if ((res && !error_test) || (!res && error_test))
             error_count++;
 
-        str_destroy(&str_path);
     }
 
     closedir(dir);

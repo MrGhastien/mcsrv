@@ -34,26 +34,68 @@ void strbuild_appendc(StringBuilder* builder, i32 c);
  * Appends a C string to the string in a builder.
  *
  * @param[in] builder The string builder containing the string to append to.
- * @param[in] c The C string to append.
+ * @param[in] cstr The C string to append.
  */
 void strbuild_appends(StringBuilder* builder, const char* cstr);
 /**
  * Appends a string to the string in a builder.
  *
  * @param[in] builder The string builder containing the string to append to.
- * @param[in] c The string to append.
+ * @param[in] str The string to append.
  */
 void strbuild_append(StringBuilder* builder, const string* str);
 
 /**
+ * Appends a formatted string to the string in a builder.
+ *
+ * @param[in] builder The string builder containing the string to append to.
+ * @param[in] format The format of the string to append.
+ * @param ... Arguments for the format.
+ */
+void strbuild_appendf(StringBuilder* builder, const char* format, ...);
+
+/**
+ * Inserts a single character to the string in a builder.
+ *
+ * @param[in] builder The string builder containing the string to append to.
+ * @param[in] index The position to insert the given character at.
+ * @param[in] c The character to append.
+ */
+void strbuild_insertc(StringBuilder* builder, u64 index, i32 c);
+/**
+ * Inserts a C string to the string in a builder.
+ *
+ * @param[in] builder The string builder containing the string to append to.
+ * @param[in] index The position at which to insert the given C string.
+ * @param[in] cstr The C string to append.
+ */
+void strbuild_inserts(StringBuilder* builder, u64 index, const char* cstr);
+/**
+ * Inserts a string to the string in a builder.
+ *
+ * @param[in] builder The string builder containing the string to append to.
+ * @param[in] index The position at which to insert the given string.
+ * @param[in] str The string to append.
+ */
+void strbuild_insert(StringBuilder* builder, u64 index, const string* str);
+
+/**
+ * Inserts a formatted string to the string in a builder.
+ *
+ * @param[in] builder The string builder containing the string to append to.
+ * @param[in] index The position at which to insert the formatted string.
+ * @param[in] format The format of the string to insert.
+ * @param ... Arguments for the format.
+ */
+void strbuild_insertf(StringBuilder* builder, u64 index, const char* format, ...);
+
+/**
  * Creates a new string from the contents of a string builder.
  *
- * The returned string's buffer is allocated using the arena passed in to strbuild_create()
- * when the builder is created.
- *
- * @param[in] The builder containing the characters of the string to create.
+ * @param[in] builder The builder containing the characters of the string to create.
+ * @param[in] arena The arena used to allocate the new string.
  * @return A new string containing characters of the builder.
  */
-string strbuild_to_string(StringBuilder* builder);
+string strbuild_to_string(const StringBuilder* builder, Arena* arena);
 
 #endif /* ! STR_BUILDER_H */

@@ -93,7 +93,7 @@ bool json_get_float(const JSONNode* node, f64* out);
 bool json_get_bool(const JSONNode* node, bool* out);
 bool json_is_null(const JSONNode* node);
 
-void json_stringify(JSON* json, string* out, u64 capacity, Arena* arena);
+void json_stringify(JSON* json, string* out, Arena* arena);
 
 JSON json_parse(ByteBuffer* buffer, Arena* arena);
 
