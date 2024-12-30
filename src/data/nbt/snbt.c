@@ -47,71 +47,71 @@ static i32 get_tag_size(const NBTTag* tag) {
     }
 }
 
-static void write_indent(FILE* fd, SNBTContext* ctx) {
+static void write_indent(IOMux fd, SNBTContext* ctx) {
     i32 max = ctx->stack.size * ctx->spaces_per_indent;
     for (i32 i = 0; i < max; ++i) {
-        fputc(' ', fd);
+        iomux_writec(fd, ' ');
     }
 }
 
-static void write_snbt_tag(const NBTTag* tag, FILE* fd, SNBTContext* ctx) {
+static void write_snbt_tag(const NBTTag* tag, IOMux fd, SNBTContext* ctx) {
     SNBTMetadata* parent = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
     if (ctx->pretty_print) {
         if (parent) {
             if (parent->size < get_tag_size(parent->tag))
-                fputc(',', fd);
-            fputc('\n', fd);
+                iomux_writec(fd, ',');
+            iomux_writec(fd, '\n');
         }
         write_indent(fd, ctx);
     }
 
     if (parent) {
         if (is_not_array(parent->type))
-            fprintf(fd, "'%s': ", tag->name.base);
+            iomux_writef(fd, "'%s': ", tag->name.base);
         parent->size--;
     }
 
     switch (tag->type) {
     case NBT_BYTE:
-        fprintf(fd, "%hhxb", tag->data.simple.byte);
+        iomux_writef(fd, "%hhxb", tag->data.simple.byte);
         break;
     case NBT_SHORT:
-        fprintf(fd, "%his", tag->data.simple.short_num);
+        iomux_writef(fd, "%his", tag->data.simple.short_num);
         break;
     case NBT_INT:
-        fprintf(fd, "%i", tag->data.simple.integer);
+        iomux_writef(fd, "%i", tag->data.simple.integer);
         break;
     case NBT_LONG:
-        fprintf(fd, "%" PRIi64 "l", tag->data.simple.long_num);
+        iomux_writef(fd, "%" PRIi64 "l", tag->data.simple.long_num);
         break;
     case NBT_FLOAT:
-        fprintf(fd, "%f", tag->data.simple.float_num);
+        iomux_writef(fd, "%f", tag->data.simple.float_num);
         break;
     case NBT_DOUBLE:
-        fprintf(fd, "%lf", tag->data.simple.double_num);
+        iomux_writef(fd, "%lf", tag->data.simple.double_num);
         break;
     case NBT_STRING:
-        fprintf(fd, "\"%s\"", tag->data.str.base);
+        iomux_writef(fd, "\"%s\"", tag->data.str.base);
         break;
     case NBT_LIST:
-        fputc('[', fd);
+        iomux_writec(fd, '[');
         add_meta(ctx, tag->type, tag->data.list.size, tag);
         break;
     case NBT_COMPOUND:
-        fputc('{', fd);
+        iomux_writec(fd, '{');
         add_meta(ctx, tag->type, tag->data.compound.size, tag);
         break;
     case NBT_BYTE_ARRAY:
-        fputs("[B;", fd);
+        iomux_writes(fd, "[B;");
         add_meta(ctx, tag->type, tag->data.array_size, tag);
         break;
     case NBT_INT_ARRAY:
-        fputs("[I;", fd);
+        iomux_writes(fd, "[I;");
         add_meta(ctx, tag->type, tag->data.array_size, tag);
         break;
     case NBT_LONG_ARRAY:
-        fputs("[L;", fd);
+        iomux_writes(fd, "[L;");
         add_meta(ctx, tag->type, tag->data.array_size, tag);
         break;
     default:
@@ -120,8 +120,8 @@ static void write_snbt_tag(const NBTTag* tag, FILE* fd, SNBTContext* ctx) {
 }
 
 enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
-    FILE* fd = fopen(path->base, "w");
-    if (fd == NULL) {
+    IOMux fd = iomux_open(path, "w");
+    if (fd == -1) {
         log_errorf("NBT: IO Error: %s", strerror(errno));
         return NBTE_IO;
     }
@@ -142,18 +142,18 @@ enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
         const SNBTMetadata* parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
         while (parent && parent->size == 0) {
             vector_pop(&ctx.stack, NULL);
-            fputc('\n', fd);
+            iomux_writec(fd, '\n');
             switch (parent->type) {
             case NBT_COMPOUND:
                 write_indent(fd, &ctx);
-                fputc('}', fd);
+                iomux_writec(fd, '}');
                 break;
             case NBT_LIST:
             case NBT_BYTE_ARRAY:
             case NBT_INT_ARRAY:
             case NBT_LONG_ARRAY:
                 write_indent(fd, &ctx);
-                fputc(']', fd);
+                iomux_writec(fd, ']');
                 break;
             default:
                 break;
@@ -163,7 +163,7 @@ enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
     }
 
     arena_destroy(&scratch);
-    fclose(fd);
+    iomux_close(fd);
     return NBTE_OK;
 }
 enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str) {
