@@ -1,5 +1,6 @@
 #include "string.h"
 #include "logger.h"
+#include "memory/arena.h"
 #include "utils/hash.h"
 
 #include <stdio.h>
@@ -31,19 +32,6 @@ static size_t strlcat(char *dst, const char *src, size_t size) {
 }
 #endif
 
-string str_create_dynamic(const char* cstr) {
-    size_t len = strlen(cstr);
-    char* base = malloc(len + 1);
-    memcpy(base, cstr, len);
-    base[len] = 0;
-    return (string){
-        .base = base,
-        .length = len,
-        .capacity = len + 1,
-        .fixed = FALSE,
-    };
-}
-
 string str_create(const char* cstr, Arena* arena) {
     size_t len = strlen(cstr);
     char* base = arena_allocate(arena, len + 1);
@@ -52,8 +40,6 @@ string str_create(const char* cstr, Arena* arena) {
     return (string){
         .base = base,
         .length = len,
-        .capacity = len + 1,
-        .fixed = TRUE,
     };
 }
 
@@ -62,8 +48,6 @@ string str_create_const(const char* cstr) {
     return (string){
         .base = (char*) cstr,
         .length = len,
-        .capacity = 0,
-        .fixed = TRUE,
     };
 }
 
@@ -72,8 +56,6 @@ string str_alloc(size_t capacity, Arena* arena) {
     return (string){
         .base = base,
         .length = 0,
-        .capacity = capacity,
-        .fixed = TRUE,
     };
 }
 
@@ -91,7 +73,7 @@ string str_create_from_buffer(const char* buf, u64 length, Arena* arena) {
     return str;
 }
 
-string str_substring(const string* str, u64 begin, u64 end, Arena* arena) {
+string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena) {
     u64 size = end - begin;
     string sub = str_alloc(size + 1, arena);
     memcpy(sub.base, &str->base[begin], size);
@@ -99,111 +81,36 @@ string str_substring(const string* str, u64 begin, u64 end, Arena* arena) {
     return sub;
 }
 
-bool str_is_const(const string* str) {
-    return str->capacity == 0;
-}
-
-void str_destroy(string* str) {
-    if (str_is_const(str) || str->fixed)
-        return;
-
-    free(str->base);
-}
-
 void str_set(string* str, const char* cstr) {
-    if (str_is_const(str))
-        return;
-    size_t len = strlen(cstr);
-
-    if (!str->fixed)
-        str->base = realloc(str->base, len + 1);
-    else if (len > str->capacity)
-        return;
-
-    memcpy(str->base, cstr, len + 1);
-    str->length = len;
+    char c;
+    u32 i;
+    for(i = 0; (c = cstr[i]) && i < str->length; i++)  {
+        str->base[i] = cstr[i];
+    }
+    str->base[i] = 0;
+    str->length = i;
 }
 
 void str_copy(string* dst, const string* src) {
-    if (str_is_const(dst))
-        return;
     size_t len = src->length;
-
-    if (!dst->fixed)
-        dst->base = realloc(dst->base, len + 1);
-    else if (len > dst->capacity)
-        return;
 
     memcpy(dst->base, src->base, len);
     dst->base[len] = 0;
     dst->length = len;
 }
 
-static void ensure_capacity(string* str, u64 size) {
-    if (str->capacity >= size)
-        return;
+string str_concat(string* lhs, const string* rhs, Arena* arena) {
+    u32 llen = lhs->length;
+    u32 rlen = rhs->length;
 
-    if (str->fixed) {
-        log_error("Cannot extend a fixed string.");
-        abort();
-        return;
-    }
+    string res = {
+        .base = arena_callocate(arena, sizeof(char) * (llen + rlen + 1)),
+        .length = llen + rlen,
+    };
 
-    u64 new_cap = str->capacity + (str->capacity >> 1);
-    if (new_cap == 1)
-        new_cap++;
-    while (new_cap < size) {
-        new_cap += new_cap >> 1;
-    }
-
-    char* new_base = realloc(str->base, new_cap);
-    if (new_base) {
-        str->capacity = new_cap;
-        str->base = new_base;
-    } else {
-        log_error("Memory allocation failure.");
-        abort();
-        return;
-    }
-}
-
-void str_append(string* str, const char* cstr) {
-    if (str_is_const(str)) {
-        fputs("Attempted to concat something to a const string!", stderr);
-        return;
-    }
-    size_t len = strlen(cstr);
-
-    ensure_capacity(str, str->length + len + 1);
-
-    str->length = strlcat(str->base, cstr, str->capacity);
-    str->base[str->length] = 0;
-}
-
-void str_appendc(string* str, char c) {
-    if (str_is_const(str)) {
-        fputs("Attempted to concat something to a const string!", stderr);
-        return;
-    }
-
-    ensure_capacity(str, str->length + 2);
-
-    str->base[str->length] = c;
-    str->base[str->length + 1] = 0;
-    str->length++;
-}
-
-void str_concat(string* lhs, const string* rhs) {
-    if (str_is_const(lhs)) {
-        fputs("Attempted to concat something to a const string!", stderr);
-        return;
-    }
-    u64 len = rhs->length;
-
-    ensure_capacity(lhs, lhs->length + len + 1);
-
-    lhs->length = strlcat(lhs->base, rhs->base, lhs->capacity);
-    lhs->base[lhs->length] = 0;
+    memcpy(res.base, lhs->base, llen);
+    memcpy(res.base + llen, rhs->base, rlen);
+    return res;
 }
 
 u64 str_hash(const void* str) {
