@@ -57,7 +57,7 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
 
     ctx.arena = arena_create(40960);
     objpool_init(&ctx.connections, &ctx.arena, max_connections, sizeof(Connection));
-    ctx.host = str_create_const(host);
+    ctx.host = str_create_view(host);
     ctx.port = port;
     ctx.code = 0;
 

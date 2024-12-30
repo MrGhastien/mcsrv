@@ -154,26 +154,26 @@ bool iomux_eof(IOMux multiplexer) {
 string iomux_error(IOMux multiplexer, i32* out_code) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux)
-        return str_create_const(NULL);
+        return str_create_view(NULL);
 
     if (out_code)
         *out_code = mux->error;
 
     switch (mux->type) {
     case IO_FILE:
-        return str_create_const(strerror(mux->error));
+        return str_create_view(strerror(mux->error));
     case IO_GZFILE: {
         i32 code;
         const char* msg = gzerror(mux->backend.gzFile, &code);
         if (code == Z_OK)
             msg = strerror(mux->error);
-        return str_create_const(msg);
+        return str_create_view(msg);
     }
     case IO_BUFFER:
-        return str_create_const(NULL);
+        return str_create_view(NULL);
     default:
         abort();
-        return str_create_const(NULL);
+        return str_create_view(NULL);
     }
 }
 

@@ -1,6 +1,8 @@
 #+TODO: TODO OPT WIP | DONE
 #+TODO: BUG NOWORK CRASH | FIXED
 
+feat > refactor > fix > repo > doc
+
 * Bugs                                                                :mcsrv:
 
 ** Network

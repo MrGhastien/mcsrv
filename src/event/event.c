@@ -38,7 +38,7 @@ typedef struct EventContext {
 static EventContext ctx;
 
 static void register_builtin_events(void) {
-    event_register_event(BEVENT_STOP, str_create_const("STOP"));
+    event_register_event(BEVENT_STOP, str_create_view("STOP"));
 }
 
 void event_system_init(void) {

@@ -10,9 +10,12 @@
 #include "containers/vector.h"
 #include "utils/string.h"
 
+/**
+* The structure representing a string builder.
+*/
 typedef struct StringBuilder {
-    Vector chars;
-    Arena* arena;
+    Vector chars; /**< A vector containing the characters of the builder. */
+    Arena* arena; /**< A pointer to the arena used to allocate the character vector. */
 } StringBuilder;
 
 /**
@@ -24,21 +27,21 @@ typedef struct StringBuilder {
 StringBuilder strbuild_create(Arena* arena);
 
 /**
- * Appends a single character to the string in a builder.
+ * Appends a single character to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] c The character to append.
  */
 void strbuild_appendc(StringBuilder* builder, i32 c);
 /**
- * Appends a C string to the string in a builder.
+ * Appends a C string to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] cstr The C string to append.
  */
 void strbuild_appends(StringBuilder* builder, const char* cstr);
 /**
- * Appends a string to the string in a builder.
+ * Appends a string to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] str The string to append.
@@ -46,7 +49,7 @@ void strbuild_appends(StringBuilder* builder, const char* cstr);
 void strbuild_append(StringBuilder* builder, const string* str);
 
 /**
- * Appends a formatted string to the string in a builder.
+ * Appends a formatted string to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] format The format of the string to append.
@@ -55,7 +58,7 @@ void strbuild_append(StringBuilder* builder, const string* str);
 void strbuild_appendf(StringBuilder* builder, const char* format, ...);
 
 /**
- * Inserts a single character to the string in a builder.
+ * Inserts a single character to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] index The position to insert the given character at.
@@ -63,7 +66,7 @@ void strbuild_appendf(StringBuilder* builder, const char* format, ...);
  */
 void strbuild_insertc(StringBuilder* builder, u64 index, i32 c);
 /**
- * Inserts a C string to the string in a builder.
+ * Inserts a C string to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] index The position at which to insert the given C string.
@@ -71,7 +74,7 @@ void strbuild_insertc(StringBuilder* builder, u64 index, i32 c);
  */
 void strbuild_inserts(StringBuilder* builder, u64 index, const char* cstr);
 /**
- * Inserts a string to the string in a builder.
+ * Inserts a string to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] index The position at which to insert the given string.
@@ -80,7 +83,7 @@ void strbuild_inserts(StringBuilder* builder, u64 index, const char* cstr);
 void strbuild_insert(StringBuilder* builder, u64 index, const string* str);
 
 /**
- * Inserts a formatted string to the string in a builder.
+ * Inserts a formatted string to a string builder.
  *
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] index The position at which to insert the formatted string.

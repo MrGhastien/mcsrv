@@ -26,10 +26,10 @@ static int test_write1(const char* file) {
 
     NBT nbt = nbt_create(&arena, 1024);
 
-    string tmp = str_create_const("test");
+    string tmp = str_create_view("test");
     nbt_put_simple(&nbt, &tmp, NBT_INT, (union NBTSimpleValue){.integer = 8274744});
 
-    string out_path = str_create_const(file);
+    string out_path = str_create_view(file);
     nbt_write(&nbt, &out_path);
 
     arena_destroy(&arena);
@@ -41,14 +41,14 @@ static int test_write2(const char* file) {
 
     NBT nbt = nbt_create(&arena, 1024);
 
-    string tmp = str_create_const("data");
+    string tmp = str_create_view("data");
     nbt_put(&nbt, &tmp, NBT_COMPOUND);
     nbt_move_to_name(&nbt, &tmp);
 
-    tmp = str_create_const("test");
+    tmp = str_create_view("test");
     nbt_put_simple(&nbt, &tmp, NBT_INT, (union NBTSimpleValue){.integer = 8274744});
 
-    string out_path = str_create_const(file);
+    string out_path = str_create_view(file);
     nbt_write(&nbt, &out_path);
 
     arena_destroy(&arena);
@@ -60,18 +60,18 @@ static int test_write3(const char* file) {
 
     NBT nbt = nbt_create(&arena, 1024);
 
-    string tmp = str_create_const("data");
+    string tmp = str_create_view("data");
     nbt_put(&nbt, &tmp, NBT_COMPOUND);
     nbt_move_to_name(&nbt, &tmp);
 
-    tmp = str_create_const("prout jnjew&xxx");
+    tmp = str_create_view("prout jnjew&xxx");
     nbt_put(&nbt, &tmp, NBT_LIST);
     nbt_move_to_name(&nbt, &tmp);
 
     nbt_push_simple(&nbt, NBT_INT, (union NBTSimpleValue){.integer = 8274744});
     nbt_push_simple(&nbt, NBT_INT, (union NBTSimpleValue){.integer = 123440006});
 
-    string out_path = str_create_const(file);
+    string out_path = str_create_view(file);
     nbt_write(&nbt, &out_path);
 
     arena_destroy(&arena);
@@ -82,12 +82,12 @@ static int test_read3(const char* file) {
     Arena arena = arena_create(1 << 24);
     NBT nbt;
 
-    string in_path = str_create_const(file);
+    string in_path = str_create_view(file);
     nbt_parse(&arena, 1024, &in_path, &nbt);
 
-    string out_path = str_create_const("inout3.nbt.gz");
+    string out_path = str_create_view("inout3.nbt.gz");
     nbt_write(&nbt, &out_path);
-    out_path = str_create_const("level.txt");
+    out_path = str_create_view("level.txt");
     nbt_write_snbt(&nbt, &out_path);
 
     arena_destroy(&arena);

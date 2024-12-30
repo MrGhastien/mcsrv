@@ -1,9 +1,8 @@
 #include "string.h"
-#include "logger.h"
+#include "math.h"
 #include "memory/arena.h"
 #include "utils/hash.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,7 +26,7 @@ string str_create(const char* cstr, Arena* arena) {
     };
 }
 
-string str_create_const(const char* cstr) {
+string str_create_view(const char* cstr) {
     u64 len = cstr == NULL ? 0 : strlen(cstr);
     return (string){
         .base = (char*) cstr,
@@ -53,7 +52,6 @@ string str_create_from_buffer(const char* buf, u64 length, Arena* arena) {
     string str = str_alloc(length, arena);
     memcpy(str.base, buf, length);
     str.base[length] = 0;
-    str.length = length;
     return str;
 }
 
@@ -66,31 +64,24 @@ string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena) {
 }
 
 void str_set(string* str, const char* cstr) {
-    char c;
-    u32 i;
-    for(i = 0; (c = cstr[i]) && i < str->length; i++)  {
-        str->base[i] = cstr[i];
-    }
-    str->base[i] = 0;
-    str->length = i;
+    char* excess = memccpy(str->base, cstr, 0, str->length);
+    if(excess == NULL)
+        excess = &str->base[str->length];
+    memset(excess, 0, str->length - (excess - str->base) + 1);
 }
 
 void str_copy(string* dst, const string* src) {
-    size_t len = src->length;
+    u64 len = min_u64(src->length, dst->length);
 
     memcpy(dst->base, src->base, len);
-    dst->base[len] = 0;
-    dst->length = len;
+    memset(dst->base + len, 0, dst->length - len + 1);
 }
 
 string str_concat(string* lhs, const string* rhs, Arena* arena) {
     u32 llen = lhs->length;
     u32 rlen = rhs->length;
 
-    string res = {
-        .base = arena_callocate(arena, sizeof(char) * (llen + rlen + 1)),
-        .length = llen + rlen,
-    };
+    string res = str_alloc(llen + rlen, arena);
 
     memcpy(res.base, lhs->base, llen);
     memcpy(res.base + llen, rhs->base, rlen);

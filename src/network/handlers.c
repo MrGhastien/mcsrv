@@ -113,7 +113,7 @@ PKT_HANDLER(log_start) {
 
     PacketEncReq* req = arena_callocate(&conn->scratch_arena, sizeof *req);
     *req = (PacketEncReq){
-        .server_id = str_create_const(""),
+        .server_id = str_create_view(""),
         .pkey_length = conn->global_enc_ctx->encoded_key_size,
         .pkey = conn->global_enc_ctx->encoded_key,
         .verify_tok_length = 4,

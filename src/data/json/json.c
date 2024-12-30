@@ -120,7 +120,7 @@ JSONNode* json_node_puts(JSON* json, JSONNode* obj, const string* name, enum JSO
 
 JSONNode* json_node_put(JSON* json, JSONNode* obj, const char* name, enum JSONType type) {
     // string str = str_alloc(name, json->arena);
-    const string str = str_create_const(name);
+    const string str = str_create_view(name);
     return json_node_puts(json, obj, &str, type);
 }
 
@@ -308,7 +308,7 @@ JSONNode* json_get_obj(const JSONNode* node, const string* name) {
 }
 
 JSONNode* json_get_obj_cstr(const JSONNode* node, const char* name) {
-    string str_name = str_create_const(name);
+    string str_name = str_create_view(name);
     return json_get_obj(node, &str_name);
 }
 

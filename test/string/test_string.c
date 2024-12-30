@@ -3,6 +3,8 @@
 
 #include "logger.h"
 
+#include <assert.h>
+
 int main(void) {
 
     logger_system_init();
@@ -14,11 +16,24 @@ int main(void) {
     strbuild_appends(&builder, "rld");
     strbuild_appendc(&builder, '!');
 
-    string tmp = str_create_const("lo wo");
+    string tmp = str_create_view("lo wo");
     strbuild_insert(&builder, 3, &tmp);
+
+    strbuild_appendf(&builder, "%s:%i", __FILE__, __LINE__);
 
     tmp = strbuild_to_string(&builder, &arena);
     log_infof("%s", str_printable_buffer(&tmp));
+
+    string cpy = str_alloc(50, &arena);
+    str_copy(&cpy, &tmp);
+    log_infof("%s", str_printable_buffer(&cpy));
+    assert(cpy.base[40] == 0);
+    assert(cpy.base[45] == 0);
+
+    str_set(&cpy, "salut les gens");
+    log_infof("%s", str_printable_buffer(&cpy));
+    assert(cpy.base[30] == 0);
+    assert(cpy.base[35] == 0);
 
     arena_destroy(&arena);
     logger_system_cleanup();
