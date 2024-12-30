@@ -3,6 +3,7 @@
 #include "containers/bytebuffer.h"
 #include "containers/object_pool.h"
 #include "memory/arena.h"
+#include "str_builder.h"
 #include "utils/string.h"
 
 #include <errno.h>
@@ -14,6 +15,9 @@
 
 #define MAX_MULTIPLEXERS 1024
 
+void strbuild_append_buf(StringBuilder* builder, const char* buf, u64 size);
+void strbuild_insert_buf(StringBuilder* builder, u64 index, const char* buf, u64 size);
+
 static Arena arena;
 static ObjectPool multiplexers;
 
@@ -21,6 +25,11 @@ union IOBackend {
     ByteBuffer* buffer;
     FILE* file;
     gzFile gzFile;
+    struct {
+        StringBuilder builder;
+        Arena* arena;
+        u64 cursor;
+    } string_backend;
 };
 
 typedef struct IOMux {
@@ -50,7 +59,7 @@ static inline IOMux_t* iomux_get(i64 index) {
 static i32 retrieve_gz_error(gzFile gzfile) {
     i32 code;
     gzerror(gzfile, &code);
-    if(code == Z_OK)
+    if (code == Z_OK)
         code = errno;
     return code;
 }
@@ -79,6 +88,18 @@ IOMux iomux_gz_open(const string* path, const char* mode) {
     return iomux_create(IO_GZFILE, (union IOBackend){.gzFile = file});
 }
 
+IOMux iomux_new_string(Arena* arena) {
+    union IOBackend backend = {
+        .string_backend =
+            {
+                             .arena = arena,
+                             .builder = strbuild_create(arena),
+                             .cursor = 0,
+                             },
+    };
+    return iomux_create(IO_STRING, backend);
+}
+
 i32 iomux_write(IOMux multiplexer, const void* data, u64 size) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux)
@@ -101,7 +122,7 @@ i32 iomux_write(IOMux multiplexer, const void* data, u64 size) {
         bytebuf_write(mux->backend.buffer, data, size);
         break;
     case IO_STRING:
-        abort();
+        strbuild_append_buf(&mux->backend.string_backend.builder, data, size);
         break;
     }
     return res;
@@ -127,9 +148,15 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
     case IO_BUFFER:
         bytebuf_read(mux->backend.buffer, size, data);
         break;
-    case IO_STRING:
-        abort();
+    case IO_STRING: {
+        u64 cursor = mux->backend.string_backend.cursor;
+        res = strbuild_get_range(&mux->backend.string_backend.builder, data, cursor, cursor + size);
+        if (res < 0)
+            mux->error = ESPIPE;
+        else
+            mux->backend.string_backend.cursor += res;
         break;
+    }
     }
     return res;
 }
@@ -146,6 +173,8 @@ bool iomux_eof(IOMux multiplexer) {
         return gzeof(mux->backend.gzFile);
     case IO_BUFFER:
         return bytebuf_size(mux->backend.buffer) == 0;
+    case IO_STRING:
+        return mux->backend.string_backend.cursor == mux->backend.string_backend.builder.chars.size;
     default:
         abort();
         return TRUE;
@@ -171,6 +200,8 @@ string iomux_error(IOMux multiplexer, i32* out_code) {
     }
     case IO_BUFFER:
         return str_create_view(NULL);
+    case IO_STRING:
+        return str_create_view(strerror(mux->error));
     default:
         abort();
         return str_create_view(NULL);
@@ -192,4 +223,14 @@ void iomux_close(IOMux multiplexer) {
     default:
         break;
     }
+
+    objpool_remove(&multiplexers, multiplexer);
+}
+
+string iomux_string(IOMux multiplexer, Arena* arena) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux || mux->error != 0)
+        return str_create_view(NULL);
+
+    return strbuild_to_string(&mux->backend.string_backend.builder, arena);
 }

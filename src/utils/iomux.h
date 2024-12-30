@@ -23,6 +23,7 @@ IOMux iomux_wrap_string(const string* str);
 
 IOMux iomux_open(const string* path, const char* mode);
 IOMux iomux_gz_open(const string* path, const char* mode);
+IOMux iomux_new_string(Arena* arena);
 
 i32 iomux_write(IOMux multiplexer, const void* data, u64 size);
 i32 iomux_read(IOMux multiplexer, void* data, u64 size);
@@ -31,5 +32,6 @@ bool iomux_eof(IOMux multiplexer);
 string iomux_error(IOMux multiplexer, i32* out_code);
 
 void iomux_close(IOMux multiplexer);
+string iomux_string(IOMux multiplexer, Arena* arena);
 
 #endif /* ! IOMUX_H */

@@ -108,7 +108,7 @@ i32 strbuild_get_range(const StringBuilder* builder, char* out_text, u64 begin, 
     if(begin >= builder->chars.size || end >= builder->chars.size || begin > end)
         return -1;
     u64 len = end - begin;
-    i32 i;
+    u32 i;
     for (i = 0; i < len; ++i) {
        vector_get(&builder->chars, begin + i, &out_text[i]);
     }
