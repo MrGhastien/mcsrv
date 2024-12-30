@@ -40,8 +40,8 @@ void vector_deep_clear(Vector *vector);
         vector_insert(vector, &holder, idx);                                   \
     }
 
-void vector_add(Vector *vector, void *element);
-void vector_insert(Vector *vector, void *element, size_t idx);
+void vector_add(Vector *vector, const void *element);
+void vector_insert(Vector *vector, const void *element, size_t idx);
 void *vector_reserve(Vector *vector);
 
 bool vector_remove(Vector *vector, size_t idx, void *out);

@@ -19,7 +19,7 @@ static bool ensure_capacity(Vector* vector, size_t size) {
     return TRUE;
 }
 
-void vector_add(Vector* vector, void* element) {
+void vector_add(Vector* vector, const void* element) {
     size_t stride = vector->stride;
 
     if (!ensure_capacity(vector, vector->size + 1))
@@ -29,7 +29,7 @@ void vector_add(Vector* vector, void* element) {
     vector->size++;
 }
 
-void vector_insert(Vector* vector, void* element, size_t idx) {
+void vector_insert(Vector* vector, const void* element, size_t idx) {
     size_t size = vector->size;
     size_t stride = vector->stride;
 

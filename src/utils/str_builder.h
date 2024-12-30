@@ -11,8 +11,8 @@
 #include "utils/string.h"
 
 /**
-* The structure representing a string builder.
-*/
+ * The structure representing a string builder.
+ */
 typedef struct StringBuilder {
     Vector chars; /**< A vector containing the characters of the builder. */
     Arena* arena; /**< A pointer to the arena used to allocate the character vector. */
@@ -91,6 +91,28 @@ void strbuild_insert(StringBuilder* builder, u64 index, const string* str);
  * @param ... Arguments for the format.
  */
 void strbuild_insertf(StringBuilder* builder, u64 index, const char* format, ...);
+
+/**
+ * Retrieves a single character at the given in a string builder.
+ *
+ * If the index is out of bounds, this function returns `-1`.
+ *
+ * @param[in] builder The builder to query.
+ * @param[in] index The position of the character to get.
+ * @return The character at index @p index, or `-1` otherwise.
+ */
+char strbuild_get(const StringBuilder* builder, u64 index);
+/**
+ * Retrieves a range from a string builder.
+ *
+ * @param[in] builder The builder to query.
+ * @param[out] out_text A pointer to the buffer which will be filled with the characters in the
+ * requested range. Should be large enough to hold at least `end - begin` characters.
+ * @param[in] begin The position of the first character to retrieve (included)
+ * @param[in] end The position of the last character to retrieve (excluded).
+ * @return The number of characters retrieved, or `-1` if indices were invalid.
+ */
+i32 strbuild_get_range(const StringBuilder* builder, char* out_text, u64 begin, u64 end);
 
 /**
  * Creates a new string from the contents of a string builder.
