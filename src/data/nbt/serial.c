@@ -9,6 +9,7 @@
 #include "memory/arena.h"
 #include "utils/bitwise.h"
 #include "utils/string.h"
+#include "utils/iomux.h"
 
 #include <errno.h>
 #include <string.h>
@@ -32,9 +33,9 @@ typedef struct NBTTagMetadata {
     i64 idx;
 } NBTTagMetadata;
 
-static bool ensure_read(gzFile fd, void* buf, u64 size) {
+static bool ensure_read(IOMux fd, void* buf, u64 size) {
     while(size > 0) {
-        i32 res = gzread(fd, buf, size);
+        i32 res = iomux_read(fd, buf, size);
         if(res <= 0)
             return FALSE;
         size -= res;
@@ -42,22 +43,19 @@ static bool ensure_read(gzFile fd, void* buf, u64 size) {
     return TRUE;
 }
 
-static enum NBTTagType parse_type(gzFile fd, const NBTReadContext* ctx) {
+static enum NBTTagType parse_type(IOMux fd, const NBTReadContext* ctx) {
 
     const NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
     if (!parent_meta || is_not_array(parent_meta->type)) {
         u8 type_byte;
         if (!ensure_read(fd, &type_byte, sizeof type_byte)) {
-            if (gzeof(fd))
+            if (iomux_eof(fd))
                 log_error("NBT: Syntax error: reached unexpected end of file");
             else {
                 i32 zlib_errnum;
-                const char* zlib_error_msg = gzerror(fd, &zlib_errnum);
-                if(zlib_errnum == Z_ERRNO || zlib_error_msg == NULL)
-                    log_errorf("NBT: Syntax error: %s", strerror(errno));
-                else
-                    log_errorf("NBT: Syntax error: %s", zlib_error_msg);
+                string zlib_error_msg = iomux_error(fd, &zlib_errnum);
+                log_errorf("NBT: Syntax error: %s", str_printable_buffer(&zlib_error_msg));
             }
             return _NBT_COUNT;
         }
@@ -170,7 +168,7 @@ static bool prune_parsing_stack(NBTReadContext* ctx) {
     return TRUE;
 }
 
-static bool read_string(Arena* arena, gzFile fd, string* out_str) {
+static bool read_string(Arena* arena, IOMux fd, string* out_str) {
     u16 name_length;
     if(!ensure_read(fd, &name_length, sizeof name_length))
         return FALSE;
@@ -182,24 +180,23 @@ static bool read_string(Arena* arena, gzFile fd, string* out_str) {
     return TRUE;
 }
 
-static void write_string(const string* str, gzFile fd) {
+static void write_string(const string* str, IOMux fd) {
     u16 clamped_length = str->length > 0xffff ? 0xffff : str->length;
     const u16 big_endian_name = uhton16(clamped_length);
-    gzwrite(fd, &big_endian_name, sizeof big_endian_name);
-    gzwrite(fd, str->base, clamped_length);
+    iomux_write(fd, &big_endian_name, sizeof big_endian_name);
+    iomux_write(fd, str->base, clamped_length);
 }
 
-static i32 parse_array(gzFile fd, NBTTag* new_tag, NBTReadContext* ctx) {
+static i32 parse_array(IOMux fd, const NBTTag* new_tag, NBTReadContext* ctx) {
     i32 num;
     if (!ensure_read(fd, &num, sizeof num)) {
-        int zlib_errnum;
-        const char* zlib_error_msg = gzerror(fd, &zlib_errnum);
-        int reached_eof = gzeof(fd);
-        if (zlib_errnum == 0 && reached_eof)
+        int errnum;
+        string errmsg = iomux_error(fd, &errnum);
+        int reached_eof = iomux_eof(fd);
+        if (errnum == 0 && reached_eof)
             log_error("NBT: Syntax error: Reached unexpected end of file");
         else
-            log_errorf("NBT: IO Error: Failed to read the input file: %s",
-                       zlib_errnum == Z_ERRNO ? strerror(errno) : zlib_error_msg);
+            log_errorf("NBT: IO Error: Failed to read the input file: %s", str_printable_buffer(&errmsg));
         return -1;
     }
     num = ntoh32(num);
@@ -215,9 +212,9 @@ static i32 parse_array(gzFile fd, NBTTag* new_tag, NBTReadContext* ctx) {
     return num;
 }
 
-static void write_array(gzFile fd, const NBTTag* tag, NBTWriteContext* ctx) {
+static void write_array(IOMux fd, const NBTTag* tag, NBTWriteContext* ctx) {
     i32 big_endian_size = hton32(tag->data.list.size);
-    gzwrite(fd, &big_endian_size, sizeof(i32));
+    iomux_write(fd, &big_endian_size, sizeof(i32));
     NBTTagMetadata new_parent = {
         .size = tag->data.list.size,
         .type = tag->type,
@@ -225,36 +222,36 @@ static void write_array(gzFile fd, const NBTTag* tag, NBTWriteContext* ctx) {
     vector_add(&ctx->stack, &new_parent);
 }
 
-static void nbt_write_tag(NBTWriteContext* ctx, gzFile fd) {
+static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd) {
     NBTTagMetadata* parent = vector_ref(&ctx->stack, ctx->stack.size - 1);
 
     NBTTag* tag = vector_ref(&ctx->nbt->tags, ctx->current_index);
     if (!parent || is_not_array(parent->type)) {
         i8 type_num = tag->type & 0xff;
-        gzwrite(fd, &type_num, sizeof type_num);
+        iomux_write(fd, &type_num, sizeof type_num);
         write_string(&tag->name, fd);
     }
     if (parent)
         parent->size--;
     switch (tag->type) {
     case NBT_BYTE:
-        gzwrite(fd, &tag->data.simple.byte, sizeof tag->data.simple.byte);
+        iomux_write(fd, &tag->data.simple.byte, sizeof tag->data.simple.byte);
         break;
     case NBT_SHORT: {
         const i16 big_endian = hton16(tag->data.simple.short_num);
-        gzwrite(fd, &big_endian, sizeof big_endian);
+        iomux_write(fd, &big_endian, sizeof big_endian);
         break;
     }
     case NBT_FLOAT:
     case NBT_INT: {
         const i32 big_endian = hton32(tag->data.simple.integer);
-        gzwrite(fd, &big_endian, sizeof big_endian);
+        iomux_write(fd, &big_endian, sizeof big_endian);
         break;
     }
     case NBT_DOUBLE:
     case NBT_LONG: {
         const i64 big_endian = hton64(tag->data.simple.long_num);
-        gzwrite(fd, &big_endian, sizeof big_endian);
+        iomux_write(fd, &big_endian, sizeof big_endian);
         break;
     }
     case NBT_STRING: {
@@ -270,7 +267,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, gzFile fd) {
         break;
     }
     case NBT_LIST: {
-        gzwrite(fd, &tag->data.list.elem_type, sizeof(u8));
+        iomux_write(fd, &tag->data.list.elem_type, sizeof(u8));
         write_array(fd, tag, ctx);
         break;
     }
@@ -287,8 +284,8 @@ static void nbt_write_tag(NBTWriteContext* ctx, gzFile fd) {
 
 enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
 
-    gzFile fd = gzopen(path->base, "wb");
-    if(fd == NULL) {
+    IOMux fd = iomux_gz_open(path, "wb");
+    if(fd == -1) {
         log_errorf("NBT: IO Error: %s", strerror(errno));
         return NBTE_IO;
     }
@@ -306,16 +303,16 @@ enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
             vector_pop(&ctx.stack, NULL);
             if (parent->type == NBT_COMPOUND) {
                 const i8 end_tag = 0;
-                gzwrite(fd, &end_tag, sizeof end_tag);
+                iomux_write(fd, &end_tag, sizeof end_tag);
             }
             parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
         }
     }
-    gzclose(fd);
+    iomux_close(fd);
     return NBTE_OK;
 }
 
-static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) {
+static bool nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagType type) {
     NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
     NBTTag new_tag = {
         .type = type,
@@ -397,7 +394,7 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
     }
     case NBT_END:
         if (!parent_meta || parent_meta->type != NBT_COMPOUND) {
-            log_errorf("Unexpected end of compound tag at position %zu", gztell(fd));
+            log_errorf("Unexpected end of compound tag at position %zu", 0ul);
             return FALSE;
         }
         NBTTag* parent_tag = nbt_mut_ref(ctx->nbt, parent_meta->idx);
@@ -414,8 +411,8 @@ static bool nbt_parse_tag(gzFile fd, NBTReadContext* ctx, enum NBTTagType type) 
 }
 
 enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt) {
-    gzFile fd = gzopen(path->base, "rb");
-    if(fd == NULL) {
+    IOMux fd = iomux_gz_open(path, "rb");
+    if(fd == -1) {
         log_errorf("NBT: IO Error: %s", strerror(errno));
         return NBTE_IO;
     }
@@ -444,6 +441,6 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, 
 
     } while (ctx.stack.size > 0);
 
-    gzclose(fd);
+    iomux_close(fd);
     return NBTE_OK;
 }

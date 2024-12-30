@@ -41,7 +41,7 @@ typedef struct IOMux {
 static IOMux iomux_create(enum IOType type, union IOBackend backend) {
 
     if (!arena.block) {
-        arena = arena_create(MAX_MULTIPLEXERS * sizeof(IOMux_t));
+        arena = arena_create(MAX_MULTIPLEXERS * (sizeof(IOMux_t) + sizeof(bool)));
         objpool_init(&multiplexers, &arena, MAX_MULTIPLEXERS, sizeof(IOMux_t));
     }
 
