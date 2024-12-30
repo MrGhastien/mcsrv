@@ -28,6 +28,11 @@ IOMux iomux_new_string(Arena* arena);
 i32 iomux_write(IOMux multiplexer, const void* data, u64 size);
 i32 iomux_read(IOMux multiplexer, void* data, u64 size);
 
+i32 iomux_writef(IOMux multiplexer, const char* format, ...);
+bool iomux_writec(IOMux multiplexer, i32 chr);
+i32 iomux_writes(IOMux multiplexer, const char* cstr);
+i32 iomux_write_str(IOMux multiplexer, const string* str);
+
 bool iomux_eof(IOMux multiplexer);
 string iomux_error(IOMux multiplexer, i32* out_code);
 

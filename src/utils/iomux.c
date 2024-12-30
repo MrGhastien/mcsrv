@@ -41,7 +41,7 @@ typedef struct IOMux {
 static IOMux iomux_create(enum IOType type, union IOBackend backend) {
 
     if (!arena.block) {
-        arena = arena_create(MAX_MULTIPLEXERS * (sizeof(IOMux_t) + sizeof(bool)));
+        arena = arena_create(MAX_MULTIPLEXERS * sizeof(IOMux_t) << 1);
         objpool_init(&multiplexers, &arena, MAX_MULTIPLEXERS, sizeof(IOMux_t));
     }
 
@@ -127,6 +127,7 @@ i32 iomux_write(IOMux multiplexer, const void* data, u64 size) {
     }
     return res;
 }
+
 i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux)
@@ -159,6 +160,135 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
     }
     }
     return res;
+}
+
+i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    i32 res = 0;
+    va_list args;
+    va_start(args, format);
+
+    switch (mux->type) {
+    case IO_FILE:
+        res = vfprintf(mux->backend.file, format, args);
+        if (res < 0)
+            mux->error = errno;
+        break;
+    case IO_GZFILE:
+        res = gzvprintf(mux->backend.gzFile, format, args);
+        if (res < 0)
+            mux->error = retrieve_gz_error(mux->backend.gzFile);
+        break;
+    case IO_BUFFER: {
+        Arena scratch = arena;
+        u64 size;
+        char* formatted = format_str(&scratch, format, args, &size);
+        bytebuf_write(mux->backend.buffer, formatted, size * sizeof *formatted);
+    } break;
+    case IO_STRING: {
+        res = strbuild_appendvf(&mux->backend.string_backend.builder, format, args);
+        if (res < 0)
+            mux->error = ESPIPE;
+        else
+            mux->backend.string_backend.cursor += res;
+        break;
+    }
+    }
+    va_end(args);
+    return res;
+}
+bool iomux_writec(IOMux multiplexer, i32 chr) {
+
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    i32 res = 0;
+
+    switch (mux->type) {
+    case IO_FILE:
+        res = fputc(chr, mux->backend.file);
+        if (res == EOF)
+            mux->error = errno;
+        break;
+    case IO_GZFILE:
+        res = gzputc(mux->backend.gzFile, chr);
+        if (res < 0)
+            mux->error = errno;
+        break;
+    case IO_BUFFER: {
+        unsigned char c = chr & 0xff;
+        bytebuf_write(mux->backend.buffer, &c, sizeof c);
+        break;
+    }
+    case IO_STRING:
+        strbuild_appendc(&mux->backend.string_backend.builder, chr);
+        break;
+    }
+    return res == 0;
+}
+i32 iomux_writes(IOMux multiplexer, const char* cstr) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    i32 res = 0;
+
+    switch (mux->type) {
+    case IO_FILE:
+        res = fputs(cstr, mux->backend.file);
+        if (res == EOF)
+            mux->error = errno;
+        break;
+    case IO_GZFILE:
+        res = gzputs(mux->backend.gzFile, cstr);
+        if (res < 0)
+            mux->error = errno;
+        break;
+    case IO_BUFFER: {
+        u64 len = strlen(cstr);
+        bytebuf_write(mux->backend.buffer, cstr, len * sizeof *cstr);
+        res = len;
+        break;
+    }
+    case IO_STRING:
+        strbuild_appends(&mux->backend.string_backend.builder, cstr);
+        break;
+    }
+    return res == 0;
+}
+i32 iomux_write_str(IOMux multiplexer, const string* str) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    i32 res = 0;
+
+    switch (mux->type) {
+    case IO_FILE:
+        res = fputs(str_printable_buffer(str), mux->backend.file);
+        if (res == EOF)
+            mux->error = errno;
+        break;
+    case IO_GZFILE:
+        res = gzputs(mux->backend.gzFile, str_printable_buffer(str));
+        if (res < 0)
+            mux->error = errno;
+        break;
+    case IO_BUFFER: {
+        bytebuf_write(mux->backend.buffer, str->base, str->length * sizeof *str->base);
+        res = str->length;
+        break;
+    }
+    case IO_STRING:
+        strbuild_append(&mux->backend.string_backend.builder, str);
+        res = str->length;
+        break;
+    }
+    return res == 0;
 }
 
 bool iomux_eof(IOMux multiplexer) {
