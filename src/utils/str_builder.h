@@ -39,7 +39,7 @@ void strbuild_appendc(StringBuilder* builder, i32 c);
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] cstr The C string to append.
  */
-void strbuild_appends(StringBuilder* builder, const char* cstr);
+i32 strbuild_appends(StringBuilder* builder, const char* cstr);
 /**
  * Appends a string to a string builder.
  *
@@ -55,7 +55,19 @@ void strbuild_append(StringBuilder* builder, const string* str);
  * @param[in] format The format of the string to append.
  * @param ... Arguments for the format.
  */
-void strbuild_appendf(StringBuilder* builder, const char* format, ...);
+i32 strbuild_appendf(StringBuilder* builder, const char* format, ...);
+/**
+ * Appends a formatted string to a string builder.
+ *
+ * This function is functionnally identical to strbuild_appendf, but accepts a @ref va_list
+ * to get the formatting arguments.
+ * It is as @ref strbuild_appendf what @ref vprintf is to @ref printf.
+ *
+ * @param[in] builder The string builder containing the string to append to.
+ * @param[in] format The format of the string to insert.
+ * @param args @ref va_list of arguments for the format.
+ */
+i32 strbuild_appendvf(StringBuilder* builder, const char* format, va_list args);
 
 /**
  * Inserts a single character to a string builder.
@@ -90,7 +102,21 @@ void strbuild_insert(StringBuilder* builder, u64 index, const string* str);
  * @param[in] format The format of the string to insert.
  * @param ... Arguments for the format.
  */
-void strbuild_insertf(StringBuilder* builder, u64 index, const char* format, ...);
+i32 strbuild_insertf(StringBuilder* builder, u64 index, const char* format, ...);
+
+/**
+ * Inserts a formatted string to a string builder.
+ *
+ * This function is functionnally identical to strbuild_insertf, but accepts a @ref va_list
+ * to get the formatting arguments.
+ * It is as @ref strbuild_insertf what @ref vprintf is to @ref printf.
+ *
+ * @param[in] builder The string builder containing the string to append to.
+ * @param[in] index The position at which to insert the formatted string.
+ * @param[in] format The format of the string to insert.
+ * @param args @ref va_list of arguments for the format.
+ */
+i32 strbuild_insertvf(StringBuilder* builder, u64 index, const char* format, va_list args);
 
 /**
  * Retrieves a single character at the given in a string builder.

@@ -191,4 +191,17 @@ u64 str_hash(const void* str);
 */
 i32 str_compare(const string* lhs, const string* rhs);
 
+/**
+* Small utility function to allocate a sufficiently sized buffer and to format a string.
+*
+* This function uses the specified arena to allocate the returned buffer.
+*
+* @param[in] scratch The arena used to allocate the buffer.
+* @param[in] format The format string.
+* @param[inout] args Arguments for the format.
+* @param[out] out_size Output for the size of the returned string.
+* @return A pointer to the formatted string, allocated with the arena.
+*/
+char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size);
+
 #endif /* ! STRING_H */

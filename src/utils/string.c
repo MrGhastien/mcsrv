@@ -2,7 +2,10 @@
 #include "math.h"
 #include "memory/arena.h"
 #include "utils/hash.h"
+#include "logger.h"
 
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -107,4 +110,21 @@ i32 str_compare(const string* lhs, const string* rhs) {
     if(lhs->length != rhs->length)
         return lhs->length - rhs->length;
     return memcmp(lhs->base, rhs->base, lhs->length);
+}
+
+char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size) {
+    va_list args_copy;
+    va_copy(args_copy, args);
+    i32 res = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+    if (res < 0) {
+        log_errorf("Failed to append formatted string: %s", strerror(errno));
+        return NULL;
+    }
+
+    if (out_size)
+        *out_size = res;
+    char* buf = arena_allocate(scratch, res + 1);
+    vsnprintf(buf, res + 1, format, args);
+    return buf;
 }

@@ -15,33 +15,19 @@ StringBuilder strbuild_create(Arena* arena) {
     return builder;
 }
 
-static char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size) {
-    va_list args_copy;
-    va_copy(args_copy, args);
-    i32 res = vsnprintf(NULL, 0, format, args_copy);
-    va_end(args_copy);
-    if (res < 0) {
-        log_errorf("Failed to append formatted string: %s", strerror(errno));
-        return NULL;
-    }
-
-    if (out_size)
-        *out_size = res;
-    char* buf = arena_allocate(scratch, res + 1);
-    vsnprintf(buf, res + 1, format, args);
-    return buf;
-}
 
 void strbuild_appendc(StringBuilder* builder, i32 c) {
     char chr = c;
     vector_add(&builder->chars, &chr);
 }
-void strbuild_appends(StringBuilder* builder, const char* cstr) {
+i32 strbuild_appends(StringBuilder* builder, const char* cstr) {
     char c;
-    while ((c = *cstr)) {
+    i32 i = 0;
+    while ((c = cstr[i])) {
         vector_add(&builder->chars, &c);
-        cstr++;
+        i++;
     }
+    return i;
 }
 void strbuild_append(StringBuilder* builder, const string* str) {
     for (u32 i = 0; i < str->length; i++) {
@@ -50,13 +36,27 @@ void strbuild_append(StringBuilder* builder, const string* str) {
     }
 }
 
-void strbuild_appendf(StringBuilder* builder, const char* format, ...) {
-    Arena scratch = *builder->arena;
+void strbuild_append_buf(StringBuilder* builder, const char* buf, u64 size) {
+    const char* chr_buf = buf;
+    for (u64 i = 0; i < size; i++) {
+        vector_add(&builder->chars, &chr_buf[i]);
+    }
+}
+
+i32 strbuild_appendf(StringBuilder* builder, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    const char* formatted = format_str(&scratch, format, args, NULL);
+    i32 res = strbuild_appendvf(builder, format, args);
     va_end(args);
-    strbuild_appends(builder, formatted);
+    return res;
+}
+
+i32 strbuild_appendvf(StringBuilder* builder, const char* format, va_list args) {
+    Arena scratch = *builder->arena;
+    u64 size;
+    const char* formatted = format_str(&scratch, format, args, &size);
+    strbuild_append_buf(builder, formatted, size);
+    return size;
 }
 
 void strbuild_insertc(StringBuilder* builder, u64 index, i32 c) {
@@ -75,27 +75,27 @@ void strbuild_insert(StringBuilder* builder, u64 index, const string* str) {
     }
 }
 
-void strbuild_insertf(StringBuilder* builder, u64 index, const char* format, ...) {
-    Arena scratch = *builder->arena;
-    va_list args;
-    va_start(args, format);
-    const char* formatted = format_str(&scratch, format, args, NULL);
-    va_end(args);
-    strbuild_inserts(builder, index, formatted);
-}
-
-void strbuild_append_buf(StringBuilder* builder, const char* buf, u64 size) {
-    const char* chr_buf = buf;
-    for (u64 i = 0; i < size; i++) {
-        vector_add(&builder->chars, &chr_buf[i]);
-    }
-}
-
 void strbuild_insert_buf(StringBuilder* builder, u64 index, const char* buf, u64 size) {
     const char* chr_buf = buf;
     for (u64 i = 0; i < size; i++) {
         vector_insert(&builder->chars, &chr_buf[i], index + i);
     }
+}
+
+i32 strbuild_insertf(StringBuilder* builder, u64 index, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    i32 res = strbuild_insertvf(builder, index, format, args);
+    va_end(args);
+    return res;
+}
+
+i32 strbuild_insertvf(StringBuilder* builder, u64 index, const char* format, va_list args) {
+    Arena scratch = *builder->arena;
+    u64 size;
+    const char* formatted = format_str(&scratch, format, args, &size);
+    strbuild_insert_buf(builder, index, formatted, size);
+    return size;
 }
 
 char strbuild_get(const StringBuilder* builder, u64 index) {
