@@ -40,8 +40,8 @@ typedef union tok_value {
 } TokenValue;
 
 typedef struct parse_info {
-    DynVector* tok_list;
-    DynVector* tok_values;
+    Vector* tok_list;
+    Vector* tok_values;
     u64 idx;
     u64 val_idx;
     JSON* json;
@@ -220,14 +220,14 @@ static enum JSONToken lex_token(ByteBuffer* buffer, TokenValue* value, Arena* ar
     }
 }
 
-static bool json_lex(ByteBuffer* buffer, DynVector* tok_list, DynVector* tok_values, Arena* arena) {
+static bool json_lex(ByteBuffer* buffer, Vector* tok_list, Vector* tok_values, Arena* arena) {
     enum JSONToken token;
     TokenValue value;
     do {
         token = lex_token(buffer, &value, arena);
-        dvect_add(tok_list, &token);
+        vect_add(tok_list, &token);
         if (token_has_value(token))
-            dvect_add(tok_values, &value);
+            vect_add(tok_values, &value);
     } while (token != TOK_EOF && token != TOK_ERROR);
 
     return token == TOK_EOF;
@@ -235,7 +235,7 @@ static bool json_lex(ByteBuffer* buffer, DynVector* tok_list, DynVector* tok_val
 
 static enum JSONToken pop_token(ParsingInfo* info) {
     enum JSONToken token;
-    dvect_get(info->tok_list, info->idx, &token);
+    vect_get(info->tok_list, info->idx, &token);
     if(token >= _TOK_COUNT || token < TOK_LBRACE)
         log_errorf("Tokenized invalid token type %i", token);
     info->idx++;
@@ -244,14 +244,14 @@ static enum JSONToken pop_token(ParsingInfo* info) {
 
 static enum JSONToken peek_token(ParsingInfo* info) {
     enum JSONToken token;
-    dvect_get(info->tok_list, info->idx, &token);
+    vect_get(info->tok_list, info->idx, &token);
     if(token >= _TOK_COUNT || token < TOK_LBRACE)
         log_errorf("Tokenized invalid token type %i", token);
     return token;
 }
 
 static TokenValue* pop_value(ParsingInfo* info) {
-    TokenValue* value = dvect_ref(info->tok_values, info->val_idx);
+    TokenValue* value = vect_ref(info->tok_values, info->val_idx);
     info->val_idx++;
     return value;
 }
@@ -385,10 +385,10 @@ static JSONNode* json_analyze(ParsingInfo* info, u32 nesting_level) {
 JSON json_parse(ByteBuffer* buffer, Arena* arena) {
     JSON json;
     json_create(&json, arena);
-    DynVector tok_list, tok_values;
+    Vector tok_list, tok_values;
 
-    dvect_init(&tok_list, arena, 16, sizeof(enum JSONToken));
-    dvect_init(&tok_values, arena, 4, sizeof(TokenValue));
+    vect_init_dynamic(&tok_list, arena, 16, sizeof(enum JSONToken));
+    vect_init_dynamic(&tok_values, arena, 4, sizeof(TokenValue));
 
     bool success = json_lex(buffer, &tok_list, &tok_values, arena);
 

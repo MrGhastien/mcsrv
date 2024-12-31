@@ -1,8 +1,11 @@
-#include "containers/vector.h"
 #include "definitions.h"
+#include <stdlib.h>
+#include <string.h>
+
+#include "containers/vector.h"
+#include "logger.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
-#include <string.h>
 
 struct vector_block {
     u32 capacity;
@@ -11,39 +14,57 @@ struct vector_block {
     struct vector_block* prev;
 };
 
-void dvect_init(DynVector* vector, Arena* arena, u64 initial_capacity, u64 stride) {
-    vector->start = arena_allocate(arena, sizeof(struct vector_block));
-    *vector->start = (struct vector_block){
-        .capacity = initial_capacity,
-        .data = arena_allocate(arena, stride * initial_capacity),
-        .next = NULL,
-        .prev = NULL,
+static struct vector_block* alloc_block(Arena* arena, u64 capacity, u64 stride) {
+    struct vector_block* blk = arena_allocate(arena, sizeof *blk);
+    *blk = (struct vector_block){
+        .capacity = capacity,
+        .data = arena_allocate(arena, stride * capacity),
     };
-    vector->current = vector->start;
-    vector->next_insert_index = 0;
-    vector->capacity = initial_capacity;
-    vector->size = 0;
-    vector->stride = stride;
-    vector->arena = arena;
+    return blk;
 }
 
-static bool ensure_capacity(DynVector* vector, u64 size) {
+static struct vector_block*
+get_block_from_index(const Vector* vector, u64 index, u64* out_blk_local_index) {
+    struct vector_block* blk = vector->start;
+    while (index >= blk->capacity) {
+        index -= blk->capacity;
+        blk = blk->next;
+    }
+
+    *out_blk_local_index = index;
+
+    return blk;
+}
+
+static bool ensure_capacity(Vector* vector, u64 size) {
     if (size <= vector->capacity)
         return TRUE;
 
-    struct vector_block* blk = arena_allocate(vector->arena, sizeof *blk);
-    blk->capacity = vector->capacity >> 1;
-    blk->data = arena_allocate(vector->arena, blk->capacity * vector->stride);
+    if (!vect_is_dynamic(vector)) {
+        log_error("Cannot resize a static vector !");
+        return FALSE;
+    }
+
+    struct vector_block* blk = alloc_block(vector->arena, vector->capacity >> 1, vector->stride);
     blk->prev = vector->current;
     vector->current->next = blk;
-
     vector->capacity += blk->capacity;
-
     return TRUE;
 }
 
+static void register_removal(Vector* vector) {
+    vector->size--;
+
+    if (vector->next_insert_index == 0) {
+        vector->current = vector->current->prev;
+        vector->next_insert_index = vector->current->capacity;
+    }
+
+    vector->next_insert_index--;
+}
+
 static void
-shift_elements_backwards(DynVector* vector, struct vector_block* blk, u64 start, u64 global_index) {
+shift_elements_backwards(Vector* vector, struct vector_block* blk, u64 start, u64 global_index) {
     u64 stride = vector->stride;
     global_index += 1;
     start += 1;
@@ -78,9 +99,8 @@ shift_elements_backwards(DynVector* vector, struct vector_block* blk, u64 start,
     }
 }
 
-static void shift_elements_forwards(DynVector* vector, u64 global_index) {
+static void shift_elements_forwards(Vector* vector, u64 global_index) {
     u64 stride = vector->stride;
-    global_index += 1;
 
     struct vector_block* blk = vector->current;
     u64 total_to_shift = vector->size - global_index;
@@ -106,61 +126,62 @@ static void shift_elements_forwards(DynVector* vector, u64 global_index) {
         memmove(dst, src, to_shift * stride);
 
         total_to_shift -= to_shift;
-        blk = blk->next;
+        blk = blk->prev;
         end = blk->capacity;
     }
 }
 
-static struct vector_block*
-get_block_from_index(const DynVector* vector, u64 index, u64* out_blk_local_index) {
-    struct vector_block* blk = vector->start;
-    while (index >= blk->capacity) {
-        index -= blk->capacity;
-        blk = blk->next;
-    }
-
-    *out_blk_local_index = index;
-
-    return blk;
-}
-
-static void register_removal(DynVector* vector) {
-    vector->size--;
-
-    if (vector->next_insert_index == 0) {
-        vector->current = vector->current->prev;
-        vector->next_insert_index = vector->current->capacity;
-    } else
-        vector->next_insert_index--;
-}
-
-static void register_addition(DynVector* vector) {
+static void register_addition(Vector* vector) {
     vector->size++;
     vector->next_insert_index++;
 
     if (vector->next_insert_index == vector->current->capacity) {
-        ensure_capacity(vector, vector->size + 1);
         vector->current = vector->current->next;
         vector->next_insert_index = 0;
     }
 }
 
-void dvect_add(DynVector* vector, void* element) {
+void vect_init_dynamic(Vector* vector, Arena* arena, u64 initial_capacity, u64 stride) {
+    vector->start = alloc_block(arena, initial_capacity, stride);
+    vector->current = vector->start;
+    vector->next_insert_index = 0;
+    vector->capacity = initial_capacity;
+    vector->size = 0;
+    vector->stride = stride;
+    vector->arena = arena;
+}
+void vect_init(Vector* vector, Arena* arena, u64 capacity, u64 stride) {
+    vector->start = alloc_block(arena, capacity, stride);
+    vector->current = vector->start;
+    vector->next_insert_index = 0;
+    vector->capacity = capacity;
+    vector->size = 0;
+    vector->stride = stride;
+    vector->arena = NULL;
+}
+
+void vect_clear(Vector* vector) {
+    vector->size = 0;
+    vector->current = vector->start;
+    vector->next_insert_index = 0;
+}
+
+void vect_add(Vector* vector, const void* element) {
     u64 stride = vector->stride;
 
-    // No need to ensure there is enough capacity here,
-    // because it is ensured when registering the previous addition
-    // for the next one
+    if (!ensure_capacity(vector, vector->size + 1))
+        return;
 
     void* dst = offset(vector->current->data, vector->next_insert_index * stride);
     memcpy(dst, element, stride);
-
     register_addition(vector);
 }
+void vect_insert(Vector* vector, const void* element, u64 idx) {
 
-void dvect_insert(DynVector* vector, void* element, u64 idx) {
+    if (!ensure_capacity(vector, vector->size + 1))
+        return;
+
     u64 stride = vector->stride;
-
     u64 local_index;
     struct vector_block* blk = get_block_from_index(vector, idx, &local_index);
 
@@ -171,16 +192,18 @@ void dvect_insert(DynVector* vector, void* element, u64 idx) {
     register_addition(vector);
 }
 
-void* dvect_reserve(DynVector* vector) {
+void* vect_reserve(Vector* vector) {
+    u64 stride = vector->stride;
+
     if (!ensure_capacity(vector, vector->size + 1))
         return NULL;
 
-    void* dst = offset(vector->current->data, vector->next_insert_index * vector->stride);
+    void* dst = offset(vector->current->data, vector->next_insert_index * stride);
     register_addition(vector);
     return dst;
 }
 
-bool dvect_remove(DynVector* vector, u64 idx, void* out) {
+bool vect_remove(Vector* vector, u64 idx, void* out) {
     u64 size = vector->size;
     if (idx >= size)
         return FALSE;
@@ -202,51 +225,32 @@ bool dvect_remove(DynVector* vector, u64 idx, void* out) {
     return TRUE;
 }
 
-bool dvect_pop(DynVector* vector, void* out) {
-    if(!dvect_peek(vector, out))
-        return FALSE;
-
-    register_removal(vector);
-
-    return TRUE;
+bool vect_pop(Vector* vector, void* out) {
+    bool res = vect_peek(vector, out);
+    if(res)
+        register_removal(vector);
+    return res;
 }
 
-bool dvect_peek(DynVector* vector, void* out) {
-    u64 size = vector->size;
-    if (size == 0)
+bool vect_peek(Vector* vector, void* out) {
+    if (vect_size(vector) == 0)
         return FALSE;
-    u64 stride = vector->stride;
+    u64 stride = vect_stride(vector);
+    void* src = offset(vector->current->data, vector->next_insert_index * stride);
 
-    u64 target_index = vector->next_insert_index - 1;
-    struct vector_block* target_blk = vector->current;
-    if(vector->next_insert_index == 0) {
-        target_blk = target_blk->prev;
-        target_index = target_blk->capacity - 1;
-    }
-
-    void* src = offset(target_blk->data, target_index * stride);
-
-    if (out)
+    if(out)
         memcpy(out, src, stride);
     return TRUE;
 }
 
-bool dvect_get(DynVector* vector, u64 index, void* out) {
-    u64 size = vector->size;
-    if (index >= size)
-        return FALSE;
-
-    u64 stride = vector->stride;
-
-    u64 local_index;
-    struct vector_block* blk = get_block_from_index(vector, index, &local_index);
-
-    if (out)
-        memcpy(out, offset(blk->data, local_index * stride), stride);
-    return TRUE;
+bool vect_get(Vector* vector, u64 index, void* out) {
+    void* elem = vect_ref(vector, index);
+    if(elem && out)
+        memcpy(out, elem, vector->stride);
+    return elem != NULL;
 }
 
-void* dvect_ref(DynVector* vector, u64 index) {
+void* vect_ref(Vector* vector, u64 index) {
     u64 size = vector->size;
     if (index >= size)
         return NULL;

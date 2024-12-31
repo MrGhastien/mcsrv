@@ -115,7 +115,7 @@ sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output, u6
     WSABUF wsa_regions[2];
     u64 region_count = 2;
     BufferRegion buf_regions[2];
-    if(bytebuf_get_write_regions(output, buf_regions, &region_count) == 0)
+    if(bytebuf_get_write_regions(output, buf_regions, &region_count, 0) == 0)
         return IOC_OK;
 
     for (u64 i = 0; i < region_count; i++) {
@@ -145,7 +145,7 @@ sock_send_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* input, u64
     WSABUF wsa_regions[2];
     u64 region_count = 2;
     BufferRegion buf_regions[2];
-    if(bytebuf_get_read_regions(input, buf_regions, &region_count) == 0)
+    if(bytebuf_get_read_regions(input, buf_regions, &region_count, 0) == 0)
         return IOC_OK;
 
     for (u64 i = 0; i < region_count; i++) {
