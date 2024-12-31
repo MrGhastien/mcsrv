@@ -13,6 +13,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/containers/ring_queue.h \
 		$(SRC_DIR)/containers/bytebuffer.h \
 		$(SRC_DIR)/containers/object_pool.h \
+		$(SRC_DIR)/containers/_array_internal.h \
 		$(SRC_DIR)/network/packet.h \
 		$(SRC_DIR)/network/decoders.h \
 		$(SRC_DIR)/network/utils.h \

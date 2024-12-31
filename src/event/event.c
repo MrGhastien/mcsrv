@@ -67,7 +67,7 @@ static void broadcast_stop_event(void) {
         .sender     = NULL,
     };
     for (u32 i = 0; i < entry->listeners.size; i++) {
-        EventListener* listener = vector_ref(&entry->listeners, i);
+        EventListener* listener = vect_ref(&entry->listeners, i);
         listener->handler(BEVENT_STOP, listener->user_data, info);
     }
 }
@@ -92,7 +92,7 @@ void event_register_event(u32 code, string name) {
     }
     EventEntry e;
     e.name = name;
-    vector_init_fixed(&e.listeners, &ctx.arena, 256, sizeof(EventListener));
+    vect_init(&e.listeners, &ctx.arena, 256, sizeof(EventListener));
     dict_put(&ctx.event_registry, &code, &e);
 
     pthread_mutex_unlock(&ctx.mutex);
@@ -123,7 +123,7 @@ void event_register_listener(u32 code, event_listener handler, void* data) {
         .user_data = data,
         .handler   = handler,
     };
-    vector_add(&e->listeners, &listener);
+    vect_add(&e->listeners, &listener);
 
     pthread_mutex_unlock(&ctx.mutex);
 }
@@ -161,7 +161,7 @@ static bool process_event_queue(void) {
 
         // Notify each listener
         for (u32 i = 0; i < entry->listeners.size; i++) {
-            EventListener* listener = vector_ref(&entry->listeners, i);
+            EventListener* listener = vect_ref(&entry->listeners, i);
             listener->handler(e->code, listener->user_data, e->info);
             //log_tracef("Notified %p of event %u.", listener->user_data, e->code);
         }

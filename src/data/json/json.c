@@ -5,9 +5,9 @@
 #include "containers/vector.h"
 #include "logger.h"
 #include "utils/string.h"
+#include "utils/str_builder.h"
 
 #include <stdio.h>
-#include <utils/str_builder.h>
 
 static const char* TYPES[_JSON_COUNT] = {
     [JSON_NULL] = "JSON_NULL",
@@ -33,7 +33,7 @@ JSONNode* json_node_create(JSON* json, enum JSONType type) {
         break;
     case JSON_ARRAY:
         node->data.array = arena_allocate(arena, sizeof(Vector));
-        vector_init(node->data.array, 4, sizeof(JSONNode*));
+        vect_init_dynamic(node->data.array, arena, 4, sizeof(JSONNode*));
         break;
     case JSON_STRING:
         node->data.string = (string){0};
@@ -45,6 +45,7 @@ JSONNode* json_node_create(JSON* json, enum JSONType type) {
         node->data.number = 0;
         break;
     default:
+        log_errorf("JSON: Invalid JSON type %i", type);
         break;
     }
     return node;
@@ -81,10 +82,9 @@ void json_node_destroy(JSONNode* node) {
     case JSON_ARRAY:
         for (size_t i = 0; i < node->data.array->size; i++) {
             JSONNode* subnode;
-            vector_get(node->data.array, i, &subnode);
+            vect_get(node->data.array, i, &subnode);
             json_node_destroy(subnode);
         }
-        vector_destroy(node->data.array);
         break;
     default:
         break;
@@ -138,7 +138,7 @@ JSONNode* json_node_add(JSON* json, JSONNode* array, enum JSONType type) {
         return NULL;
 
     JSONNode* node = json_node_create(json, type);
-    vector_add(array->data.array, &node);
+    vect_add(array->data.array, &node);
     return node;
 }
 
@@ -146,7 +146,7 @@ void json_node_addn(JSONNode* array, JSONNode* element) {
     if (!json_check_type(array, JSON_ARRAY))
         return;
 
-    vector_add(array->data.array, &element);
+    vect_add(array->data.array, &element);
 }
 
 void json_set_str_direct(JSONNode* node, string* value) {
@@ -214,7 +214,7 @@ json_array_stringify(JSON* json, const JSONNode* array, StringBuilder* builder, 
         JSONNode* elem;
         strbuild_appendc(builder, '\n');
         add_padding(builder, level + 1);
-        if (vector_get(vector, i, &elem))
+        if (vect_get(vector, i, &elem))
             json_node_stringify(json, elem, builder, level + 1);
         if (i < vector->size - 1)
             strbuild_appendc(builder, ',');
@@ -317,7 +317,7 @@ JSONNode* json_get_array(const JSONNode* node, u64 idx) {
         return NULL;
 
     JSONNode* out;
-    if (!vector_get(node->data.array, idx, &out))
+    if (!vect_get(node->data.array, idx, &out))
         return NULL;
     return out;
 }

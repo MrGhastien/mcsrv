@@ -49,7 +49,7 @@ PKT_ENCODER(log_success) {
     encode_string(&payload->username, buffer);
     bytebuf_write_varint(buffer, payload->properties.size);
     for(u32 i = 0; i < payload->properties.size; i++) {
-        PlayerProperty* prop = vector_ref(&payload->properties, i);
+        PlayerProperty* prop = vect_ref(&payload->properties, i);
         encode_string(&prop->name, buffer);
         encode_string(&prop->value, buffer);
         bytebuf_write(buffer, &prop->is_signed, sizeof(bool));

@@ -75,7 +75,7 @@ void logger_system_init(void) {
 
     // TODO: Create a dictionnary of ring buffers
 
-    vector_init_fixed(&ctx.thread_buffers, &ctx.arena, LOGGER_MAX_THREADS, sizeof(RingQueue));
+    vect_init(&ctx.thread_buffers, &ctx.arena, LOGGER_MAX_THREADS, sizeof(RingQueue));
 
     mcthread_create_attachment(&ctx.buffer_key);
     mcthread_create(&ctx.thread, &logger_handle, NULL);
@@ -90,7 +90,7 @@ static RingQueue* get_entry_queue(void) {
     RingQueue* queue = NULL;
     u32 size = ctx.thread_buffers.size;
     for (u32 i = 0; i < size; i++) {
-        RingQueue* q = vector_ref(&ctx.thread_buffers, i);
+        RingQueue* q = vect_ref(&ctx.thread_buffers, i);
         const LogEntry* entry = rqueue_peek(q);
         if (!entry)
             continue;
@@ -158,7 +158,7 @@ void logger_system_cleanup(void) {
 static void add_log_entry(enum LogLevel lvl, ByteBuffer* buffer) {
     RingQueue* q = mcthread_get_data(ctx.buffer_key);
     if (!q) {
-        q = vector_reserve(&ctx.thread_buffers);
+        q = vect_reserve(&ctx.thread_buffers);
         *q = rqueue_create(LOGGER_MAX_ENTRY_COUNT, sizeof(LogEntry), &ctx.arena);
         mcthread_attach_data(ctx.buffer_key, q);
     }
