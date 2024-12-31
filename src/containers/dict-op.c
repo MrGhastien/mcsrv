@@ -123,7 +123,7 @@ i64 dict_put(Dict* map, const void* key, const void* value) {
     return idx;
 }
 
-i64 dict_remove(Dict* map, const void* key, void* outValue) {
+i64 dict_remove(Dict* map, const void* key, void* out_value) {
     if (key == NULL || map->size == 0)
         return -1;
 
@@ -132,8 +132,8 @@ i64 dict_remove(Dict* map, const void* key, void* outValue) {
     if (idx == -1)
         return -1;
 
-    if (outValue)
-        memcpy(outValue, n.value, map->value_stride);
+    if (out_value)
+        memcpy(out_value, n.value, map->value_stride);
 
     *n.hashp = 0;
     map->size--;
@@ -142,7 +142,7 @@ i64 dict_remove(Dict* map, const void* key, void* outValue) {
     return idx;
 }
 
-i64 dict_get(Dict* map, const void* key, void* outValue) {
+i64 dict_get(Dict* map, const void* key, void* out_value) {
     if (key == NULL || map->size == 0)
         return -1;
 
@@ -151,8 +151,8 @@ i64 dict_get(Dict* map, const void* key, void* outValue) {
     if (idx == -1)
         return -1;
 
-    if (outValue)
-        memcpy(outValue, n.value, map->value_stride);
+    if (out_value)
+        memcpy(out_value, n.value, map->value_stride);
 
     return idx;
 }
