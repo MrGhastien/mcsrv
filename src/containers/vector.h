@@ -8,11 +8,11 @@
 #include "definitions.h"
 #include "memory/arena.h"
 
-struct vector_block;
+struct data_block;
 
 typedef struct vector {
-    struct vector_block* start;   /**< Array of blocks storing elements of this vector. */
-    struct vector_block* current; /**< The next block in which a new element is inserted. */
+    struct data_block* start;   /**< Array of blocks storing elements of this vector. */
+    struct data_block* current; /**< The next block in which a new element is inserted. */
     u32 next_insert_index;        /**< The next index of the current block at which a new element is
                                      inserted. */
     u32 capacity;                 /**< The total capacity of this vector. */
@@ -20,8 +20,6 @@ typedef struct vector {
     u32 stride;                   /**< The size in bytes of elements. */
     Arena* arena;                 /**< The arena used to allocate new blocks to grow the vector. */
 } Vector;
-
-/* === Static vector === */
 
 /**
  * Initializes a new static vector.
