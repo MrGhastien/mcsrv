@@ -4,10 +4,10 @@
 #include "utils/hash.h"
 #include "logger.h"
 
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 i32 str_compare_raw(const void* lhs, const void* rhs) {
     return str_compare(lhs, rhs);

@@ -24,6 +24,8 @@
 #include "memory/arena.h"
 #include "utils/hash.h"
 
+#include <stdarg.h>
+
 /**
 * The string structure.
 */

@@ -42,7 +42,17 @@ static bool ensure_capacity(Vector* vector, u64 size) {
     blk->prev = vector->current;
     vector->current->next = blk;
     vector->capacity += blk->capacity;
+
+    if (vector->next_insert_index == vector->current->capacity) {
+        vector->current = vector->current->next;
+        vector->next_insert_index = 0;
+    }
     return TRUE;
+}
+
+static void register_addition(Vector* vector) {
+    vector->size++;
+    vector->next_insert_index++;
 }
 
 static void register_removal(Vector* vector) {
@@ -121,16 +131,6 @@ static void shift_elements_forwards(Vector* vector, u64 global_index) {
         total_to_shift -= to_shift;
         blk = blk->prev;
         end = blk->capacity;
-    }
-}
-
-static void register_addition(Vector* vector) {
-    vector->size++;
-    vector->next_insert_index++;
-
-    if (vector->next_insert_index == vector->current->capacity) {
-        vector->current = vector->current->next;
-        vector->next_insert_index = 0;
     }
 }
 
