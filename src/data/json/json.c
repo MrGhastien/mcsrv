@@ -179,7 +179,6 @@ void json_set_cstr(JSON* json, JSONNode* node, const char* value) {
         return;
     }
 
-    str_set(&node->data.string, value);
     node->data.string = str_create(value, json->arena);
 }
 void json_set_int(JSONNode* node, long value) {

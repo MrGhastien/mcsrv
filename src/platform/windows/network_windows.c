@@ -115,7 +115,7 @@ sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output, u6
     WSABUF wsa_regions[2];
     u64 region_count = 2;
     BufferRegion buf_regions[2];
-    if(bytebuf_get_write_regions(output, buf_regions, &region_count, 0) == 0)
+    if (bytebuf_get_write_regions(output, buf_regions, &region_count, 0) == 0)
         return IOC_OK;
 
     for (u64 i = 0; i < region_count; i++) {
@@ -145,7 +145,7 @@ sock_send_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* input, u64
     WSABUF wsa_regions[2];
     u64 region_count = 2;
     BufferRegion buf_regions[2];
-    if(bytebuf_get_read_regions(input, buf_regions, &region_count, 0) == 0)
+    if (bytebuf_get_read_regions(input, buf_regions, &region_count, 0) == 0)
         return IOC_OK;
 
     for (u64 i = 0; i < region_count; i++) {
@@ -326,12 +326,24 @@ enum IOCode empty_buffer(NetworkContext* ctx, Connection* conn) {
     }
     return res;
 }
+
+static enum IOCode initiate_read(NetworkContext* ctx, Connection* conn) {
+
+    enum IOCode code = fill_buffer(ctx, conn);
+    while (code == IOC_OK) {
+        code = receive_packet(ctx, conn);
+        if (code == IOC_AGAIN && !conn->pending_recv)
+            code = fill_buffer(ctx, conn);
+    }
+    return code;
+}
+
 static enum IOCode handle_connection_io(NetworkContext* ctx,
                                         PlatformConnection* pconn,
                                         WSAOVERLAPPED* overlapped,
                                         u64 transferred) {
 
-    enum IOCode code = IOC_OK;
+    enum IOCode code = IOC_CLOSED;
     Connection* conn = &pconn->connection;
 
     // Resume processing the data
@@ -340,12 +352,8 @@ static enum IOCode handle_connection_io(NetworkContext* ctx,
         conn->pending_recv = FALSE;
         bytebuf_register_write(&conn->recv_buffer, transferred);
 
-        code = fill_buffer(ctx, conn);
-        while (code == IOC_OK) {
-            code = receive_packet(ctx, conn);
-            if (code == IOC_AGAIN && !conn->pending_recv)
-                code = fill_buffer(ctx, conn);
-        }
+        code = initiate_read(ctx, conn);
+
     } else if (overlapped == &pconn->write_overlapped && conn->pending_send) {
         // WRITE complete
         conn->pending_send = FALSE;
@@ -405,7 +413,8 @@ static enum IOCode accept_connection(NetworkContext* ctx, socketfd* peer_socket)
     };
 
     if (CreateIoCompletionPort(
-            (HANDLE)*peer_socket, platform_ctx.completion_port, (uintptr_t) pconn, 0) != platform_ctx.completion_port) {
+            (HANDLE) *peer_socket, platform_ctx.completion_port, (uintptr_t) pconn, 0) !=
+        platform_ctx.completion_port) {
         log_errorf("Could not handle the connection to [%s:%u]: %s",
                    connection->peer_addr.base,
                    connection->peer_port,
@@ -417,8 +426,8 @@ static enum IOCode accept_connection(NetworkContext* ctx, socketfd* peer_socket)
     *peer_socket = SOCKFD_INVALID;
     log_infof("Accepted connection from [%s:%i].", peer_host.base, peer_port);
 
-    enum IOCode code = handle_connection_io(ctx, pconn, &pconn->read_overlapped, 0);
-    if (code < IOC_OK)
+    enum IOCode code = initiate_read(ctx, &pconn->connection);
+    if(code < IOC_OK)
         close_connection(ctx, &pconn->connection);
     return code;
 }
