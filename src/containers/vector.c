@@ -225,7 +225,7 @@ bool vect_pop(Vector* vector, void* out) {
     return res;
 }
 
-bool vect_peek(Vector* vector, void* out) {
+bool vect_peek(const Vector* vector, void* out) {
     if (vect_size(vector) == 0)
         return FALSE;
     u64 stride = vect_stride(vector);
@@ -236,14 +236,14 @@ bool vect_peek(Vector* vector, void* out) {
     return TRUE;
 }
 
-bool vect_get(Vector* vector, u64 index, void* out) {
+bool vect_get(const Vector* vector, u64 index, void* out) {
     void* elem = vect_ref(vector, index);
     if (elem && out)
         memcpy(out, elem, vector->stride);
     return elem != NULL;
 }
 
-void* vect_ref(Vector* vector, u64 index) {
+void* vect_ref(const Vector* vector, u64 index) {
     u64 size = vector->size;
     if (index >= size)
         return NULL;

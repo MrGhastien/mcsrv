@@ -119,7 +119,7 @@ bool vect_pop(Vector* vector, void* out);
  * @param[out] out A pointer to a memory region where the queried element will be copied.
  * @return @ref TRUE if the last element was successfully retrieved, @ref FALSE otherwise.
  */
-bool vect_peek(Vector* vector, void* out);
+bool vect_peek(const Vector* vector, void* out);
 /**
  * Retrieves an element of a vector.
  *
@@ -128,7 +128,7 @@ bool vect_peek(Vector* vector, void* out);
  * @param[out] out A pointer to a memory region where the queried element will be copied.
  * @return @ref TRUE if the element was successfully retrieved, @ref FALSE otherwise.
  */
-bool vect_get(Vector* vector, u64 index, void* out);
+bool vect_get(const Vector* vector, u64 index, void* out);
 /**
  * Returns a reference to an element inside a vector.
  *
@@ -140,7 +140,7 @@ bool vect_get(Vector* vector, u64 index, void* out);
  * @return A pointer to the slot in which the queried element is stored, `NULL` if the element could
  * not be retrieved.
  */
-void* vect_ref(Vector* vector, u64 index);
+void* vect_ref(const Vector* vector, u64 index);
 
 /**
  * Convenience macro to add an immediate value at the end of a vector.
