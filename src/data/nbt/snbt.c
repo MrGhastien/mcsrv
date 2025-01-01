@@ -22,7 +22,7 @@ typedef struct SNBTMetadata {
 } SNBTMetadata;
 
 static void add_meta(SNBTContext* ctx, enum NBTTagType type, i32 size, const NBTTag* tag_ref) {
-    SNBTMetadata* new_meta = vector_reserve(&ctx->stack);
+    SNBTMetadata* new_meta = vect_reserve(&ctx->stack);
     *new_meta = (SNBTMetadata){
         .type = type,
         .size = size,
@@ -55,7 +55,7 @@ static void write_indent(IOMux fd, SNBTContext* ctx) {
 }
 
 static void write_snbt_tag(const NBTTag* tag, IOMux fd, SNBTContext* ctx) {
-    SNBTMetadata* parent = vector_ref(&ctx->stack, ctx->stack.size - 1);
+    SNBTMetadata* parent = vect_ref(&ctx->stack, ctx->stack.size - 1);
 
     if (ctx->pretty_print) {
         if (parent) {
@@ -132,16 +132,16 @@ enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
         .pretty_print = TRUE,
         .spaces_per_indent = 4,
     };
-    vector_init_fixed(&ctx.stack, &scratch, 512, sizeof(SNBTMetadata));
+    vect_init(&ctx.stack, &scratch, 512, sizeof(SNBTMetadata));
 
     for (u32 i = 0; i < nbt->tags.size; i++) {
         const NBTTag* tag = nbt_ref(nbt, i);
 
         write_snbt_tag(tag, fd, &ctx);
 
-        const SNBTMetadata* parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
+        const SNBTMetadata* parent = vect_ref(&ctx.stack, ctx.stack.size - 1);
         while (parent && parent->size == 0) {
-            vector_pop(&ctx.stack, NULL);
+            vect_pop(&ctx.stack, NULL);
             iomux_writec(fd, '\n');
             switch (parent->type) {
             case NBT_COMPOUND:
@@ -158,7 +158,7 @@ enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
             default:
                 break;
             }
-            parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
+            parent = vect_ref(&ctx.stack, ctx.stack.size - 1);
         }
     }
 

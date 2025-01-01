@@ -45,7 +45,7 @@ static bool ensure_read(IOMux fd, void* buf, u64 size) {
 
 static enum NBTTagType parse_type(IOMux fd, const NBTReadContext* ctx) {
 
-    const NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
+    const NBTTagMetadata* parent_meta = vect_ref(&ctx->stack, ctx->stack.size - 1);
 
     if (!parent_meta || is_not_array(parent_meta->type)) {
         u8 type_byte;
@@ -67,7 +67,7 @@ static enum NBTTagType parse_type(IOMux fd, const NBTReadContext* ctx) {
         return type;
     }
 
-    const NBTTag* parent = vector_ref(&ctx->nbt->tags, parent_meta->idx);
+    const NBTTag* parent = vect_ref(&ctx->nbt->tags, parent_meta->idx);
     switch (parent_meta->type) {
     case NBT_LIST:
         return parent->data.list.elem_type;
@@ -85,11 +85,11 @@ static enum NBTTagType parse_type(IOMux fd, const NBTReadContext* ctx) {
 
 static bool update_parents(NBTReadContext* ctx, enum NBTTagType current_type) {
     i64 i = (i64) ctx->stack.size - 1;
-    NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, i);
+    NBTTagMetadata* parent_meta = vect_ref(&ctx->stack, i);
 
     if (parent_meta && current_type == parent_meta->type) {
         i--;
-        parent_meta = vector_ref(&ctx->stack, i);
+        parent_meta = vect_ref(&ctx->stack, i);
     }
 
     if (!parent_meta)
@@ -125,7 +125,7 @@ static bool update_parents(NBTReadContext* ctx, enum NBTTagType current_type) {
     // Increment the total tag length of lists and compounds.
     // Also remove metadata of tags which have all their elements parsed.
     for (i64 i = (i64) ctx->stack.size - 1; i >= 0; i--) {
-        parent_meta = vector_ref(&ctx->stack, i);
+        parent_meta = vect_ref(&ctx->stack, i);
         NBTTag* parent_tag = nbt_mut_ref(ctx->nbt, parent_meta->idx);
 
         switch (parent_meta->type) {
@@ -149,7 +149,7 @@ static bool update_parents(NBTReadContext* ctx, enum NBTTagType current_type) {
 
 static bool prune_parsing_stack(NBTReadContext* ctx) {
     while (ctx->stack.size > 0) {
-        const NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
+        const NBTTagMetadata* parent_meta = vect_ref(&ctx->stack, ctx->stack.size - 1);
         if (parent_meta->size > 0 || is_not_array(parent_meta->type))
             break;
 
@@ -158,7 +158,7 @@ static bool prune_parsing_stack(NBTReadContext* ctx) {
         case NBT_BYTE_ARRAY:
         case NBT_INT_ARRAY:
         case NBT_LONG_ARRAY:
-            vector_pop(&ctx->stack, NULL);
+            vect_pop(&ctx->stack, NULL);
             break;
         default:
             log_errorf("Invalid parent tag of type %i", parent_meta->type);
@@ -202,7 +202,7 @@ static i32 parse_array(IOMux fd, const NBTTag* new_tag, NBTReadContext* ctx) {
     num = ntoh32(num);
 
     if (num > 0) {
-        NBTTagMetadata* new_tag_meta = vector_reserve(&ctx->stack);
+        NBTTagMetadata* new_tag_meta = vect_reserve(&ctx->stack);
         *new_tag_meta = (NBTTagMetadata){
             .size = num,
             .type = new_tag->type,
@@ -219,13 +219,13 @@ static void write_array(IOMux fd, const NBTTag* tag, NBTWriteContext* ctx) {
         .size = tag->data.list.size,
         .type = tag->type,
     };
-    vector_add(&ctx->stack, &new_parent);
+    vect_add(&ctx->stack, &new_parent);
 }
 
 static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd) {
-    NBTTagMetadata* parent = vector_ref(&ctx->stack, ctx->stack.size - 1);
+    NBTTagMetadata* parent = vect_ref(&ctx->stack, ctx->stack.size - 1);
 
-    NBTTag* tag = vector_ref(&ctx->nbt->tags, ctx->current_index);
+    NBTTag* tag = vect_ref(&ctx->nbt->tags, ctx->current_index);
     if (!parent || is_not_array(parent->type)) {
         i8 type_num = tag->type & 0xff;
         iomux_write(fd, &type_num, sizeof type_num);
@@ -263,7 +263,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd) {
             .size = tag->data.compound.size,
             .type = tag->type,
         };
-        vector_add(&ctx->stack, &new_parent);
+        vect_add(&ctx->stack, &new_parent);
         break;
     }
     case NBT_LIST: {
@@ -293,19 +293,19 @@ enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
     NBTWriteContext ctx = {
         .nbt = nbt,
     };
-    vector_init_fixed(&ctx.stack, nbt->arena, 512, sizeof(NBTTagMetadata));
+    vect_init(&ctx.stack, nbt->arena, 512, sizeof(NBTTagMetadata));
     for (u32 i = 0; i < nbt->tags.size; i++) {
         ctx.current_index = i;
         nbt_write_tag(&ctx, fd);
 
-        const NBTTagMetadata* parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
+        const NBTTagMetadata* parent = vect_ref(&ctx.stack, ctx.stack.size - 1);
         while (parent && parent->size == 0) {
-            vector_pop(&ctx.stack, NULL);
+            vect_pop(&ctx.stack, NULL);
             if (parent->type == NBT_COMPOUND) {
                 const i8 end_tag = 0;
                 iomux_write(fd, &end_tag, sizeof end_tag);
             }
-            parent = vector_ref(&ctx.stack, ctx.stack.size - 1);
+            parent = vect_ref(&ctx.stack, ctx.stack.size - 1);
         }
     }
     iomux_close(fd);
@@ -313,7 +313,7 @@ enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
 }
 
 static bool nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagType type) {
-    NBTTagMetadata* parent_meta = vector_ref(&ctx->stack, ctx->stack.size - 1);
+    NBTTagMetadata* parent_meta = vect_ref(&ctx->stack, ctx->stack.size - 1);
     NBTTag new_tag = {
         .type = type,
     };
@@ -384,7 +384,7 @@ static bool nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagType type) {
         break;
     }
     case NBT_COMPOUND: {
-        NBTTagMetadata* new_tag_meta = vector_reserve(&ctx->stack);
+        NBTTagMetadata* new_tag_meta = vect_reserve(&ctx->stack);
         *new_tag_meta = (NBTTagMetadata){
             .size = 0,
             .type = type,
@@ -399,7 +399,7 @@ static bool nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagType type) {
         }
         NBTTag* parent_tag = nbt_mut_ref(ctx->nbt, parent_meta->idx);
         parent_tag->data.compound.size = parent_meta->size;
-        vector_pop(&ctx->stack, NULL);
+        vect_pop(&ctx->stack, NULL);
         return TRUE;
     default:
         return TRUE;
@@ -421,7 +421,7 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, 
         .arena = arena,
         .nbt = out_nbt,
     };
-    vector_init_fixed(&ctx.stack, arena, 512, sizeof(NBTTagMetadata));
+    vect_init(&ctx.stack, arena, 512, sizeof(NBTTagMetadata));
 
     nbt_init_empty(arena, max_token_count, out_nbt);
 

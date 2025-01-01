@@ -120,4 +120,15 @@ u64 arena_recent_length(Arena* arena);
  */
 void* arena_recent_pos(Arena* arena);
 
+/**
+* Indicates whether two arenas share the same memory block or not.
+*
+* @param[in] a The first arena.
+* @param[in] b The second arena.
+* @return @ref TRUE if both arenas share the same memory block, @ref FALSE otherwise.
+*/
+static inline bool arena_is_mem_shared(const Arena* a, const Arena* b) {
+    return a->block == b->block;
+}
+
 #endif /* ! ARENA_H */

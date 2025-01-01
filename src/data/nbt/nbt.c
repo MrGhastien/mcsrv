@@ -14,17 +14,17 @@
 
 static NBTTag* get_current_tag(NBT* nbt) {
     i64 idx;
-    if (!vector_peek(&nbt->stack, &idx))
+    if (!vect_peek(&nbt->stack, &idx))
         return NULL;
 
-    return vector_ref(&nbt->tags, idx);
+    return vect_ref(&nbt->tags, idx);
 }
 
 static void increment_parent_total_lengths(NBT* nbt) {
     for (u32 i = 0; i < nbt->stack.size; i++) {
         u64 idx;
-        vector_get(&nbt->stack, i, &idx);
-        NBTTag* tag = vector_ref(&nbt->tags, idx);
+        vect_get(&nbt->stack, i, &idx);
+        NBTTag* tag = vect_ref(&nbt->tags, idx);
 
         switch (tag->type) {
         case NBT_COMPOUND:
@@ -65,34 +65,34 @@ NBT nbt_create(Arena* arena, u64 max_token_count) {
     NBT nbt;
     nbt_init_empty(arena, max_token_count, &nbt);
 
-    NBTTag* root = vector_reserve(&nbt.tags);
+    NBTTag* root = vect_reserve(&nbt.tags);
     *root = (NBTTag){
         .type = NBT_COMPOUND,
         .data.compound.total_tag_length = 1,
         .data.compound.size = 0,
     };
 
-    vector_add_imm(&nbt.stack, 0LL, i64);
+    vect_add_imm(&nbt.stack, 0LL, i64);
 
     return nbt;
 }
 
 void nbt_init_empty(Arena* arena, u64 max_token_count, NBT* out_nbt) {
     out_nbt->arena = arena;
-    vector_init_fixed(&out_nbt->tags, arena, max_token_count, sizeof(NBTTag));
-    vector_init_fixed(&out_nbt->stack, arena, 512, sizeof(i64));
+    vect_init_dynamic(&out_nbt->tags, arena, max_token_count, sizeof(NBTTag));
+    vect_init(&out_nbt->stack, arena, 512, sizeof(i64));
 }
 
 void nbt_add_tag(NBT* nbt, NBTTag* tag) {
-    vector_add(&nbt->tags, tag);
+    vect_add(&nbt->tags, tag);
 }
 
 const NBTTag* nbt_ref(const NBT* nbt, i64 index) {
-    return vector_ref(&nbt->tags, index);
+    return vect_ref(&nbt->tags, index);
 }
 
 NBTTag* nbt_mut_ref(NBT* nbt, i64 index) {
-    return vector_ref(&nbt->tags, index);
+    return vect_ref(&nbt->tags, index);
 }
 
 enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value) {
@@ -124,7 +124,7 @@ enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleVa
         .type = tag->data.list.elem_type,
         .data.simple = value,
     };
-    vector_add(&nbt->tags, &new_tag);
+    vect_add(&nbt->tags, &new_tag);
     tag->data.list.size++;
     increment_parent_total_lengths(nbt);
     return TRUE;
@@ -143,7 +143,7 @@ enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
         .type = tag->data.list.elem_type,
         .data.str = str_create_copy(str, nbt->arena),
     };
-    vector_add(&nbt->tags, &new_tag);
+    vect_add(&nbt->tags, &new_tag);
     tag->data.list.size++;
     return NBTE_OK;
 }
@@ -160,7 +160,7 @@ enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {
     NBTTag new_tag = {
         .type = tag->data.list.elem_type,
     };
-    vector_add(&nbt->tags, &new_tag);
+    vect_add(&nbt->tags, &new_tag);
     tag->data.list.size++;
     return NBTE_OK;
 }
@@ -176,7 +176,7 @@ nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimp
         .data.simple = value,
         .name = str_create_copy(name, nbt->arena),
     };
-    vector_add(&nbt->tags, &new_tag);
+    vect_add(&nbt->tags, &new_tag);
     tag->data.compound.size++;
     return NBTE_OK;
 }
@@ -190,7 +190,7 @@ enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str) {
         .data.str = str_create_copy(str, nbt->arena),
         .name = str_create_copy(name, nbt->arena),
     };
-    vector_add(&nbt->tags, &new_tag);
+    vect_add(&nbt->tags, &new_tag);
     tag->data.compound.size++;
     return NBTE_OK;
 }
@@ -208,7 +208,7 @@ enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type) {
         new_tag.data.compound.total_tag_length = 1;
     else if (type == NBT_LIST)
         new_tag.data.list.total_tag_length = 1;
-    vector_add(&nbt->tags, &new_tag);
+    vect_add(&nbt->tags, &new_tag);
     tag->data.compound.size++;
     return NBTE_OK;
 }
@@ -277,12 +277,12 @@ enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
         return NBTE_INVALID_PARENT;
 
     i64 idx;
-    vector_peek(&nbt->stack, &idx);
+    vect_peek(&nbt->stack, &idx);
     idx++;
     for (i32 i = 0; i < tag->data.array_size; i++) {
-        NBTTag* child_tag = vector_ref(&nbt->tags, idx);
+        NBTTag* child_tag = vect_ref(&nbt->tags, idx);
         if (str_compare(&child_tag->name, name) == 0) {
-            vector_add(&nbt->stack, &idx);
+            vect_add(&nbt->stack, &idx);
             return NBTE_OK;
         }
 
@@ -304,24 +304,24 @@ enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index) {
     }
 
     i64 idx;
-    vector_peek(&nbt->stack, &idx);
+    vect_peek(&nbt->stack, &idx);
     for (i32 i = 0; i < index; i++) {
-        NBTTag* child_tag = vector_ref(&nbt->tags, idx);
+        NBTTag* child_tag = vect_ref(&nbt->tags, idx);
         idx += get_total_length(child_tag);
     }
-    vector_add(&nbt->stack, &idx);
+    vect_add(&nbt->stack, &idx);
     return NBTE_OK;
 }
 enum NBTStatus nbt_move_to_parent(NBT* nbt) {
-    return vector_pop(&nbt->stack, NULL) ? NBTE_OK : NBTE_NOT_FOUND;
+    return vect_pop(&nbt->stack, NULL) ? NBTE_OK : NBTE_NOT_FOUND;
 }
 enum NBTStatus nbt_move_to_next_sibling(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     i64 prev_index;
-    if (!vector_pop(&nbt->stack, &prev_index))
+    if (!vect_pop(&nbt->stack, &prev_index))
         return NBTE_NOT_FOUND;
     prev_index += get_total_length(tag);
-    vector_add(&nbt->stack, &prev_index);
+    vect_add(&nbt->stack, &prev_index);
     return NBTE_OK;
 }
 enum NBTStatus nbt_move_to_prev_sibling(NBT* nbt) {
@@ -386,7 +386,7 @@ f64 nbt_get_double(NBT* nbt) {
 }
 string* nbt_get_name(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
-    NBTTag* parent = vector_ref(&nbt->stack, nbt->stack.size - 1);
+    NBTTag* parent = vect_ref(&nbt->stack, nbt->stack.size - 1);
     if (!parent || is_not_array(parent->type))
         return NULL;
     return &tag->name;
