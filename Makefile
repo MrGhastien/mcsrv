@@ -17,7 +17,7 @@ export LDLIBS := -lcrypto -lcurl
 
 ifeq ($(detected_os),WINDOWS)
 	CPPFLAGS += -IC:\msys64\ucrt64\include
-	LDLIBS += -lws2_32 -lwsock32 -LC:/Users/bmorino/CLionProjects/mcsrv/lib/zlib-1.3.1 -lzlib1
+	LDLIBS += -lws2_32 -lwsock32 -L$(CURDIR)/lib/zlib-1.3.1 -lzlib1
 else
 	LDLIBS += -lz
 endif
