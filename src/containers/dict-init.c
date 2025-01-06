@@ -7,7 +7,8 @@
 #define DEFAULT_CAP 4
 
 void dict_init_fixed(Dict* map, const Comparator* cmp, Arena* arena, u64 capacity, u64 key_stride, u64 value_stride) {
-    map->base = arena_callocate(arena, capacity * (sizeof(u64) + key_stride + value_stride), MEM_TAG_DICT);
+    map->base = arena_callocate(
+        arena, capacity * (sizeof(u64) + key_stride + value_stride), ALLOC_TAG_DICT);
     map->comparator = cmp;
     map->key_stride = key_stride;
     map->value_stride = value_stride;

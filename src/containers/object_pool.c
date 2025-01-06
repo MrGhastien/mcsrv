@@ -1,9 +1,10 @@
 #include "object_pool.h"
 #include "_array_internal.h"
 #include "logger.h"
+#include "memory/mem_tags.h"
+#include "utils/bitwise.h"
 
 #include <stdlib.h>
-#include <utils/bitwise.h>
 
 struct PoolObj {
     bool is_allocated;
@@ -11,7 +12,7 @@ struct PoolObj {
 };
 
 void objpool_init(ObjectPool* pool, Arena* arena, u32 capacity, u32 stride) {
-    pool->start = alloc_block(arena, capacity, stride);
+    pool->start = alloc_block(arena, capacity, stride, ALLOC_TAG_POOL);
     pool->next_insert_index = 0;
     pool->capacity = capacity;
     pool->size = 0;
@@ -20,7 +21,7 @@ void objpool_init(ObjectPool* pool, Arena* arena, u32 capacity, u32 stride) {
 }
 
 void objpool_init_dynamic(ObjectPool* pool, Arena* arena, u32 initial_capacity, u32 stride) {
-    pool->start = alloc_block(arena, initial_capacity, stride);
+    pool->start = alloc_block(arena, initial_capacity, stride, ALLOC_TAG_POOL);
     pool->next_insert_index = 0;
     pool->capacity = initial_capacity;
     pool->size = 0;
@@ -68,7 +69,8 @@ static bool ensure_capacity(ObjectPool* pool, u64 size) {
         return FALSE;
     }
 
-    struct data_block* blk = alloc_block(pool->arena, pool->capacity >> 1, pool->stride);
+    struct data_block* blk =
+        alloc_block(pool->arena, pool->capacity >> 1, pool->stride, ALLOC_TAG_POOL);
     struct data_block* last = pool->start;
     while (last->next)
         last = last->next;
@@ -134,7 +136,7 @@ void* objpool_get(ObjectPool* pool, i64 index) {
     return get_obj(blk, local_index, pool->stride);
 }
 
-void objpool_foreach(const ObjectPool* pool, void (*action)(void*, i64)) {
+void objpool_foreach(const ObjectPool* pool, void (*action)(void*, i64, void*), void* user_data) {
     u64 size = objpool_size(pool);
     u64 cap = objpool_cap(pool);
     u64 i = 0;
@@ -142,7 +144,7 @@ void objpool_foreach(const ObjectPool* pool, void (*action)(void*, i64)) {
         u64 local_index;
         struct data_block* blk = get_block_from_index(pool->start, j, &local_index);
         if (is_allocated(blk, local_index, pool->stride)) {
-            action(get_obj(blk, local_index, pool->stride), j);
+            action(get_obj(blk, local_index, pool->stride), j, user_data);
             i++;
         }
     }

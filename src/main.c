@@ -1,12 +1,9 @@
-#include "data/nbt.h"
 #include "event/event.h"
 #include "logger.h"
 #include "network/network.h"
 #include "platform/platform.h"
 #include "registry/registry.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "memory/mem_tags.h"
 
 typedef struct server_ctx {
     bool running;
@@ -17,6 +14,7 @@ static ServerContext server_ctx;
 static i32 init(char* host, i32 port, u64 max_connections) {
     i32 code = 0;
 
+    memory_stats_init();
     platform_init();
 
     logger_system_init();

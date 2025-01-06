@@ -14,8 +14,6 @@
 #define SOCKIO_PENDING -1
 #define SOCKIO_ERROR -2
 
-const char* get_last_error(void);
-
 void* network_handle(void* params);
 
 i32 network_platform_init(NetworkContext* ctx, u64 max_connections);

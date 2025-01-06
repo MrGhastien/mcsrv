@@ -1,11 +1,13 @@
+#include <memory/mem_tags.h>
+#include <platform/platform.h>
 #ifdef MC_PLATFORM_WINDOWS
 
 #include "platform/mc_thread.h"
 
-#include "platform/mc_mutex.h"
 #include "containers/object_pool.h"
 #include "definitions.h"
 #include "logger.h"
+#include "platform/mc_mutex.h"
 
 #include <windows.h>
 
@@ -29,9 +31,9 @@ static MCMutex internal_array_mutex;
 static bool initialized = FALSE;
 
 void mcthread_init(void) {
-    arena = arena_create_silent(MAX_THREADS * (sizeof(struct ThreadInternal) + sizeof(bool)));
+    arena = arena_create_silent(MAX_THREADS * (sizeof(struct ThreadInternal) + sizeof(bool)), BLK_TAG_PLATFORM);
     objpool_init(&threads, &arena, MAX_THREADS, sizeof(struct ThreadInternal));
-    if(!mcmutex_create(&internal_array_mutex)) {
+    if (!mcmutex_create(&internal_array_mutex)) {
         log_fatal("Failed to prepare the platform layer for threading.");
         abort();
     }
@@ -51,7 +53,7 @@ static unsigned long routine_wrapper(void* arg) {
 }
 
 i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg) {
-    if(!routine || !thread)
+    if (!routine || !thread)
         return 1;
 
     // if(!threads.base)
@@ -65,14 +67,11 @@ i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg) {
     internal->routine = routine;
     internal->index = index;
 
-    internal->handle = CreateThread(
-        NULL,
-        0,
-        &routine_wrapper,
-        internal,
-        0,
-        &internal->id
-        );
+    internal->handle = CreateThread(NULL, 0, &routine_wrapper, internal, 0, &internal->id);
+    if (!internal->handle) {
+        log_fatalf("Failed to create thread: %s.", get_last_error());
+        return GetLastError();
+    }
 
     thread->internal = internal;
 
@@ -82,11 +81,12 @@ i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg) {
     return 0;
 }
 void mcthread_destroy(MCThread* thread) {
-    if(!thread)
+    if (!thread)
         return;
 
     struct ThreadInternal* internal = thread->internal;
-    CloseHandle(internal->handle);
+    if(!CloseHandle(internal->handle))
+        log_fatalf("Failed to destroy thread: %s", get_last_error());
     mcmutex_lock(&internal_array_mutex);
     objpool_remove(&threads, internal->index);
     mcmutex_unlock(&internal_array_mutex);
@@ -100,17 +100,48 @@ void mcthread_destroy(MCThread* thread) {
 
 bool mcthread_set_name(const char* name) {
     UNUSED(name);
-    //TODO
+    // TODO
     return FALSE;
 }
 
-bool mcthread_create_attachment(MCThreadKey* out_key);
-bool mcthread_destroy_attachment(MCThreadKey key);
-void mcthread_attach_data(MCThreadKey key, const void* data);
-void* mcthread_get_data(MCThreadKey key);
+bool mcthread_create_attachment(MCThreadKey* out_key) {
+    i64 key = TlsAlloc();
+    if(key == TLS_OUT_OF_INDEXES) {
+        log_fatalf("Failed to create thread attachment: %s.", get_last_error());
+        return FALSE;
+    }
+
+    *out_key = key;
+    return TRUE;
+}
+
+bool mcthread_destroy_attachment(MCThreadKey key) {
+    bool res = TlsFree(key);
+    if (!res) {
+        log_fatalf("Failed to destroy thread attachment: %s.", get_last_error());
+        return FALSE;
+    }
+    return TRUE;
+}
+void mcthread_attach_data(MCThreadKey key, void* data) {
+    if(!TlsSetValue(key, data))
+        log_errorf("Failed to attach data to thread: %s", get_last_error());
+}
+
+void* mcthread_get_data(MCThreadKey key) {
+    void* res = TlsGetValue(key);
+    if(res == NULL)  {
+        i64 ecode = GetLastError();
+        if(ecode != ERROR_SUCCESS) {
+            log_errorf("Failed to get data from thread: %s", get_error_from_code(ecode));
+            return NULL;
+        }
+
+    }
+    return res;
+}
 
 MCThread* mcthread_self(void) {
-    //TODO;
     abort();
 }
 bool mcthread_equals(MCThread* thread) {
@@ -125,11 +156,11 @@ bool mcthread_is_running(MCThread* thread) {
 bool mcthread_join(MCThread* thread, void** out_return) {
     struct ThreadInternal* internal = thread->internal;
     DWORD code = WaitForSingleObject(internal->handle, INFINITE);
-    if(code != WAIT_OBJECT_0)
+    if (code != WAIT_OBJECT_0)
         return FALSE;
 
     unsigned long res;
-    if(!GetExitCodeThread(internal->handle, &res))
+    if (!GetExitCodeThread(internal->handle, &res))
         return FALSE;
 
     mcthread_destroy(thread);

@@ -8,7 +8,7 @@
 int main(void) {
 
     logger_system_init();
-    Arena arena = arena_create(1 << 20);
+    Arena arena = arena_create(1 << 20, BLK_TAG_UNKNOWN);
 
     StringBuilder builder = strbuild_create(&arena);
 

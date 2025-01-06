@@ -8,7 +8,7 @@
 
 RingQueue rqueue_create(u32 size, u32 stride, Arena* arena) {
     return (RingQueue){
-        .block = arena_allocate(arena, size * stride, MEM_TAG_VECTOR),
+        .block = arena_allocate(arena, size * stride, ALLOC_TAG_VECTOR),
         .start = 0,
         .end = 0,
         .capacity = size,

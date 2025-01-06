@@ -22,7 +22,7 @@ static void ensure_capacity(DynamicArena* arena, size_t capacity) {
 static Arena* add_block(DynamicArena* arena, size_t size) {
     ensure_capacity(arena, arena->block_count + 1);
     Arena* blk = &arena->blocks[arena->block_count];
-    *blk = arena_create(BLOCK_SIZE * ((BLOCK_SIZE - 1 + size) / BLOCK_SIZE));
+    *blk = arena_create(BLOCK_SIZE * ((BLOCK_SIZE - 1 + size) / BLOCK_SIZE), BLK_TAG_MEMORY);
     arena->block_count++;
 #ifdef DEBUG
     printf("Added block with capacity %zu bytes.\n", blk->capacity);

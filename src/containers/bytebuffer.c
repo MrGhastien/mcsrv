@@ -219,7 +219,7 @@ ByteBuffer bytebuf_create(u64 size) {
 
 ByteBuffer bytebuf_create_fixed(u64 size, Arena* arena) {
     return (ByteBuffer){
-        .buf = arena_allocate(arena, size, MEM_TAG_BYTEBUFFER),
+        .buf = arena_allocate(arena, size, ALLOC_TAG_BYTEBUFFER),
         .read_head = 0,
         .write_head = 0,
         .size = 0,

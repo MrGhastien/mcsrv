@@ -54,7 +54,7 @@ bool mcthread_delete_attachment(MCThreadKey key) {
     return TRUE;
 }
 
-void mcthread_attach_data(MCThreadKey key, const void* data) {
+void mcthread_attach_data(MCThreadKey key, void* data) {
     if (pthread_setspecific(key, data))
         log_error("The given attachment key is invalid.");
 }

@@ -14,7 +14,7 @@ struct data_block {
     struct data_block* prev;
 };
 
-struct data_block* alloc_block(Arena* arena, u64 capacity, u64 stride);
+struct data_block* alloc_block(Arena* arena, u64 capacity, u64 stride, i32 mem_tag);
 struct data_block* get_block_from_index(struct data_block* start, u64 index, u64* out_blk_local_index);
 
 #endif /* ! _ARRAY_INTERNAL_H */

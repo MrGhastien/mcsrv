@@ -21,7 +21,7 @@ const Comparator CMP_STRING = {
 
 string str_create(const char* cstr, Arena* arena) {
     size_t len = strlen(cstr);
-    char* base = arena_allocate(arena, len + 1, MEM_TAG_STRING);
+    char* base = arena_allocate(arena, len + 1, ALLOC_TAG_STRING);
     memcpy(base, cstr, len);
     base[len] = 0;
     return (string){
@@ -39,7 +39,7 @@ string str_create_view(const char* cstr) {
 }
 
 string str_alloc(u64 length, Arena* arena) {
-    char* base = arena_callocate(arena, length + 1, MEM_TAG_STRING);
+    char* base = arena_callocate(arena, length + 1, ALLOC_TAG_STRING);
     return (string){
         .base = base,
         .length = length,
@@ -125,7 +125,7 @@ char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size
 
     if (out_size)
         *out_size = res;
-    char* buf = arena_allocate(scratch, res + 1, MEM_TAG_STRING);
+    char* buf = arena_allocate(scratch, res + 1, ALLOC_TAG_STRING);
     vsnprintf(buf, res + 1, format, args);
     return buf;
 }

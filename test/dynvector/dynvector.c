@@ -4,7 +4,7 @@
 #include <assert.h>
 
 static void test1(void) {
-    Arena arena = arena_create(1 << 20);
+    Arena arena = arena_create(1 << 20, BLK_TAG_UNKNOWN);
 
     Vector vector;
     vect_init_dynamic(&vector, &arena, 4, sizeof(u64));

@@ -13,7 +13,7 @@ typedef i32 (*zlib_action)(z_streamp stream, int flush);
 typedef i32 (*zlib_resetter)(z_streamp stream);
 
 static void* zlib_alloc(void* arena, u32 item_count, u32 size) {
-    return arena_allocate(arena, item_count * size, MEM_TAG_NETWORK);
+    return arena_allocate(arena, item_count * size, ALLOC_TAG_PACKET);
 }
 
 static void zlib_free(void* arena, void* addr) {

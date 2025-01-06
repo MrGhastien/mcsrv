@@ -90,8 +90,9 @@ void* objpool_get(ObjectPool* pool, i64 index);
  *
  * @param[in] pool The object pool to iterate.
  * @param[in] action The action to perform.
+ * @param[in] user_data Data passed to each call of @p action.
  */
-void objpool_foreach(const ObjectPool* pool, void (*action)(void*, i64));
+void objpool_foreach(const ObjectPool* pool, void (*action)(void*, i64, void*), void* user_data);
 
 #define objpool_size(pool) ((pool)->size)
 #define objpool_cap(pool) ((pool)->capacity)

@@ -112,17 +112,17 @@ PKT_HANDLER(log_start) {
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
 
-    PacketEncReq* req = arena_callocate(&conn->scratch_arena, sizeof *req, MEM_TAG_NETWORK);
+    PacketEncReq* req = arena_callocate(&conn->scratch_arena, sizeof *req, ALLOC_TAG_PACKET);
     *req = (PacketEncReq){
         .server_id = str_create_view(""),
         .pkey_length = conn->global_enc_ctx->encoded_key_size,
         .pkey = conn->global_enc_ctx->encoded_key,
         .verify_tok_length = 4,
-        .verify_tok = arena_allocate(&conn->scratch_arena, 4, MEM_TAG_NETWORK),
+        .verify_tok = arena_allocate(&conn->scratch_arena, 4, ALLOC_TAG_UNKNOWN),
         .authenticate = TRUE,
     };
     memset(req->verify_tok, 78, req->verify_tok_length);
-    conn->verify_token = arena_allocate(&conn->persistent_arena, req->verify_tok_length, MEM_TAG_NETWORK);
+    conn->verify_token = arena_allocate(&conn->persistent_arena, req->verify_tok_length, ALLOC_TAG_UNKNOWN);
     memcpy(conn->verify_token, req->verify_tok, req->verify_tok_length);
     conn->verify_token_size = req->verify_tok_length;
 

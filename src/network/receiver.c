@@ -50,7 +50,8 @@ static enum IOCode decode_common_data(RecvContext* ctx, Packet* out_pkt) {
 
         if (uncompressed_length > 0) {
 
-            ByteBuffer* uncompressed = arena_callocate(ctx->arena, sizeof *uncompressed, MEM_TAG_NETWORK | MEM_TAG_BYTEBUFFER);
+            ByteBuffer* uncompressed = arena_callocate(
+                ctx->arena, sizeof *uncompressed, ALLOC_TAG_BYTEBUFFER);
             *uncompressed = bytebuf_create_fixed(uncompressed_length, ctx->arena);
 
             i64 decompression_result =
@@ -128,7 +129,7 @@ enum IOCode receive_packet(NetworkContext* ctx, Connection* conn) {
     while (code == IOC_OK) {
         if (!conn_is_resuming_read(conn)) {
             arena_save(&conn->scratch_arena);
-            conn->packet_cache = arena_callocate(&conn->scratch_arena, sizeof *conn->packet_cache, MEM_TAG_NETWORK);
+            conn->packet_cache = arena_callocate(&conn->scratch_arena, sizeof *conn->packet_cache, ALLOC_TAG_PACKET);
             conn->packet_cache->id = PKT_INVALID;
         }
 

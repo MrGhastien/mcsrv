@@ -20,4 +20,12 @@ void platform_cleanup(void) {
     signal_system_cleanup();
 }
 
+const char* get_last_error(void) {
+    return get_error_from_code(errno);
+}
+
+const char* get_error_from_code(i64 code) {
+    return strerror(code);
+}
+
 #endif

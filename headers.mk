@@ -6,9 +6,11 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/utils/math.h \
 		$(SRC_DIR)/utils/hash.h \
 		$(SRC_DIR)/utils/iomux.h \
+		$(SRC_DIR)/utils/ansi_codes.h \
 		$(SRC_DIR)/memory/dyn_arena.h \
 		$(SRC_DIR)/memory/arena.h \
 		$(SRC_DIR)/memory/mem_tags.h \
+		$(SRC_DIR)/memory/_memory_internal.h \
 		$(SRC_DIR)/containers/dict.h \
 		$(SRC_DIR)/containers/vector.h \
 		$(SRC_DIR)/containers/ring_queue.h \

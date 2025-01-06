@@ -3,6 +3,7 @@
 #include "memory/arena.h"
 #include "data/json.h"
 #include "utils/str_builder.h"
+#include "platform/platform.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -39,7 +40,7 @@ int parse_json(const char* file) {
             break;
     }
 
-    Arena arena = arena_create(1 << 15);
+    Arena arena = arena_create(1 << 15, BLK_TAG_UNKNOWN);
 
     JSON json = json_parse(&buffer, &arena);
     if (!json.arena) {
@@ -71,7 +72,7 @@ static void test_dir(const char* path, bool error_test) {
     i32 error_count = 0;
 
     DIR* dir = opendir(path);
-    Arena arena = arena_create(1 << 15);
+    Arena arena = arena_create(1 << 15, BLK_TAG_UNKNOWN);
 
     struct dirent* element;
     while ((element = readdir(dir))) {
@@ -108,12 +109,17 @@ static void test_dir(const char* path, bool error_test) {
 
 int main(void) {
 
+    memory_stats_init();
+    platform_init();
+
     logger_system_init();
 
     test_dir("good", FALSE);
     test_dir("bad", TRUE);
 
+    memory_dump_stats();
     logger_system_cleanup();
+    platform_cleanup();
 
     return 0;
 }

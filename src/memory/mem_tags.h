@@ -1,37 +1,37 @@
 #ifndef MEM_TAGS_H
 #define MEM_TAGS_H
 
-#include "definitions.h"
-#include "utils/string.h"
+typedef struct str string;
 
-/*
-  xxxx xxxx xxxx
-  ^^^^ ^^^^ ^^^^
-  |||| |||| data container
-  |||| data format
-  server module
- */
+enum AllocTag {
+    ALLOC_TAG_UNKNOWN = 0,
+    ALLOC_TAG_VECTOR,
+    ALLOC_TAG_POOL,
+    ALLOC_TAG_STRING,
+    ALLOC_TAG_DICT,
+    ALLOC_TAG_BYTEBUFFER,
+    ALLOC_TAG_PACKET,
+    ALLOC_TAG_JSON,
+    ALLOC_TAG_NBT,
 
-enum MemoryTag {
-    MEM_TAG_UNKNOWN = 0,
-    MEM_TAG_VECTOR = 1,
-    MEM_TAG_POOL = 2,
-    MEM_TAG_STRING = 3,
-    MEM_TAG_DICT = 4,
-    MEM_TAG_BYTEBUFFER = 4,
-
-    MEM_TAG_NBT = 1 << 3,
-    MEM_TAG_JSON = 2 << 3,
-    MEM_TAG_TOML = 2 << 3,
-
-    MEM_TAG_NETWORK = 1 << 6,
-    MEM_TAG_EVENT = 2 << 6,
-    MEM_TAG_REGISTRY = 3 << 6,
-    MEM_TAG_PLATFORM = 4 << 6,
-
-    _MEM_TAG_COUNT = 11,
+    _ALLOC_TAG_COUNT,
 };
 
-string get_tag_names(i32 tags, Arena* arena);
+enum MemoryBlockTag {
+    BLK_TAG_UNKNOWN = 0,
+    BLK_TAG_NETWORK,
+    BLK_TAG_EVENT,
+    BLK_TAG_REGISTRY,
+    BLK_TAG_PLATFORM,
+    BLK_TAG_MEMORY,
+
+    _BLK_TAG_COUNT,
+};
+string get_alloc_tag_name(enum AllocTag tag);
+string get_blk_tag_name(enum MemoryBlockTag tag);
+
+//void set_global_tags(i32 tags);
+void memory_stats_init(void);
+void memory_dump_stats(void);
 
 #endif /* ! MEM_TAGS_H */

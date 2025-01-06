@@ -4,6 +4,7 @@
 #include "containers/vector.h"
 #include "logger.h"
 #include "memory/arena.h"
+#include "memory/mem_tags.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -42,7 +43,7 @@ static void register_builtin_events(void) {
 }
 
 void event_system_init(void) {
-    ctx.arena = arena_create(1L << 20);
+    ctx.arena = arena_create(1L << 20, BLK_TAG_EVENT);
 
     dict_init_fixed(
                     &ctx.event_registry, NULL, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
@@ -171,7 +172,6 @@ static bool process_event_queue(void) {
 }
 
 void event_handle(void) {
-
     while (ctx.running) {
         pthread_mutex_lock(&ctx.mutex);
         if (ctx.queue.length == 0)

@@ -22,7 +22,7 @@ bool mcthread_set_name(const char* name);
 
 bool mcthread_create_attachment(MCThreadKey* out_key);
 bool mcthread_destroy_attachment(MCThreadKey key);
-void mcthread_attach_data(MCThreadKey key, const void* data);
+void mcthread_attach_data(MCThreadKey key, void* data);
 void* mcthread_get_data(MCThreadKey key);
 
 MCThread* mcthread_self(void);

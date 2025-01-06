@@ -4,9 +4,11 @@
 #ifdef MC_PLATFORM_WINDOWS
 
 #include "logger.h"
+#include "memory/mem_tags.h"
 #include "network/packet_codec.h"
 #include "platform/mc_thread.h"
 #include "platform/network.h"
+#include "platform/platform.h"
 
 #include <mswsock.h>
 #include <stdio.h>
@@ -220,19 +222,6 @@ void sock_close(socketfd socket) {
 
 /* ===== Networking subsystem ===== */
 
-const char* get_last_error(void) {
-    static char error_msg[2048];
-    i32 error_code = WSAGetLastError();
-    FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
-                  NULL,
-                  error_code,
-                  MAKELANGID(LANG_SYSTEM_DEFAULT, SUBLANG_DEFAULT),
-                  error_msg,
-                  2048,
-                  NULL);
-    return error_msg;
-}
-
 i32 network_platform_init(NetworkContext* ctx, u64 max_connections) {
     WSADATA wsa_data;
     i32 res = WSAStartup(MAKEWORD(2, 2), &wsa_data);
@@ -427,7 +416,7 @@ static enum IOCode accept_connection(NetworkContext* ctx, socketfd* peer_socket)
     log_infof("Accepted connection from [%s:%i].", peer_host.base, peer_port);
 
     enum IOCode code = initiate_read(ctx, &pconn->connection);
-    if(code < IOC_OK)
+    if (code < IOC_OK)
         close_connection(ctx, &pconn->connection);
     return code;
 }

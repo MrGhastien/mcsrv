@@ -22,7 +22,7 @@ static bool str_ends_with(const char* str, const char* substr) {
 */
 
 static int test_write1(const char* file) {
-    Arena arena = arena_create(1 << 24);
+    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
@@ -37,7 +37,7 @@ static int test_write1(const char* file) {
 }
 
 static int test_write2(const char* file) {
-    Arena arena = arena_create(1 << 24);
+    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
@@ -56,7 +56,7 @@ static int test_write2(const char* file) {
 }
 
 static int test_write3(const char* file) {
-    Arena arena = arena_create(1 << 24);
+    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
@@ -64,7 +64,7 @@ static int test_write3(const char* file) {
     nbt_put(&nbt, &tmp, NBT_COMPOUND);
     nbt_move_to_name(&nbt, &tmp);
 
-    tmp = str_create_view("prout jnjew&xxx");
+    tmp = str_create_view("sf893*jnjew&xxx");
     nbt_put(&nbt, &tmp, NBT_LIST);
     nbt_move_to_name(&nbt, &tmp);
 
@@ -79,7 +79,7 @@ static int test_write3(const char* file) {
 }
 
 static int test_read3(const char* file) {
-    Arena arena = arena_create(1 << 24);
+    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
     NBT nbt;
 
     string in_path = str_create_view(file);
@@ -137,6 +137,7 @@ static void test_dir(const char* path, bool error_test) {
 
 int main(void) {
 
+    memory_stats_init();
     logger_system_init();
 
     test_write1("out1.nbt.gz");
@@ -144,6 +145,8 @@ int main(void) {
     test_write3("out3.nbt.gz");
 
     test_read3("out3.nbt.gz");
+
+    memory_dump_stats();
 
     logger_system_cleanup();
 

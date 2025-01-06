@@ -26,15 +26,15 @@ json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, si
 JSONNode* json_node_create(JSON* json, enum JSONType type) {
     Arena* arena = json->arena;
 
-    JSONNode* node = arena_allocate(arena, sizeof(JSONNode), MEM_TAG_JSON);
+    JSONNode* node = arena_allocate(arena, sizeof(JSONNode), ALLOC_TAG_JSON);
     node->type = type;
     switch (type) {
     case JSON_OBJECT:
-        node->data.obj = arena_allocate(arena, sizeof(Dict), MEM_TAG_JSON | MEM_TAG_DICT);
+        node->data.obj = arena_allocate(arena, sizeof(Dict), ALLOC_TAG_JSON);
         dict_init(node->data.obj, &CMP_STRING, sizeof(string), sizeof(JSONNode*));
         break;
     case JSON_ARRAY:
-        node->data.array = arena_allocate(arena, sizeof(Vector), MEM_TAG_JSON | MEM_TAG_VECTOR);
+        node->data.array = arena_allocate(arena, sizeof(Vector), ALLOC_TAG_JSON);
         vect_init_dynamic(node->data.array, arena, 4, sizeof(JSONNode*));
         break;
     case JSON_STRING:

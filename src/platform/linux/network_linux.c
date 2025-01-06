@@ -196,10 +196,6 @@ string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
 
 /* ===== Networking sub-system ===== */
 
-const char* get_last_error(void) {
-    return strerror(errno);
-}
-
 enum IOCode fill_buffer(NetworkContext* ctx, Connection* conn) {
     UNUSED(ctx);
     enum IOCode res = IOC_AGAIN;

@@ -137,8 +137,8 @@ bool conn_is_resuming_read(const Connection* conn) {
 Connection
 conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port) {
     Connection conn = {
-        .persistent_arena = arena_create(CONN_PARENA_SIZE),
-        .scratch_arena = arena_create(CONN_SARENA_SIZE),
+        .persistent_arena = arena_create(CONN_PARENA_SIZE, BLK_TAG_NETWORK),
+        .scratch_arena = arena_create(CONN_SARENA_SIZE, BLK_TAG_NETWORK),
         .compression = FALSE,
         .encryption = FALSE,
         .state = STATE_HANDSHAKE,

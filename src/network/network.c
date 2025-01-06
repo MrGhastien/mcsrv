@@ -11,8 +11,10 @@
 
 #include "logger.h"
 
+#include "memory/mem_tags.h"
 #include "platform/mc_thread.h"
 #include "platform/network.h"
+#include "platform/platform.h"
 
 static NetworkContext ctx;
 
@@ -55,7 +57,7 @@ i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
 
 i32 network_init(char* host, i32 port, u64 max_connections) {
 
-    ctx.arena = arena_create(40960);
+    ctx.arena = arena_create(40960, BLK_TAG_NETWORK);
     objpool_init(&ctx.connections, &ctx.arena, max_connections, sizeof(Connection));
     ctx.host = str_create_view(host);
     ctx.port = port;
@@ -68,7 +70,6 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
     res = create_server_socket(&ctx, host, port);
     if (res)
         return res;
-
 
     if (!encryption_init(&ctx.enc_ctx))
         return 3;

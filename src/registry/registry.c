@@ -16,7 +16,7 @@ static Registry root;
 static Arena arena;
 
 void registry_system_init(void) {
-    arena = arena_create(REGISTRY_ARENA_SIZE);
+    arena = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY);
     root.name = resid_default_cstr("root");
     dict_init_fixed(&root.entries, NULL, &arena, 100, sizeof(ResourceID), sizeof(Registry));
 

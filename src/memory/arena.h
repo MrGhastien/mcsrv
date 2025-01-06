@@ -7,6 +7,7 @@
 #define ARENA_H
 
 #include "definitions.h"
+#include "mem_tags.h"
 
 /**
    Simple linear allocator.
@@ -26,18 +27,20 @@ typedef struct arena {
  * Creates an arena allocator of the specified size.
  *
  * @param size The number of bytes to allocate for the arena.
+ * @param tag
  * @return The new arena allocator.
  */
-Arena arena_create(u64 size);
+Arena arena_create(u64 size, enum MemoryBlockTag tag);
 /**
  * Creates an arena allocator of the specified size, without logging anything.
  *
  * This is functionally the same as arena_create(u64), except is does not log any trace messages.
  *
  * @param size The number of bytes to allocate for the arena.
+ * @param tag
  * @return The new arena allocator.
  */
-Arena arena_create_silent(u64 size);
+Arena arena_create_silent(u64 size, enum MemoryBlockTag tag);
 /**
  * Frees all memory associated with an arena.
  *
@@ -57,7 +60,7 @@ void arena_destroy(Arena* arena);
  * @param bytes The amount of bytes to allocate.
  * @param tags
  */
-void* arena_allocate(Arena* arena, u64 bytes, i32 tags);
+void* arena_allocate(Arena* arena, u64 bytes, enum AllocTag tags);
 /**
  * Allocates memory in an arena and fills it with 0.
  *
@@ -67,7 +70,7 @@ void* arena_allocate(Arena* arena, u64 bytes, i32 tags);
  * @param bytes The amount of bytes to allocate.
  * @param tags
  */
-void* arena_callocate(Arena* arena, u64 bytes, i32 tags);
+void* arena_callocate(Arena* arena, u64 bytes, enum AllocTag tags);
 
 void* arena_allocate_aligned(Arena* arena, u64 bytes);
 void* arena_callocate_aligned(Arena* arena, u64 bytes);
