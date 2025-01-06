@@ -1,3 +1,4 @@
+#include "definitions.h"
 #include "event/event.h"
 #include "logger.h"
 #include "network/network.h"
@@ -53,7 +54,6 @@ int main(int argc, char** argv) {
         return res;
     }
 
-    memory_dump_stats();
 
     event_handle();
 

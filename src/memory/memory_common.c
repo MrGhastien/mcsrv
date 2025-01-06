@@ -13,6 +13,8 @@
 #include "platform/mc_thread.h"
 #include "utils/ansi_codes.h"
 
+#include <stdlib.h>
+
 #define TRACKER_BUF_SIZE (1 << 24)
 
 struct alloc_track {
@@ -35,8 +37,10 @@ static const char* ALLOC_TAG_NAMES[] = {
     [ALLOC_TAG_STRING] = "String",
     [ALLOC_TAG_DICT] = "Dictionary",
     [ALLOC_TAG_BYTEBUFFER] = "ByteBuffer",
+    [ALLOC_TAG_PACKET] = "Packet",
     [ALLOC_TAG_NBT] = "NBT",
     [ALLOC_TAG_JSON] = "JSON",
+    [ALLOC_TAG_EXTERNAL] = "External",
 };
 
 static const char* BLK_TAG_NAMES[] = {

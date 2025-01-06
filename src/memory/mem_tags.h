@@ -13,6 +13,7 @@ enum AllocTag {
     ALLOC_TAG_PACKET,
     ALLOC_TAG_JSON,
     ALLOC_TAG_NBT,
+    ALLOC_TAG_EXTERNAL,
 
     _ALLOC_TAG_COUNT,
 };

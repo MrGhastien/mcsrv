@@ -5,6 +5,8 @@
 
 #include <pthread.h>
 #include <signal.h>
+#include <errno.h>
+#include <string.h>
 
 void platform_init(void) {
     sigset_t global_sigmask;

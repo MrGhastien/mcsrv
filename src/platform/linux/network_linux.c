@@ -11,6 +11,7 @@
 
 #include "platform/network.h"
 #include "platform/socket.h"
+#include "platform/platform.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -422,6 +423,7 @@ void* network_handle(void* params) {
                 ctx->should_continue = FALSE;
             else {
                 Connection* conn = objpool_get(&ctx->connections, e->data.u64);
+                memory_dump_stats();
                 handle_connection_io(ctx, conn, e->events);
             }
         }
