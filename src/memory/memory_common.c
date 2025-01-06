@@ -110,21 +110,41 @@ void unregister_block(i64 idx) {
     mcmutex_unlock(&stats_mutex);
 }
 
-void register_alloc(i64 arena_idx, i32 start, i32 end, i32 tags) {
-
+void register_alloc(i64 arena_idx, i32 start, i32 end, enum AllocTag tag) {
     if (arena_idx < 0)
         return;
 
-    i32 global_tags = (i64) mcthread_get_data(tag_key) & 0xffffffff;
+    if (start >= end) {
+        log_error("Memory: The start offset of an allocation must be strictly less than its end !");
+        return;
+    }
 
+    i32 global_tags = (i64) mcthread_get_data(tag_key) & 0xffffffff;
     struct alloc_track alloc = {
         .start = start,
         .end = end,
-        .tag = tags | global_tags,
+        .tag = tag | global_tags,
     };
 
     mcmutex_lock(&stats_mutex);
     struct blk_track* track = objpool_get(&arenas, arena_idx);
+    struct alloc_track* tmp_alloc;
+    while ((tmp_alloc = vect_ref(&track->allocs, vect_size(&track->allocs) - 1))) {
+        if (tmp_alloc->start == start) {
+            tmp_alloc->end = end;
+            tmp_alloc->tag = tag;
+            mcmutex_unlock(&stats_mutex);
+            return;
+        }
+
+        if (tmp_alloc->start < start) {
+            if(tmp_alloc->end < start)
+                log_warn("Memory: A region of memory is allocated after a gap");
+            tmp_alloc->end = start;
+            break;
+        }
+        vect_pop(&track->allocs, NULL);
+    }
     vect_add(&track->allocs, &alloc);
     mcmutex_unlock(&stats_mutex);
 }
