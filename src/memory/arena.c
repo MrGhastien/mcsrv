@@ -1,4 +1,6 @@
 #include "arena.h"
+#include "containers/object_pool.h"
+#include "containers/vector.h"
 #include "logger.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
@@ -8,34 +10,78 @@
 #include <stdlib.h>
 #include <string.h>
 
-Arena arena_create(u64 size) {
-    Arena res = {
-        .block = malloc(size),
-        .capacity = size,
-        .length = 0,
-        .saved_length = ~0,
-        .logging = TRUE,
-    };
-    if (!res.block)
-        res.capacity = 0;
+struct alloc_track {
+    i32 tags;
+    i32 start;
+    i32 end;
+};
 
-    log_tracef("Created arena %p of %zu bytes.", res.block, res.capacity);
+struct blk_track {
+    Vector tags;
+    void* block;
+};
 
-    return res;
-}
+#define TRACKER_BUF_SIZE ((sizeof(bool) + sizeof(struct blk_track)) * 1024)
 
-Arena arena_create_silent(u64 size) {
-    Arena res = {
-        .block = malloc(size),
+static u8 arena_buf[TRACKER_BUF_SIZE];
+static Arena stats_arena;
+static ObjectPool arenas;
+static bool tracker_initialized = FALSE;
+
+static Arena arena_create_from(void* buf, u64 size) {
+    return (Arena){
+        .block = buf,
         .capacity = size,
         .length = 0,
         .saved_length = ~0,
         .logging = FALSE,
     };
-    if (!res.block)
-        res.capacity = 0;
+}
 
-    return res;
+static void init_stats(void) {
+    if (tracker_initialized)
+        return;
+    tracker_initialized = TRUE;
+    stats_arena = arena_create_from(arena_buf, TRACKER_BUF_SIZE);
+    objpool_init(&arenas, &stats_arena, 1024, sizeof(Vector*));
+}
+
+Arena arena_create(u64 size) {
+    if (!tracker_initialized)
+        init_stats();
+
+    void* block = malloc(size);
+    
+    if (!block)
+        return (Arena) {0};
+
+    log_tracef("Created arena %p of %zu bytes.", res.block, res.capacity);
+
+    return (Arena) {
+        .block = block,
+        .capacity = size,
+        .length = 0,
+        .saved_length = ~0,
+        .logging = TRUE,
+    };
+}
+
+Arena arena_create_silent(u64 size) {
+    if (!tracker_initialized)
+        init_stats();
+
+    void* block = malloc(size);
+    
+    if (!block)
+        return (Arena) {0};
+
+    return (Arena) {
+        .block = block,
+        .capacity = size,
+        .length = 0,
+        .saved_length = ~0,
+        .logging = TRUE,
+    };
 }
 
 void arena_destroy(Arena* arena) {
@@ -48,9 +94,9 @@ void arena_destroy(Arena* arena) {
 
 void* arena_allocate(Arena* arena, u64 bytes) {
 
-    //Alignment
+    // Alignment
     bytes = ceil_u64(bytes, sizeof(uintptr_t));
-    
+
     u64 remaining = arena->capacity - arena->length;
     if (bytes > remaining) {
         if (arena->logging)
@@ -98,7 +144,7 @@ void arena_free_ptr(Arena* arena, void* ptr) {
 }
 
 void arena_save(Arena* arena) {
-    if(arena->saved_length != ~0ULL) {
+    if (arena->saved_length != ~0ULL) {
         log_debug("Arena pointer save would discard previously saved pointer.");
         return;
     }

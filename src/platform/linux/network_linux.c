@@ -379,7 +379,7 @@ static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i
             close_connection(ctx, conn);
             break;
         case IOC_ERROR:
-            log_error("Errored connection.");
+            log_error("An error occurred while processing a connection.");
             close_connection(ctx, conn);
             break;
         default:
