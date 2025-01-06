@@ -1,7 +1,5 @@
 #include "arena.h"
-#include "containers/object_pool.h"
 #include "logger.h"
-#include "platform/mc_mutex.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
 #include "_memory_internal.h"
@@ -49,13 +47,13 @@ Arena arena_create_silent(u64 size, enum MemoryBlockTag tag) {
 }
 
 void arena_destroy(Arena* arena) {
+    unregister_block(arena->stats_index);
+
     free(arena->block);
     if (arena->logging) {
         log_tracef("Destroyed arena %p (%zu / %zu).", arena->block, arena->length, arena->capacity);
     }
     arena->block = NULL;
-
-    unregister_block(arena->stats_index);
 }
 
 void* arena_allocate(Arena* arena, u64 bytes, enum AllocTag tags) {
