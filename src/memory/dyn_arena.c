@@ -97,7 +97,7 @@ void* dynarena_allocate(DynamicArena* arena, size_t bytes) {
     if (suitable == NULL)
         suitable = add_block(arena, bytes);
 
-    void* ptr = arena_allocate(suitable, bytes);
+    void* ptr = arena_allocate(suitable, bytes, 0);
 
 #ifdef DEBUG
     printf("Allocated %zu bytes, now %zu bytes.\n", bytes, total_size(arena));

@@ -10,6 +10,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/utils/iomux.c \
 		$(SRC_DIR)/memory/dyn_arena.c \
 		$(SRC_DIR)/memory/arena.c \
+		$(SRC_DIR)/memory/memory_common.c \
 		$(SRC_DIR)/containers/dict-op.c \
 		$(SRC_DIR)/containers/dict-init.c \
 		$(SRC_DIR)/containers/vector.c \

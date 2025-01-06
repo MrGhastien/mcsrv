@@ -4,6 +4,7 @@
 #include "utils/bitwise.h"
 #include "utils/math.h"
 #include "utils/string.h"
+#include "memory/mem_tags.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -218,7 +219,7 @@ ByteBuffer bytebuf_create(u64 size) {
 
 ByteBuffer bytebuf_create_fixed(u64 size, Arena* arena) {
     return (ByteBuffer){
-        .buf = arena_allocate(arena, size),
+        .buf = arena_allocate(arena, size, MEM_TAG_BYTEBUFFER),
         .read_head = 0,
         .write_head = 0,
         .size = 0,

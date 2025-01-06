@@ -85,6 +85,14 @@ bool objpool_remove(ObjectPool* pool, i64 idx);
  */
 void* objpool_get(ObjectPool* pool, i64 index);
 
+/**
+ * Performs an action on all the elements of an object pool.
+ *
+ * @param[in] pool The object pool to iterate.
+ * @param[in] action The action to perform.
+ */
+void objpool_foreach(const ObjectPool* pool, void (*action)(void*, i64));
+
 #define objpool_size(pool) ((pool)->size)
 #define objpool_cap(pool) ((pool)->capacity)
 #define objpool_stride(pool) ((pool)->stride)

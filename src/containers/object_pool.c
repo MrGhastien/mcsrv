@@ -96,7 +96,7 @@ void* objpool_add(ObjectPool* pool, i64* out_index) {
     u64 local_index;
     struct data_block* blk = get_block_from_index(pool->start, index, &local_index);
     void* ptr = get_obj(blk, local_index, pool->stride);
-    set_allocated(blk, index, TRUE, pool->stride);
+    set_allocated(blk, local_index, TRUE, pool->stride);
 
     if (out_index)
         *out_index = index;
@@ -112,10 +112,10 @@ bool objpool_remove(ObjectPool* pool, i64 idx) {
     u64 local_index;
     struct data_block* blk = get_block_from_index(pool->start, idx, &local_index);
 
-    if (!is_allocated(blk, idx, pool->stride))
+    if (!is_allocated(blk, local_index, pool->stride))
         return FALSE;
 
-    set_allocated(blk, idx, FALSE, pool->stride);
+    set_allocated(blk, local_index, FALSE, pool->stride);
     if (idx < pool->next_insert_index)
         pool->next_insert_index = idx;
     pool->size--;
@@ -129,7 +129,21 @@ void* objpool_get(ObjectPool* pool, i64 index) {
     u64 local_index;
     struct data_block* blk = get_block_from_index(pool->start, index, &local_index);
 
-    if (!is_allocated(blk, index, pool->stride))
+    if (!is_allocated(blk, local_index, pool->stride))
         return NULL;
-    return get_obj(blk, index, pool->stride);
+    return get_obj(blk, local_index, pool->stride);
+}
+
+void objpool_foreach(const ObjectPool* pool, void (*action)(void*, i64)) {
+    u64 size = objpool_size(pool);
+    u64 cap = objpool_cap(pool);
+    u64 i = 0;
+    for (u64 j = 0; j < cap && i < size; ++j) {
+        u64 local_index;
+        struct data_block* blk = get_block_from_index(pool->start, j, &local_index);
+        if (is_allocated(blk, local_index, pool->stride)) {
+            action(get_obj(blk, local_index, pool->stride), j);
+            i++;
+        }
+    }
 }

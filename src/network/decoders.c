@@ -1,6 +1,7 @@
 #include "decoders.h"
 #include "containers/bytebuffer.h"
 #include "memory/arena.h"
+#include "memory/mem_tags.h"
 #include "packet.h"
 
 
@@ -11,7 +12,7 @@ PKT_DECODER(dummy) {
 }
 
 PKT_DECODER(handshake) {
-    PacketHandshake* hshake = arena_allocate(arena, sizeof(PacketHandshake));
+    PacketHandshake* hshake = arena_allocate(arena, sizeof(PacketHandshake), MEM_TAG_NETWORK);
     if (!hshake)
         return;
 
@@ -33,7 +34,7 @@ PKT_DECODER(handshake) {
 }
 
 PKT_DECODER(ping) {
-    PacketPing* ping = arena_allocate(arena, sizeof *ping);
+    PacketPing* ping = arena_allocate(arena, sizeof *ping, MEM_TAG_NETWORK);
 
     // There is no need to care about endianess, as we don't do operations or comparisons
     // on the received number.
@@ -42,7 +43,7 @@ PKT_DECODER(ping) {
 }
 
 PKT_DECODER(log_start) {
-    PacketLoginStart* payload = arena_allocate(arena, sizeof *payload);
+    PacketLoginStart* payload = arena_allocate(arena, sizeof *payload, MEM_TAG_NETWORK);
     bytebuf_read_mcstring(bytes, arena, &payload->player_name);
     bytebuf_read(bytes, 16, &payload->uuid);
 
@@ -50,14 +51,14 @@ PKT_DECODER(log_start) {
 }
 
 PKT_DECODER(enc_res) {
-    PacketEncRes* payload = arena_allocate(arena, sizeof *payload);
+    PacketEncRes* payload = arena_allocate(arena, sizeof *payload, MEM_TAG_NETWORK);
 
     bytebuf_read_varint(bytes, &payload->shared_secret_length);
-    payload->shared_secret = arena_allocate(arena, payload->shared_secret_length);
+    payload->shared_secret = arena_allocate(arena, payload->shared_secret_length, MEM_TAG_NETWORK);
     bytebuf_read(bytes, payload->shared_secret_length, payload->shared_secret);
 
     bytebuf_read_varint(bytes, &payload->verify_token_length);
-    payload->verify_token = arena_allocate(arena, payload->verify_token_length);
+    payload->verify_token = arena_allocate(arena, payload->verify_token_length, MEM_TAG_NETWORK);
     bytebuf_read(bytes, payload->verify_token_length, payload->verify_token);
 
     packet->payload = payload;

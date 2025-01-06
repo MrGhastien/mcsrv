@@ -4,8 +4,9 @@
 #include "containers/dict.h"
 #include "containers/vector.h"
 #include "logger.h"
-#include "utils/string.h"
+#include "memory/mem_tags.h"
 #include "utils/str_builder.h"
+#include "utils/string.h"
 
 #include <stdio.h>
 
@@ -19,20 +20,21 @@ static const char* TYPES[_JSON_COUNT] = {
     [JSON_BOOL] = "JSON_BOOL",
 };
 
-static void json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level);
+static void
+json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level);
 
 JSONNode* json_node_create(JSON* json, enum JSONType type) {
     Arena* arena = json->arena;
 
-    JSONNode* node = arena_allocate(arena, sizeof(JSONNode));
+    JSONNode* node = arena_allocate(arena, sizeof(JSONNode), MEM_TAG_JSON);
     node->type = type;
     switch (type) {
     case JSON_OBJECT:
-        node->data.obj = arena_allocate(arena, sizeof(Dict));
+        node->data.obj = arena_allocate(arena, sizeof(Dict), MEM_TAG_JSON | MEM_TAG_DICT);
         dict_init(node->data.obj, &CMP_STRING, sizeof(string), sizeof(JSONNode*));
         break;
     case JSON_ARRAY:
-        node->data.array = arena_allocate(arena, sizeof(Vector));
+        node->data.array = arena_allocate(arena, sizeof(Vector), MEM_TAG_JSON | MEM_TAG_VECTOR);
         vect_init_dynamic(node->data.array, arena, 4, sizeof(JSONNode*));
         break;
     case JSON_STRING:
@@ -247,7 +249,8 @@ static void foreach_stringify(const Dict* dict, size_t idx, void* key, void* val
     strbuild_appendc(sdata->builder, '\n');
 }
 
-static void json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level) {
+static void
+json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level) {
     if (!node)
         return;
     switch (node->type) {

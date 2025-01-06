@@ -7,7 +7,6 @@
 #define ARENA_H
 
 #include "definitions.h"
-#include <stddef.h>
 
 /**
    Simple linear allocator.
@@ -19,6 +18,7 @@ typedef struct arena {
     u64 capacity;
     u64 length;
     u64 saved_length;
+    i64 stats_index;
     bool logging;
 } Arena;
 
@@ -55,8 +55,9 @@ void arena_destroy(Arena* arena);
  *
  * @param arena The arena to use to allocate memory.
  * @param bytes The amount of bytes to allocate.
+ * @param tags
  */
-void* arena_allocate(Arena* arena, u64 bytes);
+void* arena_allocate(Arena* arena, u64 bytes, i32 tags);
 /**
  * Allocates memory in an arena and fills it with 0.
  *
@@ -64,8 +65,9 @@ void* arena_allocate(Arena* arena, u64 bytes);
  *
  * @param arena The arena to use to allocate memory.
  * @param bytes The amount of bytes to allocate.
+ * @param tags
  */
-void* arena_callocate(Arena* arena, u64 bytes);
+void* arena_callocate(Arena* arena, u64 bytes, i32 tags);
 
 void* arena_allocate_aligned(Arena* arena, u64 bytes);
 void* arena_callocate_aligned(Arena* arena, u64 bytes);
@@ -73,14 +75,14 @@ void* arena_callocate_aligned(Arena* arena, u64 bytes);
  * Frees the specified amount of bytes from an arena.
  *
  * If the amount of bytes is greater than the length of the allocated memory
- * of the arena, it is silently clamped all the memory is freed 
+ * of the arena, it is silently clamped all the memory is freed
  */
 void arena_free(Arena* arena, u64 bytes);
 /**
  * Frees the specified amount of bytes from an arena.
  *
  * If the amount of bytes is greater than the length of the allocated memory
- * of the arena, it is silently clamped all the memory is freed 
+ * of the arena, it is silently clamped all the memory is freed
  */
 void arena_free_ptr(Arena* arena, void* ptr);
 
@@ -95,7 +97,7 @@ void arena_save(Arena* arena);
 /**
  * Restores the available memory pointer that was previously saved.
  *
- * Note that calling this function before saving any available memory pointer simply 
+ * Note that calling this function before saving any available memory pointer simply
  * restores the pointer to the start of the underlying memory, i.e. frees all memory.
  *
  * @param arena The arena of which to restore the available memory pointer.
@@ -121,14 +123,16 @@ u64 arena_recent_length(Arena* arena);
 void* arena_recent_pos(Arena* arena);
 
 /**
-* Indicates whether two arenas share the same memory block or not.
-*
-* @param[in] a The first arena.
-* @param[in] b The second arena.
-* @return @ref TRUE if both arenas share the same memory block, @ref FALSE otherwise.
-*/
+ * Indicates whether two arenas share the same memory block or not.
+ *
+ * @param[in] a The first arena.
+ * @param[in] b The second arena.
+ * @return @ref TRUE if both arenas share the same memory block, @ref FALSE otherwise.
+ */
 static inline bool arena_is_mem_shared(const Arena* a, const Arena* b) {
     return a->block == b->block;
 }
+
+void memory_dump_stats(void);
 
 #endif /* ! ARENA_H */

@@ -4,15 +4,16 @@
 #include "logger.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
+#include "memory/mem_tags.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 struct data_block* alloc_block(Arena* arena, u64 capacity, u64 stride) {
-    struct data_block* blk = arena_allocate(arena, sizeof *blk);
+    struct data_block* blk = arena_allocate(arena, sizeof *blk, MEM_TAG_VECTOR);
     *blk = (struct data_block){
         .capacity = capacity,
-        .data = arena_allocate(arena, stride * capacity),
+        .data = arena_allocate(arena, stride * capacity, MEM_TAG_VECTOR),
     };
     return blk;
 }

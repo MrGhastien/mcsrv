@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 typedef struct server_ctx {
     bool running;
 } ServerContext;
@@ -52,9 +51,11 @@ int main(int argc, char** argv) {
 
     res = init("0.0.0.0", 25565, 10);
 
-    if(res != 0) {
+    if (res != 0) {
         return res;
     }
+
+    memory_dump_stats();
 
     event_handle();
 
