@@ -271,8 +271,7 @@ static u64 write_data_callback(void* ptr, u64 size, u64 nmemb, ByteBuffer* buffe
 }
 
 bool encryption_authenticate_player(Connection* conn, JSON* json) {
-    Arena scratch = conn->scratch_arena;
-    string hash = encryption_hash(&scratch, conn->global_enc_ctx, &conn->peer_enc_ctx);
+    string hash = encryption_hash(&conn->scratch_arena, conn->global_enc_ctx, &conn->peer_enc_ctx);
     log_infof("Hash: %s", hash.base);
 
     CURL* curl = curl_easy_init();
@@ -281,9 +280,9 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
         return FALSE;
     }
 
-    ByteBuffer buffer = bytebuf_create_fixed(8192, &scratch);
+    ByteBuffer buffer = bytebuf_create_fixed(8192, &conn->scratch_arena);
     char url[2048];
-    char* error_buffer = arena_callocate(&scratch, CURL_ERROR_SIZE, ALLOC_TAG_STRING);
+    char* error_buffer = arena_callocate(&conn->scratch_arena, CURL_ERROR_SIZE, ALLOC_TAG_STRING);
     snprintf(url,
              2048,
              "https://sessionserver.mojang.com/session/minecraft/"
@@ -293,7 +292,7 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.8.0");
+    //curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.8.0");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_buffer);
@@ -310,17 +309,18 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
     if (res_code != 200) {
         log_errorf("Failed request to sessionserver.mojang.com: %li", res_code);
+        return FALSE;
     }
 
     bytebuf_write_varint(&buffer, 0);
 
-    *json = json_parse(&buffer, &scratch);
+    *json = json_parse(&buffer, &conn->scratch_arena);
     if (json->arena == NULL)
         return FALSE;
 
 #ifdef TRACE
     string str;
-    json_stringify(json, &str, 2048, &scratch);
+    json_stringify(json, &str, &conn->scratch_arena);
     log_tracef("%s", str.base);
 #endif
 

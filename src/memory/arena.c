@@ -16,7 +16,7 @@ Arena arena_create(u64 size, enum MemoryBlockTag tag) {
         return (Arena){0};
 
     i64 idx = register_block(block, size, tag);
-    log_tracef("Created arena %p of %zu bytes.", res.block, res.capacity);
+    log_tracef("Created arena %p of %zu bytes.", block, size);
 
     return (Arena){
         .block = block,

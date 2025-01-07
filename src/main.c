@@ -15,10 +15,11 @@ static ServerContext server_ctx;
 static i32 init(char* host, i32 port, u64 max_connections) {
     i32 code = 0;
 
+    logger_system_init();
+
     memory_stats_init();
     platform_init();
 
-    logger_system_init();
     event_system_init();
     registry_system_init();
     code = network_init(host, port, max_connections);
@@ -38,9 +39,9 @@ static void cleanup(void) {
     network_stop();
     registry_system_cleanup();
     event_system_cleanup();
-    logger_system_cleanup();
 
     platform_cleanup();
+    logger_system_cleanup();
 }
 
 int main(int argc, char** argv) {
@@ -53,7 +54,6 @@ int main(int argc, char** argv) {
     if (res != 0) {
         return res;
     }
-
 
     event_handle();
 

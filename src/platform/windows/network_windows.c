@@ -16,11 +16,6 @@
 #define COMPL_KEY_ACCEPT 0
 #define COMPL_KEY_STOP 1
 
-enum IOCode
-sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output, u64* out_byte_count);
-enum IOCode
-sock_send_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* input, u64* out_byte_count);
-
 typedef struct PlatformConnection {
     Connection connection;
     WSAOVERLAPPED read_overlapped;
@@ -94,6 +89,8 @@ bool sockaddr_from_acceptex(void* acceptex_buffer, SocketAddress* out_address) {
     struct sockaddr* peer;
     i32 peer_len;
 
+    STATIC_ASSERT(sizeof(struct sockaddr_storage) == sizeof(out_address->data.storage));
+
     GetAcceptExSockaddrs(acceptex_buffer,
                          0,
                          sizeof(out_address->data.storage) + 16,
@@ -112,8 +109,7 @@ bool sockaddr_from_acceptex(void* acceptex_buffer, SocketAddress* out_address) {
 bool sock_is_valid(socketfd socket) {
     return socket != INVALID_SOCKET;
 }
-enum IOCode
-sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output, u64* out_byte_count) {
+enum IOCode sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output) {
     WSABUF wsa_regions[2];
     u64 region_count = 2;
     BufferRegion buf_regions[2];
@@ -132,18 +128,12 @@ sock_recv_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* output, u6
         i32 error = WSAGetLastError();
         if (error == WSA_IO_PENDING)
             return IOC_PENDING;
-        log_errorf("Failed to fill the receive buffer: %s", get_last_error());
+        log_errorf("Failed to fill the receive buffer: %s", get_error_from_code(error));
         return IOC_ERROR;
     }
-
-    bytebuf_register_write(output, bytes);
-    if (bytes == 0)
-        return IOC_CLOSED;
-    *out_byte_count = bytes;
-    return IOC_OK;
+    return IOC_PENDING;
 }
-enum IOCode
-sock_send_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* input, u64* out_byte_count) {
+enum IOCode sock_send_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* input) {
     WSABUF wsa_regions[2];
     u64 region_count = 2;
     BufferRegion buf_regions[2];
@@ -163,12 +153,7 @@ sock_send_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer* input, u64
             return IOC_PENDING;
         return IOC_ERROR;
     }
-
-    bytebuf_register_read(input, bytes);
-    if (bytes == 0)
-        return IOC_CLOSED;
-    *out_byte_count = bytes;
-    return IOC_OK;
+    return IOC_PENDING;
 }
 
 socketfd sock_create(int address_family, int type, int protocol) {
@@ -281,8 +266,7 @@ enum IOCode fill_buffer(NetworkContext* ctx, Connection* conn) {
     enum IOCode res = IOC_PENDING;
     enum IOCode code = IOC_OK;
     while (conn->recv_buffer.size < conn->recv_buffer.capacity && code == IOC_OK) {
-        u64 size;
-        code = sock_recv_buf(conn->peer_socket, &pconn->read_overlapped, &conn->recv_buffer, &size);
+        code = sock_recv_buf(conn->peer_socket, &pconn->read_overlapped, &conn->recv_buffer);
         if (code < res)
             res = code;
         if (code == IOC_PENDING)
@@ -305,9 +289,7 @@ enum IOCode empty_buffer(NetworkContext* ctx, Connection* conn) {
     enum IOCode res = IOC_PENDING;
     enum IOCode code = IOC_OK;
     while (conn->send_buffer.size > 0 && code == IOC_OK) {
-        u64 size;
-        code =
-            sock_send_buf(conn->peer_socket, &pconn->write_overlapped, &conn->send_buffer, &size);
+        code = sock_send_buf(conn->peer_socket, &pconn->write_overlapped, &conn->send_buffer);
         if (code < res)
             res = code;
         if (code == IOC_PENDING)
@@ -318,7 +300,7 @@ enum IOCode empty_buffer(NetworkContext* ctx, Connection* conn) {
 
 static enum IOCode initiate_read(NetworkContext* ctx, Connection* conn) {
 
-    enum IOCode code = fill_buffer(ctx, conn);
+    enum IOCode code = IOC_OK;
     while (code == IOC_OK) {
         code = receive_packet(ctx, conn);
         if (code == IOC_AGAIN && !conn->pending_recv)
@@ -334,6 +316,9 @@ static enum IOCode handle_connection_io(NetworkContext* ctx,
 
     enum IOCode code = IOC_CLOSED;
     Connection* conn = &pconn->connection;
+
+    if (transferred == 0)
+        return IOC_CLOSED;
 
     // Resume processing the data
     if (overlapped == &pconn->read_overlapped && conn->pending_recv) {
@@ -362,24 +347,24 @@ static enum IOCode handle_connection_io(NetworkContext* ctx,
     return code;
 }
 
-static enum IOCode accept_connection(NetworkContext* ctx, socketfd* peer_socket) {
+static enum IOCode accept_connection(NetworkContext* ctx, PlatformConnection** out_pconn) {
+    static socketfd peer_socket_cache = SOCKFD_INVALID;
     SocketAddress peer_address_cache;
-    if (!sock_is_valid(*peer_socket)) {
+    if (!sock_is_valid(peer_socket_cache)) {
         enum IOCode code =
-            sock_accept(ctx->server_socket, peer_socket, platform_ctx.accept_addr_buffer);
+            sock_accept(ctx->server_socket, &peer_socket_cache, platform_ctx.accept_addr_buffer);
         switch (code) {
         case IOC_ERROR:
             log_errorf("Failed to establish connection to peer: %s", get_last_error());
-            return code;
-            // no fall through allowed :(
+            EXPLICIT_FALLTHROUGH;
         case IOC_PENDING:
             return code;
         default:
-            sockaddr_from_acceptex(platform_ctx.accept_addr_buffer, &peer_address_cache);
             break;
         }
-    } else
-        sockaddr_from_acceptex(platform_ctx.accept_addr_buffer, &peer_address_cache);
+    }
+
+    sockaddr_from_acceptex(platform_ctx.accept_addr_buffer, &peer_address_cache);
 
     Arena arena = ctx->arena;
 
@@ -389,20 +374,20 @@ static enum IOCode accept_connection(NetworkContext* ctx, socketfd* peer_socket)
     i64 index;
     PlatformConnection* pconn = objpool_add(&ctx->connections, &index);
     if (!pconn) {
-        sock_close(*peer_socket);
+        sock_close(peer_socket_cache);
         log_warn("Reached maximum connection amount, rejecting.");
         return IOC_CLOSED;
     }
 
     Connection* connection = &pconn->connection;
     *pconn = (PlatformConnection){
-        .connection = conn_create(*peer_socket, index, &ctx->enc_ctx, peer_host, peer_port),
+        .connection = conn_create(peer_socket_cache, index, &ctx->enc_ctx, peer_host, peer_port),
         .read_overlapped = {0},
         .write_overlapped = {0},
     };
 
     if (CreateIoCompletionPort(
-            (HANDLE) *peer_socket, platform_ctx.completion_port, (uintptr_t) pconn, 0) !=
+            (HANDLE) peer_socket_cache, platform_ctx.completion_port, (uintptr_t) pconn, 0) !=
         platform_ctx.completion_port) {
         log_errorf("Could not handle the connection to [%s:%u]: %s",
                    connection->peer_addr.base,
@@ -412,19 +397,23 @@ static enum IOCode accept_connection(NetworkContext* ctx, socketfd* peer_socket)
         return IOC_ERROR;
     }
 
-    *peer_socket = SOCKFD_INVALID;
+    peer_socket_cache = SOCKFD_INVALID;
     log_infof("Accepted connection from [%s:%i].", peer_host.base, peer_port);
 
-    enum IOCode code = initiate_read(ctx, &pconn->connection);
-    if (code < IOC_OK)
-        close_connection(ctx, &pconn->connection);
-    return code;
+    *out_pconn = pconn;
+
+    return IOC_OK;
 }
 static enum IOCode try_accept(NetworkContext* ctx) {
-    static socketfd peer_socket_cache = SOCKFD_INVALID;
     enum IOCode accept_res = IOC_OK;
     while (accept_res == IOC_OK) {
-        accept_res = accept_connection(ctx, &peer_socket_cache);
+        PlatformConnection* pconn;
+        accept_res = accept_connection(ctx, &pconn);
+        if(accept_res == IOC_OK) {
+            enum IOCode code = initiate_read(ctx, &pconn->connection);
+            if (code < IOC_OK)
+                close_connection(ctx, &pconn->connection);
+        }
     }
 
     return accept_res;

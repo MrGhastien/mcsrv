@@ -22,11 +22,11 @@
  * gracefully.
  */
 enum IOCode {
-    IOC_ERROR, /**< An error occurred, the connection must be closed. */
-    IOC_CLOSED, /**< The connection has been closed by the peer, stop handling it. */
-    IOC_OK,    /**< No errors occurred, connection can stay open. */
-    IOC_AGAIN, /**< Data could not be read all at once, we should try reading more when possible. */
-    IOC_PENDING, /**< Read operations are pending. */
+    IOC_ERROR = 0, /**< An error occurred, the connection must be closed. */
+    IOC_CLOSED = 1, /**< The connection has been closed by the peer, stop handling it. */
+    IOC_OK = 2,    /**< No errors occurred, connection can stay open. */
+    IOC_AGAIN = 3, /**< Data could not be read all at once, we should try reading more when possible. */
+    IOC_PENDING = 4, /**< Read operations are pending. */
 };
 
 typedef struct NetworkContext {
