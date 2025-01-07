@@ -98,7 +98,7 @@ PKT_HANDLER(status) {
 PKT_HANDLER(ping) {
     PacketPing* ping = pkt->payload;
     PacketPing pong = {.num = ping->num};
-    Packet response = {.id = PKT_PING, .payload = &pong};
+    Packet response = {.id = PKT_STATUS_PING, .payload = &pong};
 
     send_packet(ctx, &response, conn);
     return TRUE;
@@ -127,7 +127,7 @@ PKT_HANDLER(log_start) {
     conn->verify_token_size = req->verify_tok_length;
 
     Packet response = {
-        .id = PKT_ENC_REQ,
+        .id = PKT_LOGIN_CRYPT_REQUEST,
         .payload = req,
     };
 
@@ -143,7 +143,7 @@ static bool enable_compression(NetworkContext* ctx, Connection* conn) {
     };
 
     Packet cmprss_pkt = {
-        .id = PKT_COMPRESS,
+        .id = PKT_LOGIN_COMPRESS,
         .payload = &payload,
     };
 
@@ -223,7 +223,7 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
     }
 
     Packet pkt = {
-        .id = PKT_LOG_SUCCESS,
+        .id = PKT_LOGIN_SUCCESS,
         .payload = &login_success,
     };
 

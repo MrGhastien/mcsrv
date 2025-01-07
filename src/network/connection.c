@@ -40,10 +40,10 @@ static PacketFunction function_table[_STATE_COUNT][_PKT_TYPE_COUNT] = {
             &pkt_decode_dummy,
             &pkt_handle_status,
             &pkt_encode_status,
-            "STATUS_REQ",
-            "STATUS_RES",
+            "STATUS_REQUEST",
+            "STATUS_RESPONSE",
         },
-        [PKT_PING] = {
+        [PKT_STATUS_PING] = {
             &pkt_decode_ping,
             &pkt_handle_ping,
             &pkt_encode_ping,
@@ -52,41 +52,48 @@ static PacketFunction function_table[_STATE_COUNT][_PKT_TYPE_COUNT] = {
         },
     },
     [STATE_LOGIN] = {
-        [PKT_LOG_START] = {
+        [PKT_LOGIN_DISCONNECT] = {
             &pkt_decode_log_start,
             &pkt_handle_log_start,
             &pkt_encode_dummy,
-            "LOG_START",
+            "LOGIN_START",
             "DISCONNECT",
         },
-        [PKT_ENC_REQ] = {
+        [PKT_LOGIN_CRYPT_REQUEST] = {
             &pkt_decode_enc_res,
             &pkt_handle_enc_res,
             &pkt_encode_enc_req,
-            "ENC_RES",
-            "ENC_REQ",
+            "CRYPT_RESPONSE",
+            "CRYPT_REQUEST",
         },
-        [PKT_LOG_SUCCESS] = {
+        [PKT_LOGIN_SUCCESS] = {
             NULL,
             NULL,
             &pkt_encode_log_success,
-            "LOG_PLUGIN_PAYLOAD_S",
-            "LOG_SUCCESS",
+            "LOGIN_CUSTOM_RESPONSE",
+            "LOGIN_SUCCESS",
         },
-        [PKT_COMPRESS] = {
+        [PKT_LOGIN_COMPRESS] = {
             &pkt_decode_dummy,
             &pkt_handle_dummy,
             &pkt_encode_compress,
-            "LOG_ACK",
+            "LOGIN_ACK",
             "COMPRESS",
         },
-        [PKT_LOG_PLUGIN_PAYLOAD_C] = {
+        [PKT_LOGIN_CUSTOM_REQUEST] = {
             NULL,
             NULL,
             NULL,
-            "LOG_PLUGIN_PAYLOAD_C",
-            "COOKIE_RES",
+            "LOGIN_CUSTOM_REQUEST",
+            "COOKIE_RESPONSE",
         },
+        [PKT_LOGIN_COOKIE_REQUEST] = {
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            "LOGIN_COOKIE_REQUEST",
+        }
     },
 };
 

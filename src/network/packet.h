@@ -27,8 +27,8 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#include "definitions.h"
 #include "containers/vector.h"
+#include "definitions.h"
 #include "utils/string.h"
 
 #include <stddef.h>
@@ -57,7 +57,7 @@ enum PacketType {
     /** @ref State#STATE_STATUS "Status" phase (Server-Bound) */
     PKT_STATUS = 0x0,
     /** @ref State#STATE_STATUS "Status" phase (Client-Bound) */
-    PKT_PING = 0x1,
+    PKT_STATUS_PING = 0x1,
     /**@}*/
 
     // === LOGIN ===
@@ -65,21 +65,48 @@ enum PacketType {
     /**@{*/
     // Client-bound
     /** @ref State#STATE_LOGIN "Log-in" phase (Client-bound) */
-    PKT_DISCONNECT = 0x0,
-    PKT_ENC_REQ = 0x1,
-    PKT_LOG_SUCCESS = 0x2,
-    PKT_COMPRESS = 0x3,
-    PKT_LOG_PLUGIN_PAYLOAD_C = 0x4,
-    PKT_COOKIE_REQ = 0x5,
+    PKT_LOGIN_DISCONNECT = 0x0,
+    PKT_LOGIN_CRYPT_REQUEST = 0x1,
+    PKT_LOGIN_SUCCESS = 0x2,
+    PKT_LOGIN_COMPRESS = 0x3,
+    PKT_LOGIN_CUSTOM_REQUEST = 0x4,
+    PKT_LOGIN_COOKIE_REQUEST = 0x5,
     /**@}*/
     // Server-bound
     /**@{*/
     /** @ref State#STATE_LOGIN "Log-in" phase (Server-bound) */
-    PKT_LOG_START = 0x0,
-    PKT_ENC_RES = 0x1,
-    PKT_LOG_PLUGIN_PAYLOAD_S = 0x2,
-    PKT_LOG_ACK = 0x3,
-    PKT_COOKIE_RES = 0x4,
+    PKT_LOGIN_START = 0x0,
+    PKT_LOGIN_CRYPT_RESPONSE = 0x1,
+    PKT_LOGIN_CUSTOM_RESPONSE = 0x2,
+    PKT_LOGIN_ACK = 0x3,
+    PKT_LOGIN_COOKIE_RESPONSE = 0x4,
+    /**@}*/
+
+    // === CONFIGURATION ===
+    /** @name Configuration */
+    /**@{*/
+    /** @ref State#STATE_CONFIG "Configuration" phase (Client-Bound) */
+    PKT_CFG_COOKIE_REQUEST = 0x0,
+    PKT_CFG_CUSTOM_REQUEST = 0x1,
+    PKT_CFG_DISCONNECT = 0x2,
+    PKT_CFG_FINISH = 0x3,
+    PKT_CFG_CLIENT_KEEP_ALIVE = 0x4,
+    PKT_CFG_PING = 0x5,
+    PKT_CFG_RESET_CHAR = 0x6,
+    PKT_CFG_REGISTRY_DATA = 0x7,
+    PKT_CFG_REMOVE_RESPACK = 0x8,
+    PKT_CFG_ADD_RESPACK = 0x9,
+    PKT_CFG_STORE_COOKIE = 0xa,
+    PKT_CFG_TRANSFER = 0xb,
+    PKT_CFG_SET_FEATURE_FLAGS = 0xc,
+    /** @ref State#STATE_CONFIG "Configuration" phase (Server-Bound) */
+    PKT_CFG_CLIENT_INFO = 0x0,
+    PKT_CFG_COOKIE_RESPONSE = 0x1,
+    PKT_CFG_CUSTOM_RESPONSE = 0x2,
+    PKT_CFG_FINISH_ACK = 0x3,
+    PKT_CFG_SERVER_KEEP_ALIVE = 0x4,
+    PKT_CFG_PONG = 0x5,
+    PKT_CFG_RESPACK_RESPONSE = 0x6,
     /**@}*/
 
     _PKT_TYPE_COUNT = 6
@@ -93,8 +120,8 @@ enum PacketType {
  */
 typedef struct Packet {
     enum PacketType id; /**< The packet identifier. */
-    u32 total_length;    /**< The length of the payload and packet ID (as a VarInt). Only used to
-                             resume packet decoding. */
+    u32 total_length;   /**< The length of the payload and packet ID (as a VarInt). Only used to
+                            resume packet decoding. */
     u32 payload_length; /**< The length of the payload. */
     void* payload;      /**< A pointer to the payload. */
 } Packet;
@@ -195,7 +222,7 @@ typedef struct {
 } PacketSetCompress;
 
 /**
- * 
+ *
  */
 typedef struct {
     string name;
@@ -206,7 +233,7 @@ typedef struct {
 
 /**
  * Packet sent to conclude the login process.
- * 
+ *
  * The server sends the player name and UUID as given by Mojang's authentication server,
  * as well as other player properties (e.g. skin texture)
  */

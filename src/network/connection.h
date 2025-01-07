@@ -12,11 +12,11 @@
 
 #include "common_types.h"
 #include "compression.h"
-#include "security.h"
 #include "packet.h"
+#include "security.h"
 
-#include "memory/arena.h"
 #include "containers/bytebuffer.h"
+#include "memory/arena.h"
 #include "utils/string.h"
 
 #include "platform/mc_mutex.h"
@@ -24,7 +24,7 @@
 /**
  * Enumeration of connection states.
  *
- * 
+ *
  */
 enum State {
     /** The connection is closed. */
@@ -35,6 +35,8 @@ enum State {
     STATE_STATUS,
     /** The connected peer is logging-in. */
     STATE_LOGIN,
+    /** The peer is logged-in, and is now synchronizing its configuration with the server */
+    STATE_CONFIG,
     /** The connected peer is playing the game. */
     STATE_PLAY,
     _STATE_COUNT
@@ -83,23 +85,24 @@ typedef struct Connection {
     /** Name of the player connected to the server. */
     string player_name;
     string peer_addr; /**< Address of the connected peer represented by this connection. */
-    u32 peer_port; /**< TCP port of the connected peer. */
+    u32 peer_port;    /**< TCP port of the connected peer. */
 
     /** Thread MutEx device to prevent race conditions. */
     MCMutex mutex;
 } Connection;
 
 /**
-   * @brief Initializes a new connection.
+ * @brief Initializes a new connection.
  *
  * @param sockfd The File Descriptor of the socket, connected to the peer.
  * @param table_index The index of the new connection in the global connection table.
  * @param[in] enc_ctx Pointer to the global encryption context.
  * @param addr The address of the connected peer.
  * @param port the TCP port through which the peer is connected.
-* @return A new connection.
+ * @return A new connection.
  */
-Connection conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
+Connection
+conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port);
 
 /**
  * Indicates whether a previous packet read was stopped.
