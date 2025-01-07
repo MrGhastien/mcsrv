@@ -9,24 +9,24 @@ static void encode_string(const string* str, ByteBuffer* buffer) {
     bytebuf_write(buffer, str->base, str->length);
 }
 
-PKT_ENCODER(dummy) {
+DEF_PKT_ENCODER(dummy) {
     (void) pkt;
     (void) buffer;
 }
 
-PKT_ENCODER(status) {
+DEF_PKT_ENCODER(status) {
     PacketStatusResponse* payload = pkt->payload;
     encode_string(&payload->data, buffer);
 }
 
-PKT_ENCODER(ping) {
+DEF_PKT_ENCODER(ping) {
     PacketPing* pong = pkt->payload;
 
     bytebuf_write_i64(buffer, pong->num);
 }
 
-PKT_ENCODER(enc_req) {
-    PacketEncReq* payload = pkt->payload;
+DEF_PKT_ENCODER(crypt_request) {
+    PacketCryptRequest* payload = pkt->payload;
 
     encode_string(&payload->server_id, buffer);
     bytebuf_write_varint(buffer, payload->pkey_length);
@@ -36,13 +36,13 @@ PKT_ENCODER(enc_req) {
     bytebuf_write(buffer, &payload->authenticate, 1);
 }
 
-PKT_ENCODER(compress) {
+DEF_PKT_ENCODER(compress) {
     PacketSetCompress* payload = pkt->payload;
 
     bytebuf_write_varint(buffer, payload->threshold);
 }
 
-PKT_ENCODER(log_success) {
+DEF_PKT_ENCODER(login_success) {
     PacketLoginSuccess* payload = pkt->payload;
 
     bytebuf_write(buffer, payload->uuid, 2 * sizeof(u64));

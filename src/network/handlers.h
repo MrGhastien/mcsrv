@@ -18,6 +18,8 @@
 #include "network/connection.h"
 #include "packet.h"
 
+#define PKT_HANDLER(name) pkt_handle_##name
+
 /**
  * Helper macro used to declare handling functions easily.
  * Handling functions follow a specific naming convention: `pkt_handle_<name>` and
@@ -30,16 +32,29 @@
  *
  * @param name The name of the handler. Should be somewhat similar to the type of handled packets.
  */
-#define PKT_HANDLER(name) bool pkt_handle_##name(NetworkContext* ctx, const Packet* pkt, Connection* conn)
+#define DEF_PKT_HANDLER(name) bool PKT_HANDLER(name)(NetworkContext* ctx, const Packet* pkt, Connection* conn)
 
-PKT_HANDLER(dummy);
+DEF_PKT_HANDLER(dummy);
 
-PKT_HANDLER(handshake);
+/* === HANDSHAKE === */
+DEF_PKT_HANDLER(handshake);
 
-PKT_HANDLER(status);
-PKT_HANDLER(ping);
+/* === STATUS === */
+DEF_PKT_HANDLER(status);
+DEF_PKT_HANDLER(ping);
 
-PKT_HANDLER(log_start);
-PKT_HANDLER(enc_res);
+/* === LOGIN === */
+DEF_PKT_HANDLER(login_start);
+DEF_PKT_HANDLER(crypt_response);
+DEF_PKT_HANDLER(login_ack);
+
+/* === CONFIGURATION === */
+DEF_PKT_HANDLER(cfg_client_info);
+DEF_PKT_HANDLER(cfg_custom);
+DEF_PKT_HANDLER(cfg_finish_config_ack);
+DEF_PKT_HANDLER(cfg_keep_alive);
+DEF_PKT_HANDLER(cfg_pong);
+DEF_PKT_HANDLER(cfg_respack_response);
+DEF_PKT_HANDLER(cfg_known_datapacks);
 
 #endif /* ! HANDLER_H */

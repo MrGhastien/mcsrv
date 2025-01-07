@@ -7,8 +7,8 @@
 #include "security.h"
 #include "utils.h"
 
-#include "data/json.h"
 #include "containers/vector.h"
+#include "data/json.h"
 #include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
@@ -17,14 +17,14 @@
 #include <string.h>
 #include <zlib.h>
 
-PKT_HANDLER(dummy) {
+DEF_PKT_HANDLER(dummy) {
     UNUSED(ctx);
     UNUSED(pkt);
     UNUSED(conn);
     return TRUE;
 }
 
-PKT_HANDLER(handshake) {
+DEF_PKT_HANDLER(handshake) {
     UNUSED(ctx);
     PacketHandshake* shake = pkt->payload;
     log_tracef("  - Protocol version: %i", shake->protocol_version);
@@ -33,8 +33,12 @@ PKT_HANDLER(handshake) {
     log_tracef("  - Next state: %i", shake->next_state);
     switch (shake->next_state) {
     case STATE_STATUS:
+        log_debug("Switching connection state to STATUS.");
+        conn->state = STATE_LOGIN;
+        break;
     case STATE_LOGIN:
-        conn->state = shake->next_state;
+        log_debug("Switching connection state to LOGIN.");
+        conn->state = STATE_LOGIN;
         break;
     default:
         log_errorf("Invalid state of connection %i", shake->next_state);
@@ -43,7 +47,7 @@ PKT_HANDLER(handshake) {
     return TRUE;
 }
 
-PKT_HANDLER(status) {
+DEF_PKT_HANDLER(status) {
     UNUSED(pkt);
     PacketStatusResponse response;
 
@@ -95,7 +99,7 @@ PKT_HANDLER(status) {
     return TRUE;
 }
 
-PKT_HANDLER(ping) {
+DEF_PKT_HANDLER(ping) {
     PacketPing* ping = pkt->payload;
     PacketPing pong = {.num = ping->num};
     Packet response = {.id = PKT_STATUS_PING, .payload = &pong};
@@ -104,7 +108,7 @@ PKT_HANDLER(ping) {
     return TRUE;
 }
 
-PKT_HANDLER(log_start) {
+DEF_PKT_HANDLER(login_start) {
     PacketLoginStart* payload = pkt->payload;
 
     conn->player_name = str_create_copy(&payload->player_name, &conn->persistent_arena);
@@ -112,8 +116,8 @@ PKT_HANDLER(log_start) {
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
 
-    PacketEncReq* req = arena_callocate(&conn->scratch_arena, sizeof *req, ALLOC_TAG_PACKET);
-    *req = (PacketEncReq){
+    PacketCryptRequest* req = arena_callocate(&conn->scratch_arena, sizeof *req, ALLOC_TAG_PACKET);
+    *req = (PacketCryptRequest){
         .server_id = str_create_view(""),
         .pkey_length = conn->global_enc_ctx->encoded_key_size,
         .pkey = conn->global_enc_ctx->encoded_key,
@@ -122,7 +126,8 @@ PKT_HANDLER(log_start) {
         .authenticate = TRUE,
     };
     memset(req->verify_tok, 78, req->verify_tok_length);
-    conn->verify_token = arena_allocate(&conn->persistent_arena, req->verify_tok_length, ALLOC_TAG_UNKNOWN);
+    conn->verify_token =
+        arena_allocate(&conn->persistent_arena, req->verify_tok_length, ALLOC_TAG_UNKNOWN);
     memcpy(conn->verify_token, req->verify_tok, req->verify_tok_length);
     conn->verify_token_size = req->verify_tok_length;
 
@@ -232,8 +237,8 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
     return TRUE;
 }
 
-PKT_HANDLER(enc_res) {
-    PacketEncRes* payload = pkt->payload;
+DEF_PKT_HANDLER(crypt_response) {
+    PacketCryptResponse* payload = pkt->payload;
 
     u64 ss_size;
     u8* decrypted_ss = encryption_decrypt(conn->global_enc_ctx,
@@ -288,4 +293,13 @@ PKT_HANDLER(enc_res) {
     json_destroy(&json);
 
     return res;
+}
+
+DEF_PKT_HANDLER(login_ack) {
+
+    log_infof("Player %s has successfully logged-in!", str_printable_buffer(&conn->player_name));
+    log_debug("Switching connection state to CONFIG.");
+
+    conn->state = STATE_CONFIG;
+    return TRUE;
 }

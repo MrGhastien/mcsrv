@@ -30,6 +30,7 @@
 #include "containers/vector.h"
 #include "definitions.h"
 #include "utils/string.h"
+#include "data/json.h"
 
 #include <stddef.h>
 
@@ -87,7 +88,7 @@ enum PacketType {
     /**@{*/
     /** @ref State#STATE_CONFIG "Configuration" phase (Client-Bound) */
     PKT_CFG_COOKIE_REQUEST = 0x0,
-    PKT_CFG_CUSTOM_REQUEST = 0x1,
+    PKT_CFG_CUSTOM_CLIENT = 0x1,
     PKT_CFG_DISCONNECT = 0x2,
     PKT_CFG_FINISH = 0x3,
     PKT_CFG_CLIENT_KEEP_ALIVE = 0x4,
@@ -99,14 +100,19 @@ enum PacketType {
     PKT_CFG_STORE_COOKIE = 0xa,
     PKT_CFG_TRANSFER = 0xb,
     PKT_CFG_SET_FEATURE_FLAGS = 0xc,
+    PKT_CFG_UPDATE_TAGS = 0xd,
+    PKT_CFG_KNOWN_DATAPACKS_CLIENT = 0xe,
+    PKT_CFG_CUSTOM_REPORT = 0xf,
+    PKT_CFG_SERVER_LINKS = 0x10,
     /** @ref State#STATE_CONFIG "Configuration" phase (Server-Bound) */
     PKT_CFG_CLIENT_INFO = 0x0,
     PKT_CFG_COOKIE_RESPONSE = 0x1,
-    PKT_CFG_CUSTOM_RESPONSE = 0x2,
+    PKT_CFG_CUSTOM_SERVER = 0x2,
     PKT_CFG_FINISH_ACK = 0x3,
     PKT_CFG_SERVER_KEEP_ALIVE = 0x4,
     PKT_CFG_PONG = 0x5,
     PKT_CFG_RESPACK_RESPONSE = 0x6,
+    PKT_CFG_KNOWN_DATAPACKS_SERVER = 0x7,
     /**@}*/
 
     _PKT_TYPE_COUNT = 6
@@ -180,6 +186,10 @@ typedef struct {
     u64 uuid[2];
 } PacketLoginStart;
 
+typedef struct {
+    JSON reason;
+} PacketLoginDisconnect;
+
 /**
  * Packet sent to enable encryption of packets.
  */
@@ -192,7 +202,7 @@ typedef struct {
     u8* verify_tok;        /**< Arbitrary bytes used to verify the protocol encryption. */
     bool authenticate;     /**< @ref TRUE if the client should authenticate through MC servers,
                           @ref FALSE otherwise.*/
-} PacketEncReq;
+} PacketCryptRequest;
 
 /**
  * Packet received when encryption is enabled.
@@ -204,7 +214,7 @@ typedef struct {
     i32 verify_token_length;
     u8* verify_token; /**< Token sent in the @ref PacketEncReq "encryption request",
                          encrypted using the server's public key. */
-} PacketEncRes;
+} PacketCryptResponse;
 
 /**
  * Packet sent to enable compression of packets.

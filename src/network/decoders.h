@@ -18,6 +18,8 @@
 #include "connection.h"
 #include "packet.h"
 
+#define PKT_DECODER(name) pkt_decode_##name
+
 /**
  * Helper macro used to declare decoding functions easily.
  * Decoding functions follow a specific name convention: `pkt_decode_<name>` and
@@ -30,14 +32,28 @@
  *
  * @param name The name of the decoder. Should be somewhat similar to the type of decoded packets.
  */
-#define PKT_DECODER(name) void pkt_decode_##name(Packet* packet, Arena* arena, ByteBuffer* bytes)
+#define DEF_PKT_DECODER(name) void PKT_DECODER(name)(Packet* packet, Arena* arena, ByteBuffer* bytes)
 
-PKT_DECODER(dummy);
+DEF_PKT_DECODER(dummy);
 
-PKT_DECODER(handshake);
-PKT_DECODER(ping);
+/* === HANDSHAKE === */
+DEF_PKT_DECODER(handshake);
 
-PKT_DECODER(log_start);
-PKT_DECODER(enc_res);
+/* === STATUS === */
+DEF_PKT_DECODER(ping);
+
+/* === LOGIN === */
+DEF_PKT_DECODER(login_start);
+DEF_PKT_DECODER(crypt_response);
+DEF_PKT_DECODER(cfg_custom_server);
+
+/* === CONFIGURATION === */
+DEF_PKT_DECODER(cfg_client_info);
+DEF_PKT_DECODER(cfg_custom);
+DEF_PKT_DECODER(cfg_finish_config_ack);
+DEF_PKT_DECODER(cfg_keep_alive);
+DEF_PKT_DECODER(cfg_pong);
+DEF_PKT_DECODER(cfg_respack_response);
+DEF_PKT_DECODER(cfg_known_datapacks);
 
 #endif /* ! DECODERS_H */
