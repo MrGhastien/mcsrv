@@ -93,7 +93,9 @@ void* arena_callocate(Arena* arena, u64 bytes, enum AllocTag tags) {
 void arena_free(Arena* arena, u64 bytes) {
     if (bytes > arena->length)
         bytes = arena->length;
+
     arena->length -= bytes;
+    unregister_allocs(arena->stats_index, arena->length);
     if (arena->logging) {
         log_tracef("Freed %zu bytes from %p (%zu/%zu).",
                    bytes,
@@ -104,9 +106,10 @@ void arena_free(Arena* arena, u64 bytes) {
 }
 
 void arena_free_ptr(Arena* arena, void* ptr) {
-    if (ptr < arena->block || ptr >= offset(arena->block, arena->length))
+    if (ptr < arena->block || ptr >= offsetu(arena->block, arena->length))
         return;
     arena->length = ptr - arena->block;
+    unregister_allocs(arena->stats_index, arena->length);
 }
 
 void arena_save(Arena* arena) {
@@ -125,7 +128,7 @@ void arena_restore(Arena* arena) {
 }
 
 void* arena_recent_pos(Arena* arena) {
-    return offset(arena->block, arena->saved_length);
+    return offsetu(arena->block, arena->saved_length);
 }
 
 u64 arena_recent_length(Arena* arena) {

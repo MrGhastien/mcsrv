@@ -19,8 +19,8 @@
 
 struct alloc_track {
     enum AllocTag tag;
-    i32 start;
-    i32 end;
+    u64 start;
+    u64 end;
 };
 
 struct blk_track {
@@ -57,7 +57,6 @@ static Arena stats_arena;
 static ObjectPool arenas;
 static bool tracker_initialized = FALSE;
 static MCMutex stats_mutex;
-static MCThreadKey tag_key;
 
 string get_alloc_tag_name(enum AllocTag tag) {
     if (tag >= _ALLOC_TAG_COUNT || tag < ALLOC_TAG_UNKNOWN)
@@ -87,10 +86,6 @@ void memory_stats_init(void) {
     if (tracker_initialized)
         return;
     tracker_initialized = TRUE;
-    if (!mcthread_create_attachment(&tag_key)) {
-        log_fatal("Failed to initialize the memory instrumentation tool.");
-        abort();
-    }
     mcmutex_create(&stats_mutex);
     stats_arena = arena_create_from(arena_buf, TRACKER_BUF_SIZE);
     objpool_init_dynamic(&arenas, &stats_arena, 8, sizeof(struct blk_track));
@@ -114,7 +109,7 @@ void unregister_block(i64 idx) {
     mcmutex_unlock(&stats_mutex);
 }
 
-void register_alloc(i64 arena_idx, i32 start, i32 end, enum AllocTag tag) {
+void register_alloc(i64 arena_idx, u64 start, u64 end, enum AllocTag tag) {
     if (arena_idx < 0)
         return;
 
@@ -123,11 +118,10 @@ void register_alloc(i64 arena_idx, i32 start, i32 end, enum AllocTag tag) {
         return;
     }
 
-    i32 global_tags = (i64) mcthread_get_data(tag_key) & 0xffffffff;
     struct alloc_track alloc = {
         .start = start,
         .end = end,
-        .tag = tag | global_tags,
+        .tag = tag,
     };
 
     mcmutex_lock(&stats_mutex);
@@ -142,7 +136,7 @@ void register_alloc(i64 arena_idx, i32 start, i32 end, enum AllocTag tag) {
         }
 
         if (tmp_alloc->start < start) {
-            if(tmp_alloc->end < start)
+            if (tmp_alloc->end < start)
                 log_warn("Memory: A region of memory is allocated after a gap");
             tmp_alloc->end = start;
             break;
@@ -151,6 +145,22 @@ void register_alloc(i64 arena_idx, i32 start, i32 end, enum AllocTag tag) {
     }
     vect_add(&track->allocs, &alloc);
     mcmutex_unlock(&stats_mutex);
+}
+
+void unregister_allocs(i64 arena_idx, u64 start) {
+    if (arena_idx < 0)
+        return;
+
+    struct blk_track* track = objpool_get(&arenas, arena_idx);
+    struct alloc_track* tmp_alloc;
+    while ((tmp_alloc = vect_ref(&track->allocs, vect_size(&track->allocs) - 1))) {
+        if (tmp_alloc->start < start) {
+            if (tmp_alloc->end > start)
+                tmp_alloc->end = start;
+            break;
+        }
+        vect_pop(&track->allocs, NULL);
+    }
 }
 
 struct stat_dump_data {
@@ -186,12 +196,6 @@ static void dump_block_stats(void* ptr, i64 idx, void* user_data) {
               "%zu" ANSI_RESET " bytes free.",
               total,
               track->size - total);
-}
-
-void set_global_tags(i32 tags) {
-    i64 long_tags = tags;
-
-    mcthread_attach_data(tag_key, (void*) long_tags);
 }
 
 void memory_dump_stats(void) {

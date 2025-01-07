@@ -34,7 +34,8 @@ Arena arena_create(u64 size, enum MemoryBlockTag tag);
 /**
  * Creates an arena allocator of the specified size, without logging anything.
  *
- * This is functionally the same as arena_create(u64), except is does not log any trace messages.
+ * This is functionally the same as arena_create(u64), except it does not log any trace messages.
+ * This variant is used by the logger to prevent infinite recursions.
  *
  * @param size The number of bytes to allocate for the arena.
  * @param tag
@@ -58,7 +59,7 @@ void arena_destroy(Arena* arena);
  *
  * @param arena The arena to use to allocate memory.
  * @param bytes The amount of bytes to allocate.
- * @param tags
+ * @param tags Tags for the allocations. Used by memory instrumentation.
  */
 void* arena_allocate(Arena* arena, u64 bytes, enum AllocTag tags);
 /**
@@ -68,7 +69,7 @@ void* arena_allocate(Arena* arena, u64 bytes, enum AllocTag tags);
  *
  * @param arena The arena to use to allocate memory.
  * @param bytes The amount of bytes to allocate.
- * @param tags
+ * @param tags Tags for the allocations. Used by memory instrumentation.
  */
 void* arena_callocate(Arena* arena, u64 bytes, enum AllocTag tags);
 
