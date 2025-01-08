@@ -95,6 +95,127 @@ static PacketFunction function_table[_STATE_COUNT][_PKT_TYPE_COUNT] = {
             "LOGIN_COOKIE_REQUEST",
         }
     },
+    [STATE_CONFIG] = {
+        [PKT_CFG_COOKIE_REQUEST] = {
+            &PKT_DECODER(cfg_client_info),
+            &PKT_HANDLER(cfg_client_info),
+            NULL,
+            "CLIENT_INFO",
+            "COOKIE_REQUEST"
+        },
+        [PKT_CFG_CUSTOM_CLIENT] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_custom),
+            "COOKIE_RESPONSE",
+            "CUSTOM_CLIENT"
+        },
+        [PKT_CFG_DISCONNECT] = {
+            &PKT_DECODER(cfg_custom),
+            &PKT_HANDLER(cfg_custom),
+            &PKT_ENCODER(cfg_disconnect),
+            "CUSTOM_SERVER",
+            "DISCONNECT"
+        },
+        [PKT_CFG_FINISH] = {
+            &PKT_DECODER(cfg_finish_config_ack),
+            &PKT_HANDLER(cfg_finish_config_ack),
+            &PKT_ENCODER(dummy),
+            "FINISH_ACK",
+            "FINISH"
+        },
+        [PKT_CFG_CLIENT_KEEP_ALIVE] = {
+            &PKT_DECODER(cfg_keep_alive),
+            &PKT_HANDLER(cfg_keep_alive),
+            &PKT_ENCODER(cfg_keep_alive),
+            "SERVER_KEEP_ALIVE",
+            "CLIENT_KEEP_ALIVE"
+        },
+        [PKT_CFG_PING] = {
+            &PKT_DECODER(cfg_pong),
+            &PKT_HANDLER(cfg_pong),
+            &PKT_ENCODER(cfg_ping),
+            "PONG",
+            "PING"
+        },
+        [PKT_CFG_RESET_CHAT] = {
+            &PKT_DECODER(cfg_respack_response),
+            &PKT_HANDLER(cfg_respack_response),
+            &PKT_ENCODER(dummy),
+            "RESPACK_RESPONSE",
+            "RESET_CHAT"
+        },
+        [PKT_CFG_REGISTRY_DATA] = {
+            &PKT_DECODER(cfg_known_datapacks),
+            &PKT_HANDLER(cfg_known_datapacks),
+            &PKT_ENCODER(cfg_registry_data),
+            "KNOWN_DATAPACKS_SERVER",
+            "REGISTRY_DATA"
+        },
+        [PKT_CFG_REMOVE_RESPACK] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_remove_respack),
+            NULL,
+            "REMOVE_RESPACK"
+        },
+        [PKT_CFG_ADD_RESPACK] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_add_respack),
+            NULL,
+            "ADD_RESPACK"
+        },
+        [PKT_CFG_STORE_COOKIE] = {
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            "STORE_COOKIE"
+        },
+        [PKT_CFG_TRANSFER] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_transfer),
+            NULL,
+            "TRANSFER"
+        },
+        [PKT_CFG_SET_FEATURE_FLAGS] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_set_feature_flags),
+            NULL,
+            "SET_FEATURE_FLAGS"
+        },
+        [PKT_CFG_UPDATE_TAGS] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_update_tags),
+            NULL,
+            "UPDATE_TAGS"
+        },
+        [PKT_CFG_KNOWN_DATAPACKS_CLIENT] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_known_datapacks),
+            NULL,
+            "KNOWN_DATAPACKS_CLIENT"
+        },
+        [PKT_CFG_CUSTOM_REPORT] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_custom_report),
+            NULL,
+            "CUSTOM_REPORT"
+        },
+        [PKT_CFG_SERVER_LINKS] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(cfg_server_links),
+            NULL,
+            "SERVER_LINKS"
+        },
+    },
 };
 
 static PacketFunction* get_pkt_funcs(const Packet* pkt, const Connection* conn) {

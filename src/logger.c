@@ -1,8 +1,10 @@
-#include "logger.h"
 
 #ifndef MC_CPLX_LOGGER
 
+#include "logger.h"
 #include "platform/mc_mutex.h"
+#include "utils/ansi_codes.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -63,7 +65,7 @@ void _log_msg(enum LogLevel lvl, char* msg) {
         break;
     }
 
-    fprintf(stream, "%s%s %s\x1b[0m\n", colors[lvl], names[lvl], msg);
+    fprintf(stream, "%s%s %s" ANSI_RESET "\n", colors[lvl], names[lvl], msg);
 }
 
 void _log_msgf(enum LogLevel lvl, char* msg, ...) {
@@ -88,7 +90,8 @@ void _log_msgf(enum LogLevel lvl, char* msg, ...) {
 
     fprintf(stream, "%s%s ", colors[lvl], names[lvl]);
     vfprintf(stream, msg, args);
-    puts("\x1b[0m");
+    puts(ANSI_RESET);
+
     mcmutex_unlock(&ctx.mutex);
     va_end(args);
 }

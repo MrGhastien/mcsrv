@@ -3,7 +3,7 @@
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
 #include "packet.h"
-
+#include "logger.h"
 
 DEF_PKT_DECODER(dummy) {
     (void) packet;
@@ -60,6 +60,76 @@ DEF_PKT_DECODER(crypt_response) {
     bytebuf_read_varint(bytes, &payload->verify_token_length);
     payload->verify_token = arena_allocate(arena, payload->verify_token_length, ALLOC_TAG_UNKNOWN);
     bytebuf_read(bytes, payload->verify_token_length, payload->verify_token);
+
+    packet->payload = payload;
+}
+
+/* === CONFIGURATION === */
+
+DEF_PKT_DECODER(cfg_custom) {
+    PacketCustom* payload = arena_callocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
+
+    u64 res = 0;
+
+    string channel_str;
+    res = bytebuf_read_mcstring(bytes, arena, &channel_str);
+    if(res <= 0)
+        return;
+
+    if(!resid_parse(&channel_str, arena, &payload->channel))
+        return;
+
+    payload->data_length = packet->payload_length - res;
+    if(payload->data_length > 32676) {
+        log_errorf("Custom packet's payload is too large: is %zu bytes long, max 32767.", payload->data_length);
+        return;
+    }
+    payload->data = arena_allocate(arena, payload->data_length, ALLOC_TAG_PACKET);
+    bytebuf_read(bytes, payload->data_length, payload->data);
+
+    packet->payload = payload;
+}
+
+DEF_PKT_DECODER(cfg_client_info) {
+    PacketClientInfo* payload = arena_callocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
+
+    bytebuf_read_mcstring(bytes, arena, &payload->locale);
+    if(payload->locale.length > 16) {
+        log_error("Invalid client info packet: Locale string is longer than 16 characters.");
+        return;
+    }
+
+    bytebuf_read(bytes, sizeof payload->render_distance, &payload->render_distance);
+
+    i32 tmp;
+    bytebuf_read_varint(bytes, &tmp);
+    payload->chat_mode = tmp;
+
+    bytebuf_read(bytes, sizeof payload->chat_colors, &payload->chat_colors);
+    bytebuf_read(bytes, sizeof payload->skin_part_mask, &payload->skin_part_mask);
+    bytebuf_read_varint(bytes, &tmp);
+    payload->hand = tmp;
+
+    bytebuf_read(bytes, sizeof payload->text_filtering, &payload->text_filtering);
+    bytebuf_read(bytes, sizeof payload->allow_server_listings, &payload->allow_server_listings);
+    bytebuf_read_varint(bytes, &tmp);
+    payload->particle_status = tmp;
+
+    packet->payload = payload;
+}
+DEF_PKT_DECODER(cfg_known_datapacks) {
+    PacketKnownDatapacks* payload = arena_callocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
+
+    i32 count;
+    bytebuf_read_varint(bytes, &count);
+
+    for (i32 i = 0; i < count; ++i) {
+        KnownDatapack pack;
+        bytebuf_read_mcstring(bytes, arena, &pack.namespace);
+        bytebuf_read_mcstring(bytes, arena, &pack.id);
+        bytebuf_read_mcstring(bytes, arena, &pack.version);
+        vect_add(&payload->known_packs, &pack);
+    }
 
     packet->payload = payload;
 }

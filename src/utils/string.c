@@ -1,9 +1,9 @@
 #include "string.h"
+#include "logger.h"
 #include "math.h"
 #include "memory/arena.h"
-#include "utils/hash.h"
-#include "logger.h"
 #include "memory/mem_tags.h"
+#include "utils/hash.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -60,16 +60,44 @@ string str_create_from_buffer(const char* buf, u64 length, Arena* arena) {
 }
 
 string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena) {
-    u64 size = end - begin;
+    u64 size;
+    if (end == ~0ull)
+        size = str->length - begin;
+    else
+        size = end - begin;
     string sub = str_alloc(size, arena);
     memcpy(sub.base, &str->base[begin], size);
     sub.base[size] = 0;
     return sub;
 }
 
+string str_substring(const string* str, u64 begin, u64 end) {
+    u64 size;
+    if (end == ~0ull)
+        size = str->length - begin;
+    else
+        size = end - begin;
+    string sub = {
+        .base = str->base + begin,
+        .length = size,
+    };
+    return sub;
+}
+
+i64 str_find_char(const string* str, char c) {
+    if (!str)
+        return -1;
+    char* ptr = strchr(str->base, c);
+
+    if (!ptr)
+        return -1;
+
+    return ptr - str->base;
+}
+
 void str_set(string* str, const char* cstr) {
     char* excess = memccpy(str->base, cstr, 0, str->length);
-    if(excess == NULL)
+    if (excess == NULL)
         excess = &str->base[str->length];
     memset(excess, 0, str->length - (excess - str->base) + 1);
 }
@@ -93,6 +121,10 @@ string str_concat(string* lhs, const string* rhs, Arena* arena) {
 }
 
 const char* str_printable_buffer(const string* str) {
+    if (str->base[str->length] != 0) {
+        log_warn("String is not null terminated, setting a null byte.");
+        str->base[str->length] = 0;
+    }
     return str->base;
 }
 
@@ -102,13 +134,13 @@ u64 str_hash(const void* str) {
 }
 
 i32 str_compare(const string* lhs, const string* rhs) {
-    if(lhs == rhs)
+    if (lhs == rhs)
         return 0;
-    if(!lhs)
+    if (!lhs)
         return rhs ? -1 : 0;
-    if(!rhs)
+    if (!rhs)
         return -1;
-    if(lhs->length != rhs->length)
+    if (lhs->length != rhs->length)
         return lhs->length - rhs->length;
     return memcmp(lhs->base, rhs->base, lhs->length);
 }

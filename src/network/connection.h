@@ -87,6 +87,8 @@ typedef struct Connection {
     string peer_addr; /**< Address of the connected peer represented by this connection. */
     u32 peer_port;    /**< TCP port of the connected peer. */
 
+ string peer_brand;
+
     /** Thread MutEx device to prevent race conditions. */
     MCMutex mutex;
 } Connection;

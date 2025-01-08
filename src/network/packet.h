@@ -28,9 +28,11 @@
 #define PACKET_H
 
 #include "containers/vector.h"
-#include "definitions.h"
-#include "utils/string.h"
 #include "data/json.h"
+#include "data/nbt.h"
+#include "definitions.h"
+#include "resource/resource_id.h"
+#include "utils/string.h"
 
 #include <stddef.h>
 
@@ -93,7 +95,7 @@ enum PacketType {
     PKT_CFG_FINISH = 0x3,
     PKT_CFG_CLIENT_KEEP_ALIVE = 0x4,
     PKT_CFG_PING = 0x5,
-    PKT_CFG_RESET_CHAR = 0x6,
+    PKT_CFG_RESET_CHAT = 0x6,
     PKT_CFG_REGISTRY_DATA = 0x7,
     PKT_CFG_REMOVE_RESPACK = 0x8,
     PKT_CFG_ADD_RESPACK = 0x9,
@@ -115,7 +117,7 @@ enum PacketType {
     PKT_CFG_KNOWN_DATAPACKS_SERVER = 0x7,
     /**@}*/
 
-    _PKT_TYPE_COUNT = 6
+    _PKT_TYPE_COUNT = 0x11
 };
 
 /**
@@ -254,6 +256,81 @@ typedef struct {
     /** Added in 1.20.5 to help modded servers switch to the new datapack system. */
     bool strict_errors;
 } PacketLoginSuccess;
+
+/* === CONFIGURATION === */
+
+typedef struct {
+    ResourceID channel;
+    u8* data;
+    u16 data_length;
+} PacketCustom;
+
+enum ChatMode {
+    CHAT_ENABLED = 0,
+    CHAT_COMMANDS = 1,
+    CHAT_HIDDEN = 2,
+};
+
+enum MainHand {
+    HAND_LEFT = 0,
+    HAND_RIGHT = 1,
+};
+
+enum ParticleStatus {
+    PARTICLE_ALL = 0,
+    PARTICLE_DECREASED = 1,
+    PARTICLE_MINIMAL = 2,
+};
+
+typedef struct {
+    string locale;
+    i8 render_distance;
+    enum ChatMode chat_mode;
+    bool chat_colors;
+    u8 skin_part_mask;
+    enum MainHand hand;
+    bool text_filtering;
+    bool allow_server_listings;
+    enum ParticleStatus particle_status;
+} PacketClientInfo;
+
+typedef struct {
+    Vector features;
+} PacketSetFeatureFlags;
+
+typedef struct KnownDatapack {
+    string namespace;
+    string id;
+    string version;
+} KnownDatapack;
+
+typedef struct {
+    Vector known_packs; // KnownPack
+} PacketKnownDatapacks;
+
+typedef struct RegistryDataEntry {
+    ResourceID id;
+    NBT data;
+} RegistryDataEntry;
+
+typedef struct {
+    ResourceID registry_id;
+    Vector entries; // RegistryDataEntry
+} PacketRegistryData;
+
+typedef struct TagEntry {
+    ResourceID id;
+    Vector elements; // i32
+} TagEntry;
+
+typedef struct TagRegistryData {
+    ResourceID registry_id;
+    Vector entries; // TagEntry
+} TagRegistryData;
+
+typedef struct {
+    Vector tags; // TagRegistryData
+} PacketUpdateTags;
 
 #endif /* ! PACKET_H */
 

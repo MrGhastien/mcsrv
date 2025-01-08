@@ -20,12 +20,42 @@ Trying to interrupt with Ctrl-C does nothing.
 ** Internals
 *** TODO Scattered vector
   Vector with a dynamic size using blocks of memory to resize itself.
+*** TODO Proper error handling for packet encoders and handlers
+ Maybe an error propagation mechanism to avoid hardcoded log prefixes ?
+
 ** Network
 *** DONE Decompression & decryption of packets
 CLOSED: [2024-12-08 dim. 17:53]
 *** TODO Abstraction over Linux and Windows for the network sub-system [1/2]
 - [X] Linux sub-system
 - [ ] Windows sub-system
+*** TODO Configuration packets
+- [ ] PKT_CFG_COOKIE_REQUEST
+- [ ] PKT_CFG_CUSTOM_CLIENT
+- [ ] PKT_CFG_DISCONNECT
+- [ ] PKT_CFG_FINISH
+- [ ] PKT_CFG_CLIENT_KEEP_ALIVE
+- [ ] PKT_CFG_PING
+- [ ] PKT_CFG_RESET_CHAT
+- [ ] PKT_CFG_REGISTRY_DATA
+- [ ] PKT_CFG_REMOVE_RESPACK
+- [ ] PKT_CFG_ADD_RESPACK
+- [ ] PKT_CFG_STORE_COOKIE
+- [ ] PKT_CFG_TRANSFER
+- [ ] PKT_CFG_SET_FEATURE_FLAGS
+- [ ] PKT_CFG_UPDATE_TAGS
+- [ ] PKT_CFG_KNOWN_DATAPACKS_CLIENT
+- [ ] PKT_CFG_CUSTOM_REPORT
+- [ ] PKT_CFG_SERVER_LINKS
+
+- [ ] PKT_CFG_CLIENT_INFO
+- [ ] PKT_CFG_COOKIE_RESPONSE
+- [X] PKT_CFG_CUSTOM_SERVER
+- [ ] PKT_CFG_FINISH_ACK
+- [ ] PKT_CFG_SERVER_KEEP_ALIVE
+- [ ] PKT_CFG_PONG
+- [ ] PKT_CFG_RESPACK_RESPONSE
+- [ ] PKT_CFG_KNOWN_DATAPACKS_SERVER
 
 ** DONE Proper threading
 CLOSED: [2024-06-27 jeu. 00:21]
@@ -60,6 +90,7 @@ CLOSED: [2024-09-21 sam. 22:04]
   - [ ] SNBT Parser
   - [X] SNBT Writer
   - [ ] Support for network NBTs
+  - [ ] Proper error handling for the NBT parser and writer
 - [ ] JSON loader
 
 

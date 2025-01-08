@@ -123,6 +123,15 @@ string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena);
 string str_substring(const string* str, u64 begin, u64 end);
 
 /**
+* Finds the first occurrence of any character inside the string.
+*
+* @param[in] str The string to search into.
+* @param[in] c The character to find.
+* @return The index of the character if it is found, `-1` otherwise.
+*/
+i64 str_find_char(const string* str, char c);
+
+/**
 * Sets the contents of a string.
 *
 * This functions does not change the string's length nor does it reallocate the underlying buffer.

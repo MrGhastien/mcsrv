@@ -167,8 +167,8 @@
 #define NBT_H
 
 #include "containers/vector.h"
-
-#include <utils/string.h>
+#include "utils/string.h"
+#include "utils/iomux.h"
 
 enum NBTStatus {
     NBTE_OK = 0,
@@ -349,7 +349,15 @@ enum NBTStatus nbt_set_double(NBT* nbt, f64 value);
 * @param[in] nbt The NBT tree to save.
 * @param[in] path The path of the output file.
 */
-enum NBTStatus nbt_write(const NBT* nbt, const string* path);
+enum NBTStatus nbt_write_file(const NBT* nbt, const string* path);
+/**
+* Writes a NBT tree to an output stream.
+*
+* @param[in] nbt The NBT tree to save.
+* @param[in] multiplexer An IO multiplexer used to write to the output stream.
+* @param[in] network @ref TRUE if the NBT shall be serialized to be sent through the network, @ref FALSE otherwise.
+*/
+enum NBTStatus nbt_write(const NBT* nbt, IOMux multiplexer, bool network);
 
 enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path);
 enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str);
@@ -366,7 +374,7 @@ enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str);
 * @param[in] max_token_count The maximum amount of tags to parse.
 * @param[in] path The path to the file to read.
 * @param[out] out_nbt A pointer to an uninitialized NBT tree.
-* @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occured.
+* @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
 */
 enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
 

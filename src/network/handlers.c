@@ -296,10 +296,45 @@ DEF_PKT_HANDLER(crypt_response) {
 }
 
 DEF_PKT_HANDLER(login_ack) {
+    UNUSED(ctx);
+    UNUSED(pkt);
 
     log_infof("Player %s has successfully logged-in!", str_printable_buffer(&conn->player_name));
     log_debug("Switching connection state to CONFIG.");
 
     conn->state = STATE_CONFIG;
+    return TRUE;
+}
+
+/* === CONFIGURATION === */
+
+DEF_PKT_HANDLER(cfg_custom) {
+    UNUSED(ctx);
+    PacketCustom* payload = pkt->payload;
+
+    if(resid_is(&payload->channel, "minecraft:brand")) {
+        conn->peer_brand = str_create_from_buffer((const char*)payload->data, payload->data_length, &conn->persistent_arena);
+    } else
+        log_warnf("Received unknown custom message of channel %s:%s, ignoring.", str_printable_buffer(&payload->channel.namespace), str_printable_buffer(&payload->channel.path));
+
+    return TRUE;
+}
+
+DEF_PKT_HANDLER(cfg_client_info) {
+    UNUSED(ctx);
+    UNUSED(conn);
+    PacketClientInfo* payload = pkt->payload;
+
+    UNUSED(payload);
+    log_warn("Client settings are ignored for now TODO");
+    return TRUE;
+}
+DEF_PKT_HANDLER(cfg_known_datapacks) {
+    UNUSED(ctx);
+    UNUSED(conn);
+    PacketKnownDatapacks* payload = pkt->payload;
+    UNUSED(payload);
+
+    //TODO: Work with registry data
     return TRUE;
 }

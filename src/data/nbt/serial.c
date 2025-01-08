@@ -222,14 +222,15 @@ static void write_array(IOMux fd, const NBTTag* tag, NBTWriteContext* ctx) {
     vect_add(&ctx->stack, &new_parent);
 }
 
-static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd) {
+static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd, bool network) {
     NBTTagMetadata* parent = vect_ref(&ctx->stack, ctx->stack.size - 1);
 
     NBTTag* tag = vect_ref(&ctx->nbt->tags, ctx->current_index);
     if (!parent || is_not_array(parent->type)) {
         i8 type_num = tag->type & 0xff;
         iomux_write(fd, &type_num, sizeof type_num);
-        write_string(&tag->name, fd);
+        if(!network && !parent)
+            write_string(&tag->name, fd);
     }
     if (parent)
         parent->size--;
@@ -282,7 +283,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd) {
     }
 }
 
-enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
+enum NBTStatus nbt_write_file(const NBT* nbt, const string* path) {
 
     IOMux fd = iomux_gz_open(path, "wb");
     if(fd == -1) {
@@ -290,25 +291,33 @@ enum NBTStatus nbt_write(const NBT* nbt, const string* path) {
         return NBTE_IO;
     }
 
+    nbt_write(nbt, fd, FALSE);
+
+    iomux_close(fd);
+    return NBTE_OK;
+}
+
+enum NBTStatus nbt_write(const NBT* nbt, IOMux multiplexer, bool network) {
+
     NBTWriteContext ctx = {
         .nbt = nbt,
     };
     vect_init(&ctx.stack, nbt->arena, 512, sizeof(NBTTagMetadata));
     for (u32 i = 0; i < nbt->tags.size; i++) {
         ctx.current_index = i;
-        nbt_write_tag(&ctx, fd);
+        nbt_write_tag(&ctx, multiplexer, network);
 
         const NBTTagMetadata* parent = vect_ref(&ctx.stack, ctx.stack.size - 1);
         while (parent && parent->size == 0) {
             vect_pop(&ctx.stack, NULL);
             if (parent->type == NBT_COMPOUND) {
                 const i8 end_tag = 0;
-                iomux_write(fd, &end_tag, sizeof end_tag);
+                iomux_write(multiplexer, &end_tag, sizeof end_tag);
             }
             parent = vect_ref(&ctx.stack, ctx.stack.size - 1);
         }
     }
-    iomux_close(fd);
+
     return NBTE_OK;
 }
 
