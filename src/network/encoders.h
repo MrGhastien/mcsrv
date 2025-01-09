@@ -50,7 +50,6 @@ DEF_PKT_ENCODER(cfg_custom);
 DEF_PKT_ENCODER(cfg_disconnect);
 DEF_PKT_ENCODER(cfg_keep_alive);
 DEF_PKT_ENCODER(cfg_ping);
-DEF_PKT_ENCODER(cfg_reset_chat);
 DEF_PKT_ENCODER(cfg_registry_data);
 DEF_PKT_ENCODER(cfg_remove_respack);
 DEF_PKT_ENCODER(cfg_add_respack);

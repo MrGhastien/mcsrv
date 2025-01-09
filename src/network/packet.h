@@ -332,6 +332,67 @@ typedef struct {
     Vector tags; // TagRegistryData
 } PacketUpdateTags;
 
+typedef struct {
+    i64 keep_alive_id;
+} PacketKeepAlive;
+
+typedef struct {
+    NBT reason;
+} PacketConfigDisconnect;
+
+typedef struct {
+    u64 uuid[2];
+    string url;
+    string hash;
+    bool forced;
+    NBT prompt_message;
+} PacketPushResourcePack;
+
+typedef struct {
+    bool present;
+    u64 uuid[2];
+} PacketPopResourcePack;
+
+typedef struct {
+    string host;
+    i32 port;
+} PacketTransfer;
+
+typedef struct CustomReportDetail {
+    string title;
+    string description;
+} CustomReportDetail;
+
+typedef struct {
+    Vector details; //CustomReportDetail
+} PacketCustomReport;
+
+enum ServerBuiltinLinkType {
+    SRV_LINK_BUG_REPORT = 0,
+    SRV_LINK_GUIDELINES = 1,
+    SRV_LINK_SUPPORT = 2,
+    SRV_LINK_STATUS = 3,
+    SRV_LINK_FEEDBACK = 4,
+    SRV_LINK_COMMUNITY = 5,
+    SRV_LINK_WEBSITE = 6,
+    SRV_LINK_FORUMS = 7,
+    SRV_LINK_NEWS = 8,
+    SRV_LINK_ANNOUNCEMENTS = 9,
+};
+
+typedef struct ServerLink {
+    union label {
+        enum ServerBuiltinLinkType builtin_type;
+        NBT custom;
+    } label;
+    string url;
+    bool builtin;
+} ServerLink;
+
+typedef struct {
+    Vector links; //ServerLink
+} PacketServerLinks;
+
 #endif /* ! PACKET_H */
 
 /** @} */

@@ -1,9 +1,12 @@
 #include "decoders.h"
 #include "containers/bytebuffer.h"
+#include "definitions.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
 #include "packet.h"
 #include "logger.h"
+#include "utils/bitwise.h"
+#include <openssl/bio.h>
 
 DEF_PKT_DECODER(dummy) {
     (void) packet;
@@ -131,5 +134,14 @@ DEF_PKT_DECODER(cfg_known_datapacks) {
         vect_add(&payload->known_packs, &pack);
     }
 
+    packet->payload = payload;
+}
+DEF_PKT_DECODER(cfg_keep_alive) {
+    PacketKeepAlive* payload = arena_callocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
+
+    i64 tmp;
+    bytebuf_read(bytes, sizeof payload->keep_alive_id, &tmp);
+    payload->keep_alive_id = ntoh64(tmp);
+    
     packet->payload = payload;
 }

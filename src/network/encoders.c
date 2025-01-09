@@ -1,9 +1,12 @@
 #include "encoders.h"
 #include "containers/bytebuffer.h"
 #include "containers/vector.h"
-#include "packet.h"
+#include "data/nbt.h"
 #include "logger.h"
+#include "packet.h"
 #include "platform/platform.h"
+#include "utils/bitwise.h"
+#include "utils/iomux.h"
 #include "utils/str_builder.h"
 
 static void write_string(const string* str, ByteBuffer* buffer) {
@@ -22,7 +25,36 @@ static void write_resid(const ResourceID* id, ByteBuffer* buffer) {
     bytebuf_write(buffer, id->path.base, id->path.length);
 }
 
-DEF_PKT_ENCODER(dummy) {
+static void write_uuid(const u64 uuid[2], ByteBuffer* buffer) {
+    u64 tmp[2] = {
+        uhton64(uuid[1]),
+        uhton64(uuid[0]),
+    };
+
+    bytebuf_write(buffer, tmp, sizeof *tmp * 2);
+}
+
+static bool write_nbt(const NBT* nbt, ByteBuffer* buffer) {
+    IOMux iomux = iomux_wrap_buffer(buffer);
+    if (iomux == -1) {
+        log_error("Failed to write packet NBT.");
+        return FALSE;
+    }
+    nbt_write(nbt, iomux, TRUE);
+    iomux_close(iomux);
+    return TRUE;
+}
+
+    
+
+    /*
+    static void write_u16(u16 num, ByteBuffer* buffer) {
+        num = uhton16(num);
+        bytebuf_write(buffer, &num, sizeof num);
+    }
+    */
+
+    DEF_PKT_ENCODER(dummy) {
     (void) pkt;
     (void) buffer;
 }
@@ -58,7 +90,7 @@ DEF_PKT_ENCODER(compress) {
 DEF_PKT_ENCODER(login_success) {
     PacketLoginSuccess* payload = pkt->payload;
 
-    bytebuf_write(buffer, payload->uuid, 2 * sizeof(u64));
+    write_uuid(payload->uuid, buffer);
     write_string(&payload->username, buffer);
     bytebuf_write_varint(buffer, payload->properties.size);
     for (u32 i = 0; i < payload->properties.size; i++) {
@@ -158,5 +190,87 @@ DEF_PKT_ENCODER(cfg_update_tags) {
                 bytebuf_write_varint(buffer, tag_element_count);
             }
         }
+    }
+}
+
+DEF_PKT_ENCODER(cfg_keep_alive) {
+    PacketKeepAlive* payload = pkt->payload;
+
+    bytebuf_write_i64(buffer, payload->keep_alive_id);
+}
+
+DEF_PKT_ENCODER(cfg_ping) {
+    PacketPing* payload = pkt->payload;
+
+    bytebuf_write_i64(buffer, payload->num);
+}
+
+DEF_PKT_ENCODER(cfg_disconnect) {
+    PacketConfigDisconnect* payload = pkt->payload;
+
+    IOMux iomux = iomux_wrap_buffer(buffer);
+    if (iomux == -1) {
+        log_error("Failed to write packet NBT.");
+        return;
+    }
+    nbt_write(&payload->reason, iomux, TRUE);
+    iomux_close(iomux);
+}
+
+DEF_PKT_ENCODER(cfg_add_respack) {
+    PacketPushResourcePack* payload = pkt->payload;
+
+    write_uuid(payload->uuid, buffer);
+    write_string(&payload->url, buffer);
+    write_string(&payload->hash, buffer);
+    bytebuf_write(buffer, &payload->forced, sizeof payload->forced);
+
+    bool present = payload->prompt_message.arena != NULL;
+    bytebuf_write(buffer, &present, sizeof present);
+    if (present) {
+    }
+}
+
+DEF_PKT_ENCODER(cfg_remove_respack) {
+    PacketPopResourcePack* payload = pkt->payload;
+
+    bytebuf_write(buffer, &payload->present, sizeof payload->present);
+    if (payload->present)
+        write_uuid(payload->uuid, buffer);
+}
+
+DEF_PKT_ENCODER(cfg_transfer) {
+    PacketTransfer* payload = pkt->payload;
+
+    write_string(&payload->host, buffer);
+    bytebuf_write_varint(buffer, payload->port);
+}
+
+DEF_PKT_ENCODER(cfg_custom_report) {
+    PacketCustomReport* payload = pkt->payload;
+
+    i32 count = vect_size(&payload->details);
+    bytebuf_write_varint(buffer, count);
+
+    for (i32 i = 0; i < count; i++) {
+        CustomReportDetail* detail = vect_ref(&payload->details, i);
+        write_string(&detail->title, buffer);
+        write_string(&detail->description, buffer);
+    }
+}
+
+DEF_PKT_ENCODER(cfg_server_links) {
+    PacketServerLinks* payload = pkt->payload;
+
+    i32 count = vect_size(&payload->links);
+    for (i32 i = 0; i < count; i++) {
+        ServerLink* link = vect_ref(&payload->links, i);
+
+        bytebuf_write(buffer, &link->builtin, sizeof link->builtin);
+        if (link->builtin)
+            bytebuf_write_varint(buffer, link->label.builtin_type);
+        else
+            write_nbt(&link->label.custom, buffer);
+        write_string(&link->url, buffer);
     }
 }

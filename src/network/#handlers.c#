@@ -349,5 +349,5 @@ DEF_PKT_HANDLER(cfg_finish_config_ack) {
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_keep_alive) {
-
+    
 }

@@ -118,7 +118,7 @@ static PacketFunction function_table[_STATE_COUNT][_PKT_TYPE_COUNT] = {
             "DISCONNECT"
         },
         [PKT_CFG_FINISH] = {
-            &PKT_DECODER(cfg_finish_config_ack),
+            &PKT_DECODER(dummy),
             &PKT_HANDLER(cfg_finish_config_ack),
             &PKT_ENCODER(dummy),
             "FINISH_ACK",
