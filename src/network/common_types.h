@@ -11,6 +11,7 @@
 #include "containers/object_pool.h"
 #include "platform/socket.h"
 #include "platform/mc_thread.h"
+#include "platform/time.h"
 
 #define IOEVENT_IN 1
 #define IOEVENT_OUT 2
@@ -45,6 +46,12 @@ typedef struct NetworkContext {
 
     i32 code;
     bool should_continue;
+
+  struct timespec last_connection_clean;
+
 } NetworkContext;
+
+void network_finish(NetworkContext* ctx);
+void network_clean_connections(NetworkContext* ctx);
 
 #endif /* ! COMMON_TYPES_H */

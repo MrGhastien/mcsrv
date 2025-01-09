@@ -42,6 +42,8 @@ enum State {
     _STATE_COUNT
 };
 
+typedef struct PlatformConnectionData PlatformConnectionData;
+
 /**
  * Represents a connection to a peer.
  *
@@ -87,11 +89,17 @@ typedef struct Connection {
     string peer_addr; /**< Address of the connected peer represented by this connection. */
     u32 peer_port;    /**< TCP port of the connected peer. */
 
- string peer_brand;
- u32 ping;
+    string peer_brand;
+    u32 ping;
+
+    struct timespec last_keep_alive;
+    i64 last_keep_alive_id;
 
     /** Thread MutEx device to prevent race conditions. */
     MCMutex mutex;
+
+    // This pointer should point just after this struct !
+    PlatformConnectionData* platform_data;
 } Connection;
 
 /**

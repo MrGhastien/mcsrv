@@ -18,8 +18,10 @@ export LDLIBS := -lcrypto -lcurl
 ifeq ($(detected_os),WINDOWS)
 	CPPFLAGS += -IC:\msys64\ucrt64\include
 	LDLIBS += -lws2_32 -lwsock32 -L$(CURDIR)/lib/zlib-1.3.1 -lzlib1
+	MAIN_TARGET = mcsrv.exe
 else
 	LDLIBS += -lz
+	MAIN_TARGET = mcsrv
 endif
 
 include sources.mk
@@ -32,8 +34,6 @@ export TEST_TARGETS := $(patsubst %.c,%,$(MAIN_TESTS))
 export TEST_OBJS := $(patsubst %.c,%.o,$(TESTS))
 
 export CORE_LIB := $(CURDIR)/libsrv.a
-
-MAIN_TARGET = mcsrv
 
 .PHONY: all clean $(TEST_TARGETS)
 
