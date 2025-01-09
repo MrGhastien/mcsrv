@@ -10,10 +10,10 @@
 #include <string.h>
 
 struct data_block* alloc_block(Arena* arena, u64 capacity, u64 stride, i32 mem_tag) {
-    struct data_block* blk = arena_allocate(arena, sizeof *blk, mem_tag);
+    struct data_block* blk = arena_callocate(arena, sizeof *blk, mem_tag);
     *blk = (struct data_block){
         .capacity = capacity,
-        .data = arena_allocate(arena, stride * capacity, mem_tag),
+        .data = arena_callocate(arena, stride * capacity, mem_tag),
     };
     return blk;
 }
