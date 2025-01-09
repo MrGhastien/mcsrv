@@ -17,7 +17,7 @@
 
 #define COMPL_KEY_ACCEPT 0
 #define COMPL_KEY_STOP 1
-#define MAX_TIMEOUT 10000
+#define MAX_TIMEOUT 16000
 
 struct PlatformConnectionData {
     WSAOVERLAPPED read_overlapped;

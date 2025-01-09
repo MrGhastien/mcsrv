@@ -1,9 +1,11 @@
 #include "handlers.h"
 #include "compression.h"
 #include "connection.h"
+#include "containers/bytebuffer.h"
 #include "network.h"
 #include "packet.h"
 #include "packet_codec.h"
+#include "resource/resource_id.h"
 #include "security.h"
 #include "utils.h"
 
@@ -34,7 +36,7 @@ DEF_PKT_HANDLER(handshake) {
     switch (shake->next_state) {
     case STATE_STATUS:
         log_debug("Switching connection state to STATUS.");
-        conn->state = STATE_LOGIN;
+        conn->state = STATE_STATUS;
         break;
     case STATE_LOGIN:
         log_debug("Switching connection state to LOGIN.");
@@ -297,6 +299,31 @@ DEF_PKT_HANDLER(login_ack) {
     log_debug("Switching connection state to CONFIG.");
 
     conn->state = STATE_CONFIG;
+
+    PacketCustom server_brand_payload = {
+        .channel = resid_default_cstr("brand"),
+        .data = bytebuf_create_fixed(32767, &conn->scratch_arena),
+    };
+    string srv_brand = str_create_view("mcsrv");
+    bytebuf_write_varint(&server_brand_payload.data, srv_brand.length);
+    bytebuf_write(&server_brand_payload.data, srv_brand.base, srv_brand.length);
+    Packet pkt_to_send = {
+        .id = PKT_CFG_CUSTOM_CLIENT,
+        .payload = &server_brand_payload,
+    };
+
+    send_packet(&pkt_to_send, conn);
+
+    PacketSetFeatureFlags feature_flags_payload = {0};
+    vect_init(&feature_flags_payload.features, &conn->scratch_arena, 1, sizeof(ResourceID));
+    ResourceID* feature = vect_reserve(&feature_flags_payload.features);
+    *feature = resid_default_cstr("core");
+    pkt_to_send = (Packet){
+        .id = PKT_CFG_SET_FEATURE_FLAGS,
+        .payload = &feature_flags_payload,
+    };
+    send_packet(&pkt_to_send, conn);
+    
     return TRUE;
 }
 
@@ -306,8 +333,8 @@ DEF_PKT_HANDLER(cfg_custom) {
     PacketCustom* payload = pkt->payload;
 
     if (resid_is(&payload->channel, "minecraft:brand")) {
-        conn->peer_brand = str_create_from_buffer(
-            (const char*) payload->data, payload->data_length, &conn->persistent_arena);
+        bytebuf_read_mcstring(&payload->data, &conn->persistent_arena, &conn->peer_brand);
+        log_debugf("Peer brand: %s", str_printable_buffer(&conn->peer_brand));
     } else
         log_warnf("Received unknown custom message of channel %s:%s, ignoring.",
                   str_printable_buffer(&payload->channel.namespace),

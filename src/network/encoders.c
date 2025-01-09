@@ -112,7 +112,8 @@ DEF_PKT_ENCODER(cfg_custom) {
 
     write_resid(&payload->channel, buffer);
 
-    bytebuf_write(buffer, payload->data, payload->data_length);
+    bytebuf_write_buffer(buffer, &payload->data);
+    bytebuf_register_read(&payload->data, payload->data.size);
 }
 
 DEF_PKT_ENCODER(cfg_set_feature_flags) {

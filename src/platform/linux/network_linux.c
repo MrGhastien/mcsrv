@@ -24,7 +24,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define MAX_TIMEOUT 10000
+#define MAX_TIMEOUT 16000
 
 typedef struct PlatformNetworkCtx {
     int eventfd;
@@ -350,7 +350,7 @@ static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i
 
     if (events & EPOLLOUT && conn->pending_send) {
         conn->pending_send = FALSE;
-        io_code = empty_buffer(ctx, conn);
+        io_code = empty_buffer(conn);
         switch (io_code) {
         case IOC_CLOSED:
         case IOC_ERROR:
@@ -396,7 +396,7 @@ void* network_handle(void* params) {
     log_infof("Listening for connections on %s:%u...", ctx->host.base, ctx->port);
     while (ctx->should_continue) {
         log_trace("Waiting for EPoll notifications...");
-        u32 timeout = objpool_size(&conn->connections) > 0 ? MAX_TIMEOUT : -1;
+        u32 timeout = objpool_size(&ctx->connections) > 0 ? MAX_TIMEOUT : -1;
         eventCount = epoll_wait(platform_ctx.epollfd, events, 10, timeout);
         if (eventCount == 0) {
             log_debug("Closing unresponsive connections.");

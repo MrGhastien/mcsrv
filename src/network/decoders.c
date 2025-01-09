@@ -8,9 +8,9 @@
 #include "utils/bitwise.h"
 
 static i32 read_uuid(u64 uuid[2], ByteBuffer* buffer) {
-    if(bytebuf_read(buffer, sizeof *uuid, &uuid[1]) < (i64)sizeof *uuid)
+    if (bytebuf_read(buffer, sizeof *uuid, &uuid[1]) < (i64) sizeof *uuid)
         return -1;
-    if(bytebuf_read(buffer, sizeof *uuid, &uuid[0]) < (i64)sizeof *uuid)
+    if (bytebuf_read(buffer, sizeof *uuid, &uuid[0]) < (i64) sizeof *uuid)
         return -1;
 
     uuid[0] = untoh64(uuid[0]);
@@ -93,14 +93,14 @@ DEF_PKT_DECODER(cfg_custom) {
     if (!resid_parse(&channel_str, arena, &payload->channel))
         return;
 
-    payload->data_length = packet->payload_length - res;
-    if (payload->data_length > 32676) {
-        log_errorf("Custom packet's payload is too large: is %zu bytes long, max 32767.",
-                   payload->data_length);
+    i32 len = packet->payload_length - res;
+    if (len > 32767) {
+        log_errorf("Custom packet's payload is too large: is %zu bytes long, max 32767.", len);
         return;
     }
-    payload->data = arena_allocate(arena, payload->data_length, ALLOC_TAG_PACKET);
-    bytebuf_read(bytes, payload->data_length, payload->data);
+    payload->data = bytebuf_create_fixed(len, arena);
+    bytebuf_write_buffer(&payload->data, bytes);
+    bytebuf_register_read(bytes, len);
 
     packet->payload = payload;
 }
@@ -160,11 +160,11 @@ DEF_PKT_DECODER(cfg_keep_alive) {
 DEF_PKT_DECODER(cfg_respack_response) {
     PacketResourcePackResponse* payload = arena_callocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
 
-    if(read_uuid(payload->uuid, bytes) < (i64)sizeof *payload->uuid * 2)
+    if (read_uuid(payload->uuid, bytes) < (i64) sizeof *payload->uuid * 2)
         return;
 
     i32 tmp;
-    if(bytebuf_read(bytes, sizeof tmp, &tmp) < (i64)sizeof tmp)
+    if (bytebuf_read(bytes, sizeof tmp, &tmp) < (i64) sizeof tmp)
         return;
 
     payload->result = tmp;

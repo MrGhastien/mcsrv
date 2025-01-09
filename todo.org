@@ -18,7 +18,8 @@ Trying to interrupt with Ctrl-C does nothing.
 
 * Features                                                            :mcsrv:
 ** Internals
-*** TODO Scattered vector
+*** DONE Scattered vector
+CLOSED: [2025-01-09 jeu. 23:34]
   Vector with a dynamic size using blocks of memory to resize itself.
 *** TODO Proper error handling for packet encoders and handlers
  Maybe an error propagation mechanism to avoid hardcoded log prefixes ?
@@ -26,11 +27,12 @@ Trying to interrupt with Ctrl-C does nothing.
 ** Network
 *** DONE Decompression & decryption of packets
 CLOSED: [2024-12-08 dim. 17:53]
-*** TODO Abstraction over Linux and Windows for the network sub-system [1/2]
+*** DONE Abstraction over Linux and Windows for the network sub-system [2/2]
+CLOSED: [2025-01-09 jeu. 23:33]
 - [X] Linux sub-system
-- [ ] Windows sub-system
-*** TODO Configuration packets
-- [X] PKT_CFG_COOKIE_REQUEST
+- [X] Windows sub-system
+*** TODO Configuration packets [18/25]
+- [ ] PKT_CFG_COOKIE_REQUEST
 - [X] PKT_CFG_CUSTOM_CLIENT
 - [X] PKT_CFG_DISCONNECT
 - [X] PKT_CFG_FINISH
@@ -40,7 +42,7 @@ CLOSED: [2024-12-08 dim. 17:53]
 - [X] PKT_CFG_REGISTRY_DATA
 - [X] PKT_CFG_REMOVE_RESPACK
 - [X] PKT_CFG_ADD_RESPACK
-- [X] PKT_CFG_STORE_COOKIE
+- [ ] PKT_CFG_STORE_COOKIE
 - [X] PKT_CFG_TRANSFER
 - [X] PKT_CFG_SET_FEATURE_FLAGS
 - [X] PKT_CFG_UPDATE_TAGS
@@ -48,15 +50,16 @@ CLOSED: [2024-12-08 dim. 17:53]
 - [X] PKT_CFG_CUSTOM_REPORT
 - [X] PKT_CFG_SERVER_LINKS
 
-- [X] PKT_CFG_CLIENT_INFO
-- [X] PKT_CFG_COOKIE_RESPONSE
+- [ ] PKT_CFG_CLIENT_INFO
+- [ ] PKT_CFG_COOKIE_RESPONSE
 - [X] PKT_CFG_CUSTOM_SERVER
-- [X] PKT_CFG_FINISH_ACK
+- [ ] PKT_CFG_FINISH_ACK
 - [X] PKT_CFG_SERVER_KEEP_ALIVE
 - [X] PKT_CFG_PONG
-- [X] PKT_CFG_RESPACK_RESPONSE
-- [X] PKT_CFG_KNOWN_DATAPACKS_SERVER
-*** TODO: Keep-alive mechanism
+- [ ] PKT_CFG_RESPACK_RESPONSE
+- [ ] PKT_CFG_KNOWN_DATAPACKS_SERVER
+*** DONE TODO: Keep-alive mechanism
+CLOSED: [2025-01-09 jeu. 23:34]
 - [X] Add a timeout for epoll_wait / GetQueuedCompletionStatus
 - [X] Implement a function to traverse connections and close ones that are unresponsive (last keep-alive more than 15 secs ago)
 - [X] Close unresponsive connections

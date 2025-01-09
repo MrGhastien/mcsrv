@@ -261,8 +261,7 @@ typedef struct {
 
 typedef struct {
     ResourceID channel;
-    u8* data;
-    u16 data_length;
+    ByteBuffer data;
 } PacketCustom;
 
 enum ChatMode {
@@ -295,7 +294,7 @@ typedef struct {
 } PacketClientInfo;
 
 typedef struct {
-    Vector features;
+    Vector features; // ResourceID
 } PacketSetFeatureFlags;
 
 typedef struct KnownDatapack {
