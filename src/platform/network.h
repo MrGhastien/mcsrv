@@ -10,27 +10,27 @@
 #include "definitions.h"
 #include "network/common_types.h"
 
-
 #define SOCKIO_PENDING -1
 #define SOCKIO_ERROR -2
 
 void* network_handle(void* params);
 
 i32 network_platform_init(NetworkContext* ctx, u64 max_connections);
-i32 platform_socket_init(socketfd server_socket);
+i32 network_platform_init_socket(socketfd server_socket);
+void platform_network_finish(void);
 void platform_network_stop(void);
 
 void close_connection(NetworkContext* ctx, Connection* conn);
 
 i32 create_server_socket(NetworkContext* ctx, char* host, i32 port);
 
-enum IOCode fill_buffer(NetworkContext* ctx, Connection* conn);
-enum IOCode empty_buffer(NetworkContext* ctx, Connection* conn);
+enum IOCode fill_buffer(Connection* conn);
+enum IOCode empty_buffer(Connection* conn);
 
 /**
  * Tries sending a buffer of data.
  *
- * @param int sockfd The file descriptor of the socket to send data through.
+ * @param socket The file descriptor of the socket to send data through.
  * @param[in] data The buffer containing the data to send.
  * @param size The number of bytes in the input buffer.
  * @param[out] out_sent A pointer to a @ref u64, that will contain the number

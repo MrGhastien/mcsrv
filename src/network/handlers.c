@@ -12,20 +12,20 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
+#include "platform/platform.h"
+#include "platform/time.h"
 #include "utils/string.h"
 
 #include <string.h>
 #include <zlib.h>
 
 DEF_PKT_HANDLER(dummy) {
-    UNUSED(ctx);
     UNUSED(pkt);
     UNUSED(conn);
     return TRUE;
 }
 
 DEF_PKT_HANDLER(handshake) {
-    UNUSED(ctx);
     PacketHandshake* shake = pkt->payload;
     log_tracef("  - Protocol version: %i", shake->protocol_version);
     log_tracef("  - Server address: '%s'", shake->srv_addr.base);
@@ -94,17 +94,16 @@ DEF_PKT_HANDLER(status) {
     json_stringify(&json, &response.data, &arena);
     log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
-    send_packet(ctx, &out_pkt, conn);
+    send_packet(&out_pkt, conn);
     json_destroy(&json);
     return TRUE;
 }
-
 DEF_PKT_HANDLER(ping) {
     PacketPing* ping = pkt->payload;
     PacketPing pong = {.num = ping->num};
     Packet response = {.id = PKT_STATUS_PING, .payload = &pong};
 
-    send_packet(ctx, &response, conn);
+    send_packet(&response, conn);
     return TRUE;
 }
 
@@ -136,12 +135,11 @@ DEF_PKT_HANDLER(login_start) {
         .payload = req,
     };
 
-    send_packet(ctx, &response, conn);
+    send_packet(&response, conn);
 
     return TRUE;
 }
-
-static bool enable_compression(NetworkContext* ctx, Connection* conn) {
+static bool enable_compression(Connection* conn) {
 
     PacketSetCompress payload = {
         .threshold = COMPRESS_THRESHOLD,
@@ -152,7 +150,7 @@ static bool enable_compression(NetworkContext* ctx, Connection* conn) {
         .payload = &payload,
     };
 
-    send_packet(ctx, &cmprss_pkt, conn);
+    send_packet(&cmprss_pkt, conn);
 
     if (!compression_init(&conn->cmprss_ctx, &conn->persistent_arena))
         return FALSE;
@@ -162,8 +160,7 @@ static bool enable_compression(NetworkContext* ctx, Connection* conn) {
               conn->peer_socket);
     return TRUE;
 }
-
-static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json) {
+static bool send_login_success(Connection* conn, JSON* json) {
     JSONNode* json_id = json_get_obj_cstr(json->root, "id");
     JSONNode* json_name = json_get_obj_cstr(json->root, "name");
     JSONNode* json_properties = json_get_obj_cstr(json->root, "properties");
@@ -232,11 +229,10 @@ static bool send_login_success(NetworkContext* ctx, Connection* conn, JSON* json
         .payload = &login_success,
     };
 
-    send_packet(ctx, &pkt, conn);
+    send_packet(&pkt, conn);
 
     return TRUE;
 }
-
 DEF_PKT_HANDLER(crypt_response) {
     PacketCryptResponse* payload = pkt->payload;
 
@@ -284,19 +280,17 @@ DEF_PKT_HANDLER(crypt_response) {
     if (!res)
         return FALSE;
 
-    res = enable_compression(ctx, conn);
+    res = enable_compression(conn);
     if (!res)
         return FALSE;
 
-    res = send_login_success(ctx, conn, &json);
+    res = send_login_success(conn, &json);
 
     json_destroy(&json);
 
     return res;
 }
-
 DEF_PKT_HANDLER(login_ack) {
-    UNUSED(ctx);
     UNUSED(pkt);
 
     log_infof("Player %s has successfully logged-in!", str_printable_buffer(&conn->player_name));
@@ -309,19 +303,20 @@ DEF_PKT_HANDLER(login_ack) {
 /* === CONFIGURATION === */
 
 DEF_PKT_HANDLER(cfg_custom) {
-    UNUSED(ctx);
     PacketCustom* payload = pkt->payload;
 
-    if(resid_is(&payload->channel, "minecraft:brand")) {
-        conn->peer_brand = str_create_from_buffer((const char*)payload->data, payload->data_length, &conn->persistent_arena);
+    if (resid_is(&payload->channel, "minecraft:brand")) {
+        conn->peer_brand = str_create_from_buffer(
+            (const char*) payload->data, payload->data_length, &conn->persistent_arena);
     } else
-        log_warnf("Received unknown custom message of channel %s:%s, ignoring.", str_printable_buffer(&payload->channel.namespace), str_printable_buffer(&payload->channel.path));
+        log_warnf("Received unknown custom message of channel %s:%s, ignoring.",
+                  str_printable_buffer(&payload->channel.namespace),
+                  str_printable_buffer(&payload->channel.path));
 
     return TRUE;
 }
 
 DEF_PKT_HANDLER(cfg_client_info) {
-    UNUSED(ctx);
     UNUSED(conn);
     PacketClientInfo* payload = pkt->payload;
 
@@ -330,16 +325,14 @@ DEF_PKT_HANDLER(cfg_client_info) {
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_known_datapacks) {
-    UNUSED(ctx);
     UNUSED(conn);
     PacketKnownDatapacks* payload = pkt->payload;
     UNUSED(payload);
 
-    //TODO: Work with registry data
+    // TODO: Work with registry data
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_finish_config_ack) {
-    UNUSED(ctx);
     UNUSED(pkt);
 
     log_infof("Configuration for player %s is finished.", str_printable_buffer(&conn->player_name));
@@ -349,23 +342,31 @@ DEF_PKT_HANDLER(cfg_finish_config_ack) {
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_keep_alive) {
-    UNUSED(ctx);
     UNUSED(pkt);
     UNUSED(conn);
+    PacketKeepAlive* payload = pkt->payload;
+    conn->last_keep_alive_id = payload->keep_alive_id;
+    struct timespec now;
+    if (!timestamp(&now)) {
+        log_warnf("Failed to register keep alive: %s", get_last_error());
+        return FALSE;
+    }
+    conn->last_keep_alive = now;
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_pong) {
-    UNUSED(ctx);
     PacketPing* payload = pkt->payload;
 
     conn->ping = payload->num;
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_respack_response) {
-    UNUSED(ctx);
     UNUSED(conn);
     PacketResourcePackResponse* payload = pkt->payload;
-    log_debugf("Received resource pack download result: uuid: %016x-%016x -> %i", payload->uuid[0], payload->uuid[1], payload->result);
-    //TODO: Handle resource packs
+    log_debugf("Received resource pack download result: uuid: %016x-%016x -> %i",
+               payload->uuid[0],
+               payload->uuid[1],
+               payload->result);
+    // TODO: Handle resource packs
     return TRUE;
 }

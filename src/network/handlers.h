@@ -32,7 +32,7 @@
  *
  * @param name The name of the handler. Should be somewhat similar to the type of handled packets.
  */
-#define DEF_PKT_HANDLER(name) bool PKT_HANDLER(name)(NetworkContext* ctx, const Packet* pkt, Connection* conn)
+#define DEF_PKT_HANDLER(name) bool PKT_HANDLER(name)(const Packet* pkt, Connection* conn)
 
 DEF_PKT_HANDLER(dummy);
 

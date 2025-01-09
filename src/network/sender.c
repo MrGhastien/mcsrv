@@ -7,13 +7,11 @@
 #include "containers/bytebuffer.h"
 #include "logger.h"
 #include "memory/arena.h"
-#include "utils/bitwise.h"
-#include "utils/math.h"
 #include "platform/network.h"
 
 #define MAX_PACKET_SIZE 2097151
 
-void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
+void send_packet(const Packet* pkt, Connection* conn) {
     pkt_encoder encoder = get_pkt_encoder(pkt, conn);
     if (!encoder)
         return;
@@ -53,7 +51,7 @@ void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
     if(!conn->pending_send) {
         enum IOCode code;
         do {
-            code = empty_buffer(ctx, conn);
+            code = empty_buffer(conn);
         } while(code == IOC_OK && conn->send_buffer.size > 0);
         if(code == IOC_PENDING || code == IOC_AGAIN)
             conn->pending_send = TRUE;

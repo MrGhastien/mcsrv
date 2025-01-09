@@ -113,14 +113,14 @@ static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* ou
     return IOC_OK;
 }
 
-static bool handle_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn) {
+static bool handle_packet(const Packet* pkt, Connection* conn) {
     pkt_acceptor handler = get_pkt_handler(pkt, conn);
     if (!handler)
         return FALSE;
-    return handler(ctx, pkt, conn);
+    return handler(pkt, conn);
 }
 
-enum IOCode receive_packet(NetworkContext* ctx, Connection* conn) {
+enum IOCode receive_packet(Connection* conn) {
 
     enum IOCode code = IOC_OK;
 
@@ -139,7 +139,7 @@ enum IOCode receive_packet(NetworkContext* ctx, Connection* conn) {
         if (code != IOC_OK)
             return code;
 
-        if (!handle_packet(ctx, conn->packet_cache, conn))
+        if (!handle_packet(conn->packet_cache, conn))
             return IOC_ERROR;
 
         conn->packet_cache = NULL;

@@ -15,6 +15,7 @@
 #include "platform/mc_thread.h"
 #include "platform/network.h"
 #include "platform/platform.h"
+#include "platform/time.h"
 
 static NetworkContext ctx;
 
@@ -47,21 +48,21 @@ i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
         return 5;
     }
 
-    if (platform_socket_init(server_socket) != 0)
+    if (network_platform_init_socket(server_socket) != 0)
         return 7;
 
     log_debugf("Created the server socket, bound to [%s:%i].", host, port);
     ctx->server_socket = server_socket;
     return 0;
 }
-
 i32 network_init(char* host, i32 port, u64 max_connections) {
 
     ctx.arena = arena_create(40960, BLK_TAG_NETWORK);
-    objpool_init(&ctx.connections, &ctx.arena, max_connections, sizeof(Connection));
     ctx.host = str_create_view(host);
     ctx.port = port;
     ctx.code = 0;
+    if(!timestamp(&ctx.last_connection_clean))
+        log_warnf("Failed to set last keep-alive cleaning timestamp to now: %s", get_last_error());
 
     i32 res = network_platform_init(&ctx, max_connections);
     if (res)
@@ -81,6 +82,39 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
     return 0;
 }
 
+struct check_keep_alive_data {
+    NetworkContext* ctx;
+    struct timespec now;
+};
+static void check_keep_alive(void* ptr, i64 idx, void* user_data) {
+    UNUSED(idx);
+    Connection* conn = ptr;
+    struct check_keep_alive_data* data = user_data;
+
+    if(data->now.tv_sec - conn->last_keep_alive.tv_sec >= 15)
+        close_connection(data->ctx, conn);
+}
+void network_clean_connections(NetworkContext* ctx) {
+    struct check_keep_alive_data data = {.ctx = ctx};
+    timestamp(&data.now);
+
+    objpool_foreach(&ctx->connections, &check_keep_alive, &data);
+}
+
+void network_finish(NetworkContext* ctx) {
+
+    encryption_cleanup(&ctx->enc_ctx);
+
+    for (i64 i = 0; i < ctx->connections.capacity; i++) {
+        Connection* conn = objpool_get(&ctx->connections, i);
+        if (conn)
+            close_connection(ctx, conn);
+    }
+
+    sock_close(ctx->server_socket);
+    platform_network_finish();
+    arena_destroy(&ctx->arena);
+}
 void network_stop(void) {
     platform_network_stop();
     mcthread_join(&ctx.thread, NULL);

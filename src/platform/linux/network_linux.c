@@ -10,8 +10,8 @@
 #include "network/security.h"
 
 #include "platform/network.h"
-#include "platform/socket.h"
 #include "platform/platform.h"
+#include "platform/socket.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -23,6 +23,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#define MAX_TIMEOUT 10000
 
 typedef struct PlatformNetworkCtx {
     int eventfd;
@@ -36,24 +38,62 @@ static PlatformNetworkCtx platform_ctx = {
 
 /* ===== Socket functions ===== */
 
-socketfd sock_create(int address_family, int type, int protocol) {
-    return socket(address_family, type, protocol);
+void sockaddr_init(SocketAddress* addr, u16 family) {
+    addr->data.family = family;
+    switch (family) {
+    case AF_INET:
+        addr->length = sizeof addr->data.ip4;
+        break;
+    case AF_INET6:
+        addr->length = sizeof addr->data.ip6;
+        break;
+    default:
+        addr->length = sizeof addr->data.sa;
+        break;
+    }
+}
+bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
+    char port_str[32];
+    snprintf(port_str, 32, "%i", port);
+    struct addrinfo* info;
+    i32 res = getaddrinfo(host, port_str, NULL, &info);
+    if (res != 0) {
+        log_errorf("Could not parse address : %s", gai_strerror(res));
+        return FALSE;
+    }
+
+    memcpy(&addr->data.storage, info->ai_addr, info->ai_addrlen);
+    addr->length = info->ai_addrlen;
+
+    freeaddrinfo(info);
+
+    return TRUE;
+}
+string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
+    char host[NI_MAXHOST];
+    char serv[NI_MAXSERV];
+    if (getnameinfo(&addr->data.sa, addr->length, host, NI_MAXHOST, serv, NI_MAXSERV, 0) != 0) {
+        log_errorf("Could not convert address to string: %s", get_last_error());
+        return str_create_view(NULL);
+    }
+
+    *out_port = strtoul(serv, NULL, 0);
+
+    return str_create(host, arena);
 }
 
 bool sock_is_valid(socketfd socket) {
     return (int) socket >= 0;
 }
-
+socketfd sock_create(int address_family, int type, int protocol) {
+    return socket(address_family, type, protocol);
+}
 bool sock_bind(socketfd socket, const SocketAddress* address) {
     return bind(socket, &address->data.sa, address->length) == 0;
 }
 bool sock_listen(socketfd socket, i32 backlog) {
     return listen(socket, backlog) == 0;
 }
-void sock_close(socketfd socket) {
-    close(socket);
-}
-
 enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, SocketAddress* out_address) {
     socklen_t addr_len = sizeof(out_address->data.storage);
     socketfd peer_socket = accept(socket, &out_address->data.sa, &addr_len);
@@ -74,7 +114,6 @@ enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, SocketAddress* 
 
     return IOC_OK;
 }
-
 enum IOCode sock_recv_buf(socketfd socket, ByteBuffer* output, u64* out_byte_count) {
     if (output->capacity == output->size)
         return IOC_OK;
@@ -112,7 +151,6 @@ enum IOCode sock_recv_buf(socketfd socket, ByteBuffer* output, u64* out_byte_cou
 
     return IOC_OK;
 }
-
 enum IOCode sock_send_buf(socketfd socket, ByteBuffer* input, u64* out_byte_count) {
     if (input->size == 0)
         return IOC_OK;
@@ -149,105 +187,11 @@ enum IOCode sock_send_buf(socketfd socket, ByteBuffer* input, u64* out_byte_coun
 
     return IOC_OK;
 }
-
-void sockaddr_init(SocketAddress* addr, u16 family) {
-    addr->data.family = family;
-    switch (family) {
-    case AF_INET:
-        addr->length = sizeof addr->data.ip4;
-        break;
-    case AF_INET6:
-        addr->length = sizeof addr->data.ip6;
-        break;
-    default:
-        addr->length = sizeof addr->data.sa;
-        break;
-    }
+void sock_close(socketfd socket) {
+    close(socket);
 }
-
-bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
-    char port_str[32];
-    snprintf(port_str, 32, "%i", port);
-    struct addrinfo* info;
-    i32 res = getaddrinfo(host, port_str, NULL, &info);
-    if (res != 0) {
-        log_errorf("Could not parse address : %s", gai_strerror(res));
-        return FALSE;
-    }
-
-    memcpy(&addr->data.storage, info->ai_addr, info->ai_addrlen);
-    addr->length = info->ai_addrlen;
-
-    freeaddrinfo(info);
-
-    return TRUE;
-}
-string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
-    char host[NI_MAXHOST];
-    char serv[NI_MAXSERV];
-    if (getnameinfo(&addr->data.sa, addr->length, host, NI_MAXHOST, serv, NI_MAXSERV, 0) != 0) {
-        log_errorf("Could not convert address to string: %s", get_last_error());
-        return str_create_view(NULL);
-    }
-
-    *out_port = strtoul(serv, NULL, 0);
-
-    return str_create(host, arena);
-}
-
 /* ===== Networking sub-system ===== */
-
-enum IOCode fill_buffer(NetworkContext* ctx, Connection* conn) {
-    UNUSED(ctx);
-    enum IOCode res = IOC_AGAIN;
-    enum IOCode code = IOC_OK;
-
-    i64 starting_pos = bytebuf_current_pos(&conn->recv_buffer);
-
-    while (conn->recv_buffer.size < conn->recv_buffer.capacity && code == IOC_OK) {
-        u64 size = 0;
-        code = sock_recv_buf(conn->peer_socket, &conn->recv_buffer, &size);
-        if (code < res)
-            res = code;
-        if (code == IOC_AGAIN)
-            conn->pending_recv = TRUE;
-    }
-
-    if(conn->encryption) {
-        encryption_decipher(&conn->peer_enc_ctx, &conn->recv_buffer, starting_pos);
-    }
-
-    /*
-      Because decompression increases the size of the data, we have to make sure we have enough room
-      inside the connection's recv buffer.
-      I think we can use the packet cache to get the next packet's size.
-
-      Maybe the idea of reading as much bytes as possible in one go is not so good.
-      Reading the right amount of bytes each time we decode a packet might be simpler (and probably as fast). 
-     */
-    /* if (conn->compression) { */
-    /*     if(compression_decompress(&conn->cmprss_ctx, &conn->recv_buffer, dst_buffer) < 0) */
-    /*         return IOC_ERROR; */
-    /* } */
-    // I think i will only decrypt here, and decompress when receiving a packet
-    // This works well !
-
-    return res;
-}
-
-enum IOCode empty_buffer(NetworkContext* ctx, Connection* conn) {
-    UNUSED(ctx);
-    enum IOCode code = IOC_OK;
-    while (conn->send_buffer.size > 0 && code == IOC_OK) {
-        u64 size;
-        code = sock_send_buf(conn->peer_socket, &conn->send_buffer, &size);
-        if (code == IOC_AGAIN)
-            conn->pending_send = TRUE;
-    }
-    return code;
-}
-
-i32 platform_socket_init(socketfd server_socket) {
+i32 network_platform_init_socket(socketfd server_socket) {
 
     struct epoll_event event_in = {.events = EPOLLIN | EPOLLET, .data.fd = -1};
     if (epoll_ctl(platform_ctx.epollfd, EPOLL_CTL_ADD, server_socket, &event_in) == -1) {
@@ -257,7 +201,6 @@ i32 platform_socket_init(socketfd server_socket) {
 
     return 0;
 }
-
 i32 network_platform_init(NetworkContext* ctx, u64 max_connections) {
     int epollfd = epoll_create1(0);
     platform_ctx.epollfd = epollfd;
@@ -280,6 +223,17 @@ i32 network_platform_init(NetworkContext* ctx, u64 max_connections) {
 
     objpool_init(&ctx->connections, &ctx->arena, max_connections, sizeof(Connection));
     return 0;
+}
+void platform_network_finish(void) {
+    close(platform_ctx.epollfd);
+    close(platform_ctx.eventfd);
+}
+void platform_network_stop(void) {
+    i64 count = 1;
+    i64 res = 0;
+    while (res <= 0) {
+        res = write(platform_ctx.eventfd, &count, sizeof(count));
+    }
 }
 
 static enum IOCode accept_connection(NetworkContext* ctx) {
@@ -323,52 +277,62 @@ static enum IOCode accept_connection(NetworkContext* ctx) {
     log_infof("Accepted connection from [%s:%i].", peer_host.base, peer_port);
     return IOC_OK;
 }
+enum IOCode fill_buffer(Connection* conn) {
+    enum IOCode res = IOC_AGAIN;
+    enum IOCode code = IOC_OK;
 
-void close_connection(NetworkContext* ctx, Connection* conn) {
-    struct epoll_event placeholder;
-    log_infof("Closing connection to [%s:%i].", conn->peer_addr.base, conn->peer_port);
+    i64 starting_pos = bytebuf_current_pos(&conn->recv_buffer);
 
-    //TODO: Send a `DISCONNECT` packet when closing a connection.
+    while (conn->recv_buffer.size < conn->recv_buffer.capacity && code == IOC_OK) {
+        u64 size = 0;
+        code = sock_recv_buf(conn->peer_socket, &conn->recv_buffer, &size);
+        if (code < res)
+            res = code;
+        if (code == IOC_AGAIN)
+            conn->pending_recv = TRUE;
+    }
 
     if (conn->encryption) {
-        encryption_cleanup_peer(&conn->peer_enc_ctx);
+        encryption_decipher(&conn->peer_enc_ctx, &conn->recv_buffer, starting_pos);
     }
 
-    sock_close(conn->peer_socket);
-    epoll_ctl(platform_ctx.epollfd, EPOLL_CTL_DEL, conn->peer_socket, &placeholder);
-    arena_destroy(&conn->scratch_arena);
-    arena_destroy(&conn->persistent_arena);
-    mcmutex_destroy(&conn->mutex);
-    conn->peer_socket = SOCKFD_INVALID;
-    objpool_remove(&ctx->connections, conn->table_index);
+    /*
+      Because decompression increases the size of the data, we have to make sure we have enough room
+      inside the connection's recv buffer.
+      I think we can use the packet cache to get the next packet's size.
+
+      Maybe the idea of reading as much bytes as possible in one go is not so good.
+      Reading the right amount of bytes each time we decode a packet might be simpler (and probably
+      as fast).
+     */
+    /* if (conn->compression) { */
+    /*     if(compression_decompress(&conn->cmprss_ctx, &conn->recv_buffer, dst_buffer) < 0) */
+    /*         return IOC_ERROR; */
+    /* } */
+    // I think i will only decrypt here, and decompress when receiving a packet
+    // This works well !
+
+    return res;
 }
-
-static void network_finish(NetworkContext* ctx) {
-
-    encryption_cleanup(&ctx->enc_ctx);
-
-    for (i64 i = 0; i < ctx->connections.capacity; i++) {
-        Connection* conn = objpool_get(&ctx->connections, i);
-        if (conn)
-            close_connection(ctx, conn);
+enum IOCode empty_buffer(Connection* conn) {
+    enum IOCode code = IOC_OK;
+    while (conn->send_buffer.size > 0 && code == IOC_OK) {
+        u64 size;
+        code = sock_send_buf(conn->peer_socket, &conn->send_buffer, &size);
+        if (code == IOC_AGAIN)
+            conn->pending_send = TRUE;
     }
-
-    sock_close(ctx->server_socket);
-
-    close(platform_ctx.epollfd);
-    close(platform_ctx.eventfd);
-    arena_destroy(&ctx->arena);
+    return code;
 }
-
 static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i32 events) {
     enum IOCode io_code = IOC_OK;
     if (events & EPOLLIN && conn->pending_recv) {
         conn->pending_recv = FALSE;
-        io_code = fill_buffer(ctx, conn);
+        io_code = fill_buffer(conn);
         while (io_code == IOC_OK) {
-            io_code = receive_packet(ctx, conn);
+            io_code = receive_packet(conn);
             if (io_code == IOC_AGAIN && !conn->pending_recv)
-                io_code = fill_buffer(ctx, conn);
+                io_code = fill_buffer(conn);
         }
         switch (io_code) {
         case IOC_CLOSED:
@@ -399,6 +363,24 @@ static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i
 
     return io_code;
 }
+void close_connection(NetworkContext* ctx, Connection* conn) {
+    struct epoll_event placeholder;
+    log_infof("Closing connection to [%s:%i].", conn->peer_addr.base, conn->peer_port);
+
+    // TODO: Send a `DISCONNECT` packet when closing a connection.
+
+    if (conn->encryption) {
+        encryption_cleanup_peer(&conn->peer_enc_ctx);
+    }
+
+    sock_close(conn->peer_socket);
+    epoll_ctl(platform_ctx.epollfd, EPOLL_CTL_DEL, conn->peer_socket, &placeholder);
+    arena_destroy(&conn->scratch_arena);
+    arena_destroy(&conn->persistent_arena);
+    mcmutex_destroy(&conn->mutex);
+    conn->peer_socket = SOCKFD_INVALID;
+    objpool_remove(&ctx->connections, conn->table_index);
+}
 
 void* network_handle(void* params) {
     NetworkContext* ctx = params;
@@ -414,7 +396,18 @@ void* network_handle(void* params) {
     log_infof("Listening for connections on %s:%u...", ctx->host.base, ctx->port);
     while (ctx->should_continue) {
         log_trace("Waiting for EPoll notifications...");
-        eventCount = epoll_wait(platform_ctx.epollfd, events, 10, -1);
+        u32 timeout = objpool_size(&conn->connections) > 0 ? MAX_TIMEOUT : -1;
+        eventCount = epoll_wait(platform_ctx.epollfd, events, 10, timeout);
+        if (eventCount == 0) {
+            log_debug("Closing unresponsive connections.");
+            struct timespec now;
+            timestamp(&now);
+
+            if (now.tv_sec - ctx->last_connection_clean.tv_sec >= 15)
+                network_clean_connections(ctx);
+            continue;
+        }
+
         for (i32 i = 0; i < eventCount; i++) {
             struct epoll_event* e = &events[i];
             if (e->data.fd == -1) // server socket
@@ -442,13 +435,4 @@ void* network_handle(void* params) {
     network_finish(ctx);
     return NULL;
 }
-
-void platform_network_stop(void) {
-    i64 count = 1;
-    i64 res = 0;
-    while (res <= 0) {
-        res = write(platform_ctx.eventfd, &count, sizeof(count));
-    }
-}
-
 #endif

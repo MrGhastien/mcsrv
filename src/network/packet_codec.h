@@ -20,7 +20,7 @@
  * @param[in] conn The connection the packet was received on.
  * @return @ref TRUE if the packet was handled successfully, @ref FALSE otherwise.
  */
-typedef bool (*pkt_acceptor)(NetworkContext* ctx, const Packet* pkt, Connection* conn);
+typedef bool (*pkt_acceptor)(const Packet* pkt, Connection* conn);
 /**
  * Packet decoder function.
  *
@@ -104,7 +104,7 @@ const char* get_pkt_name(const Packet* pkt, const Connection* conn, bool clientb
  *         - @ref IOC_ERROR if a reading error occurred,
  *         - @ref IOC_CLOSED if the connection was closed while reading a packet.
  */
-enum IOCode receive_packet(NetworkContext* ctx, Connection* conn);
+enum IOCode receive_packet(Connection* conn);
 
 /**
  * Encodes and tries to send a packet immediately.
@@ -116,6 +116,6 @@ enum IOCode receive_packet(NetworkContext* ctx, Connection* conn);
  * @param[in] pkt The packet to send.
  * @param[in] conn The connection to send a packet through.
  */
-void send_packet(NetworkContext* ctx, const Packet* pkt, Connection* conn);
+void send_packet(const Packet* pkt, Connection* conn);
 
 #endif /* ! PACKET_CODEC_H */
