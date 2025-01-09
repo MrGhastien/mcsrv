@@ -29,6 +29,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/network/compression.c \
 		$(SRC_DIR)/platform/linux/platform_linux.c \
 		$(SRC_DIR)/platform/linux/network_linux.c \
+		$(SRC_DIR)/platform/linux/time_linux.c \
 		$(SRC_DIR)/platform/linux/signal-handler.c \
 		$(SRC_DIR)/platform/linux/mc_thread_linux.c \
 		$(SRC_DIR)/platform/linux/mc_mutex_linux.c \
@@ -38,6 +39,7 @@ SRCS := $(SRC_DIR)/logger.c \
 		$(SRC_DIR)/platform/windows/mc_thread_windows.c \
 		$(SRC_DIR)/platform/windows/mc_mutex_windows.c \
 		$(SRC_DIR)/platform/windows/mc_cond_var_windows.c \
+		$(SRC_DIR)/platform/windows/time_windows.c \
 		$(SRC_DIR)/data/json/json.c \
 		$(SRC_DIR)/data/json/json_parse.c \
 		$(SRC_DIR)/data/nbt/nbt.c \

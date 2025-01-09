@@ -34,6 +34,7 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/platform/mc_thread.h \
 		$(SRC_DIR)/platform/mc_mutex.h \
 		$(SRC_DIR)/platform/mc_cond_var.h \
+		$(SRC_DIR)/platform/time.h \
 		$(SRC_DIR)/platform/linux/signal-handler.h \
 		$(SRC_DIR)/platform/linux/mc_thread_linux.h \
 		$(SRC_DIR)/platform/linux/mc_mutex_linux.h \
