@@ -1,12 +1,22 @@
 #include "decoders.h"
 #include "containers/bytebuffer.h"
 #include "definitions.h"
+#include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
 #include "packet.h"
-#include "logger.h"
 #include "utils/bitwise.h"
-#include <openssl/bio.h>
+
+static i32 read_uuid(u64 uuid[2], ByteBuffer* buffer) {
+    if(bytebuf_read(buffer, sizeof *uuid, &uuid[1]) < (i64)sizeof *uuid)
+        return -1;
+    if(bytebuf_read(buffer, sizeof *uuid, &uuid[0]) < (i64)sizeof *uuid)
+        return -1;
+
+    uuid[0] = untoh64(uuid[0]);
+    uuid[1] = untoh64(uuid[1]);
+    return sizeof *uuid * 2;
+}
 
 DEF_PKT_DECODER(dummy) {
     (void) packet;
@@ -57,7 +67,8 @@ DEF_PKT_DECODER(crypt_response) {
     PacketCryptResponse* payload = arena_allocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
 
     bytebuf_read_varint(bytes, &payload->shared_secret_length);
-    payload->shared_secret = arena_allocate(arena, payload->shared_secret_length, ALLOC_TAG_UNKNOWN);
+    payload->shared_secret =
+        arena_allocate(arena, payload->shared_secret_length, ALLOC_TAG_UNKNOWN);
     bytebuf_read(bytes, payload->shared_secret_length, payload->shared_secret);
 
     bytebuf_read_varint(bytes, &payload->verify_token_length);
@@ -76,15 +87,16 @@ DEF_PKT_DECODER(cfg_custom) {
 
     string channel_str;
     res = bytebuf_read_mcstring(bytes, arena, &channel_str);
-    if(res <= 0)
+    if (res <= 0)
         return;
 
-    if(!resid_parse(&channel_str, arena, &payload->channel))
+    if (!resid_parse(&channel_str, arena, &payload->channel))
         return;
 
     payload->data_length = packet->payload_length - res;
-    if(payload->data_length > 32676) {
-        log_errorf("Custom packet's payload is too large: is %zu bytes long, max 32767.", payload->data_length);
+    if (payload->data_length > 32676) {
+        log_errorf("Custom packet's payload is too large: is %zu bytes long, max 32767.",
+                   payload->data_length);
         return;
     }
     payload->data = arena_allocate(arena, payload->data_length, ALLOC_TAG_PACKET);
@@ -97,7 +109,7 @@ DEF_PKT_DECODER(cfg_client_info) {
     PacketClientInfo* payload = arena_callocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
 
     bytebuf_read_mcstring(bytes, arena, &payload->locale);
-    if(payload->locale.length > 16) {
+    if (payload->locale.length > 16) {
         log_error("Invalid client info packet: Locale string is longer than 16 characters.");
         return;
     }
@@ -142,6 +154,20 @@ DEF_PKT_DECODER(cfg_keep_alive) {
     i64 tmp;
     bytebuf_read(bytes, sizeof payload->keep_alive_id, &tmp);
     payload->keep_alive_id = ntoh64(tmp);
-    
+
+    packet->payload = payload;
+}
+DEF_PKT_DECODER(cfg_respack_response) {
+    PacketResourcePackResponse* payload = arena_callocate(arena, sizeof *payload, ALLOC_TAG_PACKET);
+
+    if(read_uuid(payload->uuid, bytes) < (i64)sizeof *payload->uuid * 2)
+        return;
+
+    i32 tmp;
+    if(bytebuf_read(bytes, sizeof tmp, &tmp) < (i64)sizeof tmp)
+        return;
+
+    payload->result = tmp;
+
     packet->payload = payload;
 }

@@ -52,7 +52,6 @@ DEF_PKT_DECODER(cfg_client_info);
 DEF_PKT_DECODER(cfg_custom);
 DEF_PKT_DECODER(cfg_finish_config_ack);
 DEF_PKT_DECODER(cfg_keep_alive);
-DEF_PKT_DECODER(cfg_pong);
 DEF_PKT_DECODER(cfg_respack_response);
 DEF_PKT_DECODER(cfg_known_datapacks);
 

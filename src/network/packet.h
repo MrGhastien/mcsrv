@@ -364,7 +364,7 @@ typedef struct CustomReportDetail {
 } CustomReportDetail;
 
 typedef struct {
-    Vector details; //CustomReportDetail
+    Vector details; // CustomReportDetail
 } PacketCustomReport;
 
 enum ServerBuiltinLinkType {
@@ -390,8 +390,24 @@ typedef struct ServerLink {
 } ServerLink;
 
 typedef struct {
-    Vector links; //ServerLink
+    Vector links; // ServerLink
 } PacketServerLinks;
+
+enum ResourcePackResult {
+    RPRES_DL_SUCCESS = 0,
+    RPRES_DECLINED = 1,
+    RPRES_DL_FAIL = 2,
+    RPRES_ACCEPTED = 3,
+    RPRES_DOWNLOADED = 4,
+    RPRES_INVALID_URL = 5,
+    RPRES_RELOAD_FAIL = 6,
+    RPRES_DISCARDED = 7,
+};
+
+typedef struct {
+    u64 uuid[2];
+    enum ResourcePackResult result;
+} PacketResourcePackResponse;
 
 #endif /* ! PACKET_H */
 

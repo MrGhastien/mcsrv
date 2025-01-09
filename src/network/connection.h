@@ -88,6 +88,7 @@ typedef struct Connection {
     u32 peer_port;    /**< TCP port of the connected peer. */
 
  string peer_brand;
+ u32 ping;
 
     /** Thread MutEx device to prevent race conditions. */
     MCMutex mutex;

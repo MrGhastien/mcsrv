@@ -132,7 +132,7 @@ static PacketFunction function_table[_STATE_COUNT][_PKT_TYPE_COUNT] = {
             "CLIENT_KEEP_ALIVE"
         },
         [PKT_CFG_PING] = {
-            &PKT_DECODER(cfg_pong),
+            &PKT_DECODER(ping),
             &PKT_HANDLER(cfg_pong),
             &PKT_ENCODER(cfg_ping),
             "PONG",

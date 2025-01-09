@@ -349,5 +349,23 @@ DEF_PKT_HANDLER(cfg_finish_config_ack) {
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_keep_alive) {
+    UNUSED(ctx);
+    UNUSED(pkt);
+    UNUSED(conn);
+    return TRUE;
+}
+DEF_PKT_HANDLER(cfg_pong) {
+    UNUSED(ctx);
+    PacketPing* payload = pkt->payload;
 
+    conn->ping = payload->num;
+    return TRUE;
+}
+DEF_PKT_HANDLER(cfg_respack_response) {
+    UNUSED(ctx);
+    UNUSED(conn);
+    PacketResourcePackResponse* payload = pkt->payload;
+    log_debugf("Received resource pack download result: uuid: %016x-%016x -> %i", payload->uuid[0], payload->uuid[1], payload->result);
+    //TODO: Handle resource packs
+    return TRUE;
 }
