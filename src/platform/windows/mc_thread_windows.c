@@ -165,7 +165,8 @@ bool mcthread_join(MCThread* thread, void** out_return) {
 
     mcthread_destroy(thread);
 
-    *out_return = internal->res;
+    if(out_return)
+        *out_return = internal->res;
 
     return TRUE;
 }
