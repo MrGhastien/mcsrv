@@ -44,4 +44,5 @@ HDRS := $(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/data/nbt/nbt_internal.h \
 		$(SRC_DIR)/registry/registry.h \
 		$(SRC_DIR)/resource/resource_id.h \
-		$(SRC_DIR)/event/event.h
+		$(SRC_DIR)/event/event.h \
+		$(SRC_DIR)/world/data/block.h

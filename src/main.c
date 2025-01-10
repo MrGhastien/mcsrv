@@ -5,6 +5,7 @@
 #include "platform/platform.h"
 #include "registry/registry.h"
 #include "memory/mem_tags.h"
+#include "world/data/block.h"
 
 typedef struct server_ctx {
     bool running;

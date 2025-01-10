@@ -27,6 +27,9 @@ void registry_system_cleanup(void) {
     arena_destroy(&arena);
 }
 
+void register_game_elements(void) {
+}
+
 bool registry_create(ResourceID name, u64 stride) {
     Registry reg = {.name = name};
     dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
