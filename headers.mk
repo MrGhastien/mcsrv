@@ -1,48 +1,57 @@
-HDRS := $(SRC_DIR)/definitions.h \
+HDRS := $(SRC_DIR)/data/json/json_internal.h \
+		$(SRC_DIR)/data/nbt/nbt_internal.h \
+		$(SRC_DIR)/data/json.h \
+		$(SRC_DIR)/data/nbt.h \
+		$(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/logger.h \
-		$(SRC_DIR)/utils/bitwise.h \
-		$(SRC_DIR)/utils/string.h \
-		$(SRC_DIR)/utils/str_builder.h \
-		$(SRC_DIR)/utils/math.h \
-		$(SRC_DIR)/utils/hash.h \
-		$(SRC_DIR)/utils/iomux.h \
-		$(SRC_DIR)/utils/ansi_codes.h \
+		$(SRC_DIR)/network/encoders.h \
+		$(SRC_DIR)/network/compression.h \
+		$(SRC_DIR)/network/security.h \
+		$(SRC_DIR)/network/utils.h \
+		$(SRC_DIR)/network/network.h \
+		$(SRC_DIR)/network/common_types.h \
+		$(SRC_DIR)/network/connection.h \
+		$(SRC_DIR)/network/decoders.h \
+		$(SRC_DIR)/network/handlers.h \
+		$(SRC_DIR)/network/packet.h \
+		$(SRC_DIR)/network/packet_codec.h \
 		$(SRC_DIR)/memory/dyn_arena.h \
-		$(SRC_DIR)/memory/arena.h \
 		$(SRC_DIR)/memory/mem_tags.h \
 		$(SRC_DIR)/memory/_memory_internal.h \
-		$(SRC_DIR)/containers/dict.h \
-		$(SRC_DIR)/containers/vector.h \
+		$(SRC_DIR)/memory/arena.h \
+		$(SRC_DIR)/utils/hash.h \
+		$(SRC_DIR)/utils/direction.h \
+		$(SRC_DIR)/utils/position.h \
+		$(SRC_DIR)/utils/bitwise.h \
+		$(SRC_DIR)/utils/iomux.h \
+		$(SRC_DIR)/utils/math.h \
+		$(SRC_DIR)/utils/str_builder.h \
+		$(SRC_DIR)/utils/ansi_codes.h \
+		$(SRC_DIR)/utils/string.h \
 		$(SRC_DIR)/containers/ring_queue.h \
 		$(SRC_DIR)/containers/bytebuffer.h \
-		$(SRC_DIR)/containers/object_pool.h \
+		$(SRC_DIR)/containers/dict.h \
+		$(SRC_DIR)/containers/vector.h \
 		$(SRC_DIR)/containers/_array_internal.h \
-		$(SRC_DIR)/network/packet.h \
-		$(SRC_DIR)/network/decoders.h \
-		$(SRC_DIR)/network/utils.h \
-		$(SRC_DIR)/network/connection.h \
-		$(SRC_DIR)/network/packet_codec.h \
-		$(SRC_DIR)/network/network.h \
-		$(SRC_DIR)/network/handlers.h \
-		$(SRC_DIR)/network/encoders.h \
-		$(SRC_DIR)/network/security.h \
-		$(SRC_DIR)/network/compression.h \
-		$(SRC_DIR)/network/common_types.h \
-		$(SRC_DIR)/platform/platform.h \
-		$(SRC_DIR)/platform/socket.h \
-		$(SRC_DIR)/platform/network.h \
-		$(SRC_DIR)/platform/mc_thread.h \
-		$(SRC_DIR)/platform/mc_mutex.h \
-		$(SRC_DIR)/platform/mc_cond_var.h \
-		$(SRC_DIR)/platform/time.h \
-		$(SRC_DIR)/platform/linux/signal-handler.h \
-		$(SRC_DIR)/platform/linux/mc_thread_linux.h \
-		$(SRC_DIR)/platform/linux/mc_mutex_linux.h \
-		$(SRC_DIR)/data/json.h \
-		$(SRC_DIR)/data/json/json_internal.h \
-		$(SRC_DIR)/data/nbt.h \
-		$(SRC_DIR)/data/nbt/nbt_internal.h \
-		$(SRC_DIR)/registry/registry.h \
-		$(SRC_DIR)/resource/resource_id.h \
+		$(SRC_DIR)/containers/object_pool.h \
 		$(SRC_DIR)/event/event.h \
-		$(SRC_DIR)/world/data/block.h
+		$(SRC_DIR)/registry/registry.h \
+		$(SRC_DIR)/registry/registries.h \
+		$(SRC_DIR)/resource/resource_id.h \
+		$(SRC_DIR)/platform/linux/signal-handler.h \
+		$(SRC_DIR)/platform/linux/mc_cond_var_linux.h \
+		$(SRC_DIR)/platform/linux/mc_mutex_linux.h \
+		$(SRC_DIR)/platform/linux/mc_thread_linux.h \
+		$(SRC_DIR)/platform/mc_cond_var.h \
+		$(SRC_DIR)/platform/mc_mutex.h \
+		$(SRC_DIR)/platform/windows/mc_cond_var_windows.h \
+		$(SRC_DIR)/platform/windows/mc_mutex_windows.h \
+		$(SRC_DIR)/platform/windows/mc_thread_windows.h \
+		$(SRC_DIR)/platform/socket.h \
+		$(SRC_DIR)/platform/mc_thread.h \
+		$(SRC_DIR)/platform/platform.h \
+		$(SRC_DIR)/platform/network.h \
+		$(SRC_DIR)/platform/time.h \
+		$(SRC_DIR)/world/data/block.h \
+		$(SRC_DIR)/world/data/block_behavior.h \
+		$(SRC_DIR)/world/level.h 
