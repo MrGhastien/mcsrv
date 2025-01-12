@@ -74,7 +74,7 @@ string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
     char serv[NI_MAXSERV];
     if (getnameinfo(&addr->data.sa, addr->length, host, NI_MAXHOST, serv, NI_MAXSERV, 0) != 0) {
         log_errorf("Could not convert address to string: %s", get_last_error());
-        return str_create_view(NULL);
+        return str_view(NULL);
     }
 
     *out_port = strtoul(serv, NULL, 0);

@@ -58,7 +58,7 @@ i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
 i32 network_init(char* host, i32 port, u64 max_connections) {
 
     ctx.arena = arena_create(40960, BLK_TAG_NETWORK);
-    ctx.host = str_create_view(host);
+    ctx.host = str_view(host);
     ctx.port = port;
     ctx.code = 0;
     if(!timestamp(&ctx.last_connection_clean))

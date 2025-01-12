@@ -59,7 +59,7 @@ string str_create(const char* cstr, Arena* arena);
  * @param[in] cstr The source C string. Must be null-terminated.
  * @return A string view containing the characters of @p cstr.
  */
-string str_create_view(const char* cstr);
+string str_view(const char* cstr);
 
 /**
  * Creates a copy of a string.
@@ -176,7 +176,7 @@ string str_concat(string* lhs, const string* rhs, Arena* arena);
 * @param[in] str The string of which to get the contents in a printable C string.
 * @return The pointer to the start of the printable C string.
 */
-const char* str_printable_buffer(const string* str);
+const char* cstr(const string* str);
 
 /**
 * Computes the hash value of a string.

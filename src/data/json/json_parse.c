@@ -137,10 +137,10 @@ static enum JSONToken lex_number(ByteBuffer* buffer, TokenValue* value, Arena* a
 
     enum JSONToken token;
     if (frac) {
-        value->floating = strtod(str_printable_buffer(&parse_res), NULL);
+        value->floating = strtod(cstr(&parse_res), NULL);
         token = TOK_FLOAT;
     } else {
-        value->integer = strtol(str_printable_buffer(&parse_res), NULL, 10);
+        value->integer = strtol(cstr(&parse_res), NULL, 10);
         token = TOK_INT;
     }
 

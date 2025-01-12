@@ -119,7 +119,7 @@ DEF_PKT_HANDLER(login_start) {
 
     PacketCryptRequest* req = arena_callocate(&conn->scratch_arena, sizeof *req, ALLOC_TAG_PACKET);
     *req = (PacketCryptRequest){
-        .server_id = str_create_view(""),
+        .server_id = str_view(""),
         .pkey_length = conn->global_enc_ctx->encoded_key_size,
         .pkey = conn->global_enc_ctx->encoded_key,
         .verify_tok_length = 4,
@@ -295,7 +295,7 @@ DEF_PKT_HANDLER(crypt_response) {
 DEF_PKT_HANDLER(login_ack) {
     UNUSED(pkt);
 
-    log_infof("Player %s has successfully logged-in!", str_printable_buffer(&conn->player_name));
+    log_infof("Player %s has successfully logged-in!", cstr(&conn->player_name));
     log_debug("Switching connection state to CONFIG.");
 
     conn->state = STATE_CONFIG;
@@ -304,7 +304,7 @@ DEF_PKT_HANDLER(login_ack) {
         .channel = resid_default_cstr("brand"),
         .data = bytebuf_create_fixed(32767, &conn->scratch_arena),
     };
-    string srv_brand = str_create_view("mcsrv");
+    string srv_brand = str_view("mcsrv");
     bytebuf_write_varint(&server_brand_payload.data, srv_brand.length);
     bytebuf_write(&server_brand_payload.data, srv_brand.base, srv_brand.length);
     Packet pkt_to_send = {
@@ -334,11 +334,11 @@ DEF_PKT_HANDLER(cfg_custom) {
 
     if (resid_is(&payload->channel, "minecraft:brand")) {
         bytebuf_read_mcstring(&payload->data, &conn->persistent_arena, &conn->peer_brand);
-        log_debugf("Peer brand: %s", str_printable_buffer(&conn->peer_brand));
+        log_debugf("Peer brand: %s", cstr(&conn->peer_brand));
     } else
         log_warnf("Received unknown custom message of channel %s:%s, ignoring.",
-                  str_printable_buffer(&payload->channel.namespace),
-                  str_printable_buffer(&payload->channel.path));
+                  cstr(&payload->channel.namespace),
+                  cstr(&payload->channel.path));
 
     return TRUE;
 }
@@ -362,7 +362,7 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
 DEF_PKT_HANDLER(cfg_finish_config_ack) {
     UNUSED(pkt);
 
-    log_infof("Configuration for player %s is finished.", str_printable_buffer(&conn->player_name));
+    log_infof("Configuration for player %s is finished.", cstr(&conn->player_name));
     // LETS GO GAMING!!!
     conn->state = STATE_PLAY;
 

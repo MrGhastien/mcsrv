@@ -3,6 +3,9 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "resource/resource_id.h"
+
+#include "registries.h"
+
 #include <stdlib.h>
 
 #define REGISTRY_ARENA_SIZE 1048576
@@ -15,19 +18,23 @@ typedef struct registry {
 static Registry root;
 static Arena arena;
 
+
+static void register_game_elements(void) {
+    register_blocks();
+}
+
 void registry_system_init(void) {
     arena = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY);
     root.name = resid_default_cstr("root");
     dict_init_fixed(&root.entries, NULL, &arena, 100, sizeof(ResourceID), sizeof(Registry));
 
     log_debug("Registry subsystem initialized.");
+
+    register_game_elements();
 }
 
 void registry_system_cleanup(void) {
     arena_destroy(&arena);
-}
-
-void register_game_elements(void) {
 }
 
 bool registry_create(ResourceID name, u64 stride) {

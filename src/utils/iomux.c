@@ -269,12 +269,12 @@ i32 iomux_write_str(IOMux multiplexer, const string* str) {
 
     switch (mux->type) {
     case IO_FILE:
-        res = fputs(str_printable_buffer(str), mux->backend.file);
+        res = fputs(cstr(str), mux->backend.file);
         if (res == EOF)
             mux->error = errno;
         break;
     case IO_GZFILE:
-        res = gzputs(mux->backend.gzFile, str_printable_buffer(str));
+        res = gzputs(mux->backend.gzFile, cstr(str));
         if (res < 0)
             mux->error = errno;
         break;
@@ -313,28 +313,28 @@ bool iomux_eof(IOMux multiplexer) {
 string iomux_error(IOMux multiplexer, i32* out_code) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux)
-        return str_create_view(NULL);
+        return str_view(NULL);
 
     if (out_code)
         *out_code = mux->error;
 
     switch (mux->type) {
     case IO_FILE:
-        return str_create_view(strerror(mux->error));
+        return str_view(strerror(mux->error));
     case IO_GZFILE: {
         i32 code;
         const char* msg = gzerror(mux->backend.gzFile, &code);
         if (code == Z_OK)
             msg = strerror(mux->error);
-        return str_create_view(msg);
+        return str_view(msg);
     }
     case IO_BUFFER:
-        return str_create_view(NULL);
+        return str_view(NULL);
     case IO_STRING:
-        return str_create_view(strerror(mux->error));
+        return str_view(strerror(mux->error));
     default:
         abort();
-        return str_create_view(NULL);
+        return str_view(NULL);
     }
 }
 
@@ -360,7 +360,7 @@ void iomux_close(IOMux multiplexer) {
 string iomux_string(IOMux multiplexer, Arena* arena) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux || mux->error != 0)
-        return str_create_view(NULL);
+        return str_view(NULL);
 
     return strbuild_to_string(&mux->backend.string_backend.builder, arena);
 }

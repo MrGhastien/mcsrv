@@ -55,7 +55,7 @@ static enum NBTTagType parse_type(IOMux fd, const NBTReadContext* ctx) {
             else {
                 i32 zlib_errnum;
                 string zlib_error_msg = iomux_error(fd, &zlib_errnum);
-                log_errorf("NBT: Syntax error: %s", str_printable_buffer(&zlib_error_msg));
+                log_errorf("NBT: Syntax error: %s", cstr(&zlib_error_msg));
             }
             return _NBT_COUNT;
         }
@@ -196,7 +196,7 @@ static i32 parse_array(IOMux fd, const NBTTag* new_tag, NBTReadContext* ctx) {
         if (errnum == 0 && reached_eof)
             log_error("NBT: Syntax error: Reached unexpected end of file");
         else
-            log_errorf("NBT: IO Error: Failed to read the input file: %s", str_printable_buffer(&errmsg));
+            log_errorf("NBT: IO Error: Failed to read the input file: %s", cstr(&errmsg));
         return -1;
     }
     num = ntoh32(num);

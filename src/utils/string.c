@@ -30,7 +30,7 @@ string str_create(const char* cstr, Arena* arena) {
     };
 }
 
-string str_create_view(const char* cstr) {
+string str_view(const char* cstr) {
     u64 len = cstr == NULL ? 0 : strlen(cstr);
     return (string){
         .base = (char*) cstr,
@@ -120,7 +120,7 @@ string str_concat(string* lhs, const string* rhs, Arena* arena) {
     return res;
 }
 
-const char* str_printable_buffer(const string* str) {
+const char* cstr(const string* str) {
     if (str->base[str->length] != 0) {
         log_warn("String is not null terminated, setting a null byte.");
         str->base[str->length] = 0;

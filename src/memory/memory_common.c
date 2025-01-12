@@ -60,15 +60,15 @@ static MCMutex stats_mutex;
 
 string get_alloc_tag_name(enum AllocTag tag) {
     if (tag >= _ALLOC_TAG_COUNT || tag < ALLOC_TAG_UNKNOWN)
-        return str_create_view(NULL);
+        return str_view(NULL);
 
-    return str_create_view(ALLOC_TAG_NAMES[tag]);
+    return str_view(ALLOC_TAG_NAMES[tag]);
 }
 string get_blk_tag_name(enum MemoryBlockTag tag) {
     if (tag >= _BLK_TAG_COUNT || tag < BLK_TAG_UNKNOWN)
-        return str_create_view(NULL);
+        return str_view(NULL);
 
-    return str_create_view(BLK_TAG_NAMES[tag]);
+    return str_view(BLK_TAG_NAMES[tag]);
 }
 
 static Arena arena_create_from(void* buf, u64 size) {
