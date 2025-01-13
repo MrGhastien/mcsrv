@@ -9,6 +9,12 @@ typedef struct vec3i {
     i64 z;
 } Vec3i;
 
+typedef struct vec3d {
+    f64 x;
+    f64 y;
+    f64 z;
+} Vec3d;
+
 // TODO: Add utility functions
 
 #endif /* ! POSITION_H */
