@@ -45,10 +45,22 @@ bool create_state_definition(const Block* block,
                              Vector* properties,
                              Arena* arena,
                              StateDefinition* out_definition) {
-    if (!out_definition || !block || !properties || !arena)
+    if (!out_definition || !block || !arena)
         return FALSE;
 
-    u32 property_count = vect_size(properties);
+    u32 property_count = properties ? vect_size(properties) : 0;
+    if(property_count == 0) {
+        out_definition->property_count = 0;
+        out_definition->properties = NULL;
+        out_definition->state_count = 1;
+        out_definition->states = arena_callocate(arena, sizeof(BlockState), ALLOC_TAG_WORLD);
+        *out_definition->states = (BlockState){
+            .definition = out_definition,
+            .values = NULL,
+        };
+        return TRUE;
+    }
+
     const StateProperty** property_array =
         arena_callocate(arena, sizeof(StateProperty*) * property_count, ALLOC_TAG_WORLD);
 
