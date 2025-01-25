@@ -107,9 +107,9 @@ static void shift_elements_forwards(Vector* vector, u64 global_index) {
     u64 stride = vector->stride;
 
     struct data_block* blk = vector->current;
-    u64 total_to_shift = vector->size - global_index;
+    i64 total_to_shift = vector->size - global_index;
     u64 end = vector->next_insert_index;
-    while (total_to_shift > 0) {
+    while (total_to_shift > 0 && blk) {
         u64 start = sub_no_underflow(end, total_to_shift);
         void* src = offset(blk->data, start * stride);
 
@@ -131,7 +131,7 @@ static void shift_elements_forwards(Vector* vector, u64 global_index) {
 
         total_to_shift -= to_shift;
         blk = blk->prev;
-        end = blk->capacity;
+        end = !blk ? 0 : blk->capacity;
     }
 }
 
@@ -160,20 +160,21 @@ void vect_clear(Vector* vector) {
     vector->next_insert_index = 0;
 }
 
-void vect_add(Vector* vector, const void* element) {
+bool vect_add(Vector* vector, const void* element) {
     u64 stride = vector->stride;
 
     if (!ensure_capacity(vector, vector->size + 1))
-        return;
+        return FALSE;
 
     void* dst = offset(vector->current->data, vector->next_insert_index * stride);
     memcpy(dst, element, stride);
     register_addition(vector);
+    return TRUE;
 }
-void vect_insert(Vector* vector, const void* element, u64 idx) {
+bool vect_insert(Vector* vector, const void* element, u64 idx) {
 
     if (!ensure_capacity(vector, vector->size + 1))
-        return;
+        return FALSE;
 
     u64 stride = vector->stride;
     u64 local_index;
@@ -184,6 +185,7 @@ void vect_insert(Vector* vector, const void* element, u64 idx) {
     memcpy(target_addr, element, stride);
 
     register_addition(vector);
+    return TRUE;
 }
 
 void* vect_reserve(Vector* vector) {

@@ -59,8 +59,9 @@ void vect_clear(Vector* vector);
  * @param[inout] vector The vector to add an element to.
  * @param[in] element A pointer to the element to add. There must be at least as much bytes readable
  * as the stride passed to the @ref vect_init call.
+ * @return @ref TRUE if the element was successfully added to the vector, @ref FALSE otherwise.
  */
-void vect_add(Vector* vector, const void* element);
+bool vect_add(Vector* vector, const void* element);
 /**
  * Inserts an element inside a vector.
  *
@@ -70,8 +71,9 @@ void vect_add(Vector* vector, const void* element);
  * @param[in] element A pointer to the element to insert. There must be at least as many bytes
  * readable as the stride passed to the @ref vect_init call.
  * @param[in] idx The index in the vector at which to insert the element.
+ * @return @ref TRUE if the insertion is successful, @ref FALSE otherwise.
  */
-void vect_insert(Vector* vector, const void* element, u64 idx);
+bool vect_insert(Vector* vector, const void* element, u64 idx);
 
 /**
  * Reserves a slot at the end of a vector.
