@@ -1,367 +1,346 @@
 #include "data/json.h"
-#include "json_internal.h"
-
-#include "containers/dict.h"
 #include "containers/vector.h"
+#include "json_internal.h"
 #include "logger.h"
-#include "memory/mem_tags.h"
-#include "utils/str_builder.h"
 #include "utils/string.h"
+#include <stdlib.h>
 
-#include <stdio.h>
+void increment_parent_total_lengths(JSON* json) {
+    for (u32 i = 0; i < json->stack.size; i++) {
+        u64 idx;
+        vect_get(&json->stack, i, &idx);
+        JSONToken* token = vect_ref(&json->tokens, idx);
 
-static const char* TYPES[_JSON_COUNT] = {
-    [JSON_NULL] = "JSON_NULL",
-    [JSON_INT] = "JSON_INT",
-    [JSON_FLOAT] = "JSON_FLOAT",
-    [JSON_OBJECT] = "JSON_OBJECT",
-    [JSON_ARRAY] = "JSON_ARRAY",
-    [JSON_STRING] = "JSON_STRING",
-    [JSON_BOOL] = "JSON_BOOL",
-};
-
-static void
-json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level);
-
-JSONNode* json_node_create(JSON* json, enum JSONType type) {
-    Arena* arena = json->arena;
-
-    JSONNode* node = arena_allocate(arena, sizeof(JSONNode), ALLOC_TAG_JSON);
-    node->type = type;
-    switch (type) {
-    case JSON_OBJECT:
-        node->data.obj = arena_allocate(arena, sizeof(Dict), ALLOC_TAG_JSON);
-        dict_init(node->data.obj, &CMP_STRING, sizeof(string), sizeof(JSONNode*));
-        break;
-    case JSON_ARRAY:
-        node->data.array = arena_allocate(arena, sizeof(Vector), ALLOC_TAG_JSON);
-        vect_init_dynamic(node->data.array, arena, 4, sizeof(JSONNode*));
-        break;
-    case JSON_STRING:
-        node->data.string = (string){0};
-        break;
-    case JSON_BOOL:
-    case JSON_FLOAT:
-    case JSON_INT:
-    case JSON_NULL:
-        node->data.number = 0;
-        break;
-    default:
-        log_errorf("JSON: Invalid JSON type %i", type);
-        break;
-    }
-    return node;
-}
-
-void json_create(JSON* out_json, Arena* arena) {
-    out_json->arena = arena;
-    out_json->root = NULL;
-}
-
-void json_set_root(JSON* json, JSONNode* node) {
-    if (json->root) {
-        log_warn("JSON already has a root node.");
-        return;
-    }
-    json->root = node;
-}
-
-static void foreach_destroy(const Dict* dict, size_t idx, void* key, void* value, void* data) {
-    (void) dict;
-    (void) key;
-    (void) data;
-    (void) idx;
-    JSONNode** subnode = value;
-    json_node_destroy(*subnode);
-}
-
-void json_node_destroy(JSONNode* node) {
-    switch (node->type) {
-    case JSON_OBJECT:
-        dict_foreach(node->data.obj, &foreach_destroy, NULL);
-        dict_destroy(node->data.obj);
-        break;
-    case JSON_ARRAY:
-        for (size_t i = 0; i < node->data.array->size; i++) {
-            JSONNode* subnode;
-            vect_get(node->data.array, i, &subnode);
-            json_node_destroy(subnode);
+        switch (token->type) {
+        case JSON_OBJECT:
+        case JSON_ARRAY:
+            token->data.compound.total_node_length++;
+            break;
+        default:
+            log_fatalf("JSON token of type %i cannot be a parent of other tokens !", token->type);
+            abort();
+            break;
         }
-        break;
-    default:
-        break;
     }
 }
 
-void json_destroy(JSON* json) {
-    if (json->root) {
-        json_node_destroy(json->root);
-        arena_free_ptr(json->arena, json->root);
-    }
-    json->arena = NULL;
-    json->root = NULL;
-}
-
-static bool json_check_type(const JSONNode* node, enum JSONType type) {
-    if (node->type != type) {
-        const char* str_type = node->type < _JSON_COUNT ? TYPES[node->type] : "???";
-        printf("Node %p (%s) is not of type '%s'!\n", node, str_type, TYPES[type]);
-        return FALSE;
-    }
-    return TRUE;
-}
-
-JSONNode* json_node_puts(JSON* json, JSONNode* obj, const string* name, enum JSONType type) {
-    if (!json_check_type(obj, JSON_OBJECT))
+static JSONToken* get_current_node(JSON* json) {
+    i64 idx;
+    if (!vect_peek(&json->stack, &idx))
         return NULL;
 
-    JSONNode* node = json_node_create(json, type);
-    json_node_putn(obj, name, node);
-    return node;
+    return vect_ref(&json->tokens, idx);
 }
 
-JSONNode* json_node_put(JSON* json, JSONNode* obj, const char* name, enum JSONType type) {
-    // string str = str_alloc(name, json->arena);
-    const string str = str_view(name);
-    return json_node_puts(json, obj, &str, type);
-}
-
-void json_node_putn(JSONNode* obj, const string* name, JSONNode* subnode) {
-    if (!json_check_type(obj, JSON_OBJECT))
-        return;
-
-    Dict* dict = obj->data.obj;
-
-    dict_put(dict, name, &subnode);
-}
-
-JSONNode* json_node_add(JSON* json, JSONNode* array, enum JSONType type) {
-    if (!json_check_type(array, JSON_ARRAY))
-        return NULL;
-
-    JSONNode* node = json_node_create(json, type);
-    vect_add(array->data.array, &node);
-    return node;
-}
-
-void json_node_addn(JSONNode* array, JSONNode* element) {
-    if (!json_check_type(array, JSON_ARRAY))
-        return;
-
-    vect_add(array->data.array, &element);
-}
-
-void json_set_str_direct(JSONNode* node, string* value) {
-    if (!json_check_type(node, JSON_STRING))
-        return;
-    if (node->data.string.base) {
-        log_error("JSON: String is already set.");
-        return;
-    }
-
-    node->data.string = *value;
-}
-
-void json_set_str(JSON* json, JSONNode* node, const string* value) {
-    if (!json_check_type(node, JSON_STRING))
-        return;
-    if (node->data.string.base) {
-        log_error("JSON: String is already set.");
-        return;
-    }
-
-    node->data.string = str_create_copy(value, json->arena);
-}
-
-void json_set_cstr(JSON* json, JSONNode* node, const char* value) {
-    if (!json_check_type(node, JSON_STRING))
-        return;
-    if (node->data.string.base) {
-        log_error("JSON: String is already set.");
-        return;
-    }
-
-    node->data.string = str_create(value, json->arena);
-}
-void json_set_int(JSONNode* node, long value) {
-    if (!json_check_type(node, JSON_INT))
-        return;
-    node->data.number = value;
-}
-
-void json_set_double(JSONNode* node, double value) {
-    if (!json_check_type(node, JSON_FLOAT))
-        return;
-    node->data.fnumber = value;
-}
-
-void json_set_bool(JSONNode* node, bool value) {
-    if (!json_check_type(node, JSON_BOOL))
-        return;
-    node->data.boolean = value;
-}
-
-static void add_padding(StringBuilder* builder, size_t level) {
-    for (size_t i = 0; i < level; i++) {
-        strbuild_appends(builder, "    ");
-    }
-}
-
-static void
-json_array_stringify(JSON* json, const JSONNode* array, StringBuilder* builder, size_t level) {
-    Vector* vector = array->data.array;
-    strbuild_appendc(builder, '[');
-    for (size_t i = 0; i < vector->size; i++) {
-        JSONNode* elem;
-        strbuild_appendc(builder, '\n');
-        add_padding(builder, level + 1);
-        if (vect_get(vector, i, &elem))
-            json_node_stringify(json, elem, builder, level + 1);
-        if (i < vector->size - 1)
-            strbuild_appendc(builder, ',');
-    }
-    strbuild_appendc(builder, '\n');
-    add_padding(builder, level);
-    strbuild_appendc(builder, ']');
-}
-
-struct stringify_data {
-    JSON* json;
-    StringBuilder* builder;
-    bool linebreaks;
-    size_t level;
-};
-
-static void foreach_stringify(const Dict* dict, size_t idx, void* key, void* value, void* data) {
-    (void) dict;
-    struct stringify_data* sdata = data;
-    string* name = key;
-    JSONNode* node = *(JSONNode**) value;
-
-    add_padding(sdata->builder, sdata->level);
-
-    strbuild_appendc(sdata->builder, '\"');
-    strbuild_append(sdata->builder, name);
-    strbuild_appends(sdata->builder, "\": ");
-    json_node_stringify(sdata->json, node, sdata->builder, sdata->level);
-    if (idx < dict->size - 1)
-        strbuild_appendc(sdata->builder, ',');
-    strbuild_appendc(sdata->builder, '\n');
-}
-
-static void
-json_node_stringify(JSON* json, const JSONNode* node, StringBuilder* builder, size_t level) {
-    if (!node)
-        return;
-    switch (node->type) {
-    case JSON_BOOL:
-        strbuild_appends(builder, node->data.boolean ? "true" : "false");
-        break;
-    case JSON_INT: {
-        strbuild_appendf(builder, "%li", node->data.number);
-        break;
-    }
-    case JSON_FLOAT: {
-        strbuild_appendf(builder, "%g", node->data.fnumber);
-        break;
-    }
-    case JSON_NULL:
-        strbuild_appends(builder, "null");
-        break;
-    case JSON_STRING:
-        strbuild_appendc(builder, '\"');
-        strbuild_append(builder, &node->data.string);
-        strbuild_appendc(builder, '\"');
-        break;
-    case JSON_ARRAY:
-        json_array_stringify(json, node, builder, level);
-        break;
-
-    case JSON_OBJECT: {
-        struct stringify_data data = {.json = json, .builder = builder, .level = level + 1};
-        strbuild_appends(builder, "{\n");
-        dict_foreach(node->data.obj, &foreach_stringify, &data);
-        add_padding(builder, level);
-        strbuild_appendc(builder, '}');
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-void json_stringify(JSON* json, string* out, Arena* arena) {
-    Arena scratch = *arena;
-    StringBuilder builder = strbuild_create(&scratch);
-    json_node_stringify(json, json->root, &builder, 0);
-    strbuild_appendc(&builder, '\n');
-    *out = strbuild_to_string(&builder, arena);
-}
-
-JSONNode* json_get_obj(const JSONNode* node, const string* name) {
-    if (!json_check_type(node, JSON_OBJECT))
-        return NULL;
-
-    JSONNode* out;
-    if (dict_get(node->data.obj, name, &out) < 0)
-        return NULL;
-
-    return out;
-}
-
-JSONNode* json_get_obj_cstr(const JSONNode* node, const char* name) {
-    string str_name = str_view(name);
-    return json_get_obj(node, &str_name);
-}
-
-JSONNode* json_get_array(const JSONNode* node, u64 idx) {
-    if (!json_check_type(node, JSON_ARRAY))
-        return NULL;
-
-    JSONNode* out;
-    if (!vect_get(node->data.array, idx, &out))
-        return NULL;
-    return out;
-}
-
-i64 json_get_length(const JSONNode* node) {
-    switch (node->type) {
+static i32 get_total_length(const JSONToken* token) {
+    if (!token)
+        return 0;
+    switch (token->type) {
     case JSON_OBJECT:
-        return node->data.obj->size;
     case JSON_ARRAY:
-        return node->data.array->size;
+        return token->data.compound.total_node_length + 1;
     default:
-        return -1;
+        return 1;
     }
 }
 
-string* json_get_str(JSONNode* node) {
-    if (!json_check_type(node, JSON_STRING))
+JSON json_create(Arena* arena, u64 max_token_count) {
+    JSON json;
+    json.arena = arena;
+
+    vect_init_dynamic(&json.tokens, arena, max_token_count, sizeof(JSONToken));
+    vect_init(&json.stack, arena, 512, sizeof(i64));
+
+    return json;
+}
+
+enum JSONStatus json_set_root(JSON* json, enum JSONType type) {
+    if (vect_size(&json->stack) == 0)
+        return JSONE_ROOT_ALREADY_PRESENT;
+
+    JSONToken new_root = {
+        .type = type,
+    };
+    vect_add(&json->tokens, &new_root);
+    vect_add_imm(&json->stack, 0, i64);
+    return JSONE_OK;
+}
+
+enum JSONStatus append_token(JSON* json, enum JSONType parent_type, JSONToken** out_token, i64* out_index) {
+    i64 current_index = 0;
+    JSONToken* current_token;
+    if (!vect_peek(&json->stack, &current_index))
+        current_token = NULL;
+    else
+        current_token = vect_ref(&json->tokens, current_index);
+
+    if(parent_type != _JSON_COUNT) {
+        if(!current_token)
+            return JSONE_NO_ROOT;
+
+        if(current_token->type != parent_type)
+            return JSONE_INVALID_PARENT;
+    }
+
+    JSONToken new_token = {
+        .parent_index = current_index,
+    };
+    i64 new_index = current_index + get_total_length(current_token);
+    vect_insert(&json->tokens, &new_token, new_index);
+    *out_token = vect_ref(&json->tokens, new_index);
+
+    if(current_token)
+        current_token->data.compound.size++;
+    increment_parent_total_lengths(json);
+    if(out_index)
+        *out_index = new_index;
+
+    return JSONE_OK;
+}
+
+enum JSONStatus json_push_simple(JSON* json, enum JSONType type, union JSONSimpleValue value) {
+    if (type != JSON_BOOL || type != JSON_INT || type != JSON_FLOAT)
+        return JSONE_INCOMPATIBLE_TYPE;
+    JSONToken* new_token;
+    enum JSONStatus status = append_token(json, JSON_ARRAY, &new_token, NULL);
+    if (status != JSONE_OK)
+        return status;
+
+    *new_token = (JSONToken) {
+        .type = type,
+        .data.simple = value,
+    };
+    return JSONE_OK;
+}
+enum JSONStatus json_push_str(JSON* json, const string* str) {
+    JSONToken* new_token;
+    enum JSONStatus status = append_token(json, JSON_ARRAY, &new_token, NULL);
+    if (status != JSONE_OK)
+        return status;
+
+    *new_token = (JSONToken) {
+        .type = JSON_STRING,
+        .data.str = str_create_copy(str, json->arena),
+    };
+    return JSONE_OK;
+}
+enum JSONStatus json_push(JSON* json, enum JSONType type) {
+    JSONToken* new_token;
+    enum JSONStatus status = append_token(json, JSON_ARRAY, &new_token, NULL);
+    if (status != JSONE_OK)
+        return status;
+
+    *new_token = (JSONToken) {
+        .type = type,
+    };
+    return JSONE_OK;
+}
+
+enum JSONStatus
+json_put_simple(JSON* json, const string* name, enum JSONType type, union JSONSimpleValue value) {
+    JSONToken* new_token;
+    enum JSONStatus status = append_token(json, JSON_OBJECT, &new_token, NULL);
+    if (status != JSONE_OK)
+        return status;
+
+    *new_token = (JSONToken) {
+        .type = type,
+        .data.simple = value,
+        .name = str_create_copy(name, json->arena),
+    };
+    return JSONE_OK;
+}
+enum JSONStatus json_put_str(JSON* json, const string* name, const string* str) {
+    JSONToken* new_token;
+    enum JSONStatus status = append_token(json, JSON_OBJECT, &new_token, NULL);
+    if (status != JSONE_OK)
+        return status;
+
+    *new_token = (JSONToken) {
+        .type = JSON_STRING,
+        .data.str = str_create_copy(str, json->arena),
+        .name = str_create_copy(name, json->arena),
+    };
+    return JSONE_OK;
+}
+enum JSONStatus json_put(JSON* json, const string* name, enum JSONType type) {
+    JSONToken* new_token;
+    enum JSONStatus status = append_token(json, JSON_OBJECT, &new_token, NULL);
+    if (status != JSONE_OK)
+        return status;
+
+    *new_token = (JSONToken) {
+        .type = type,
+        .name = str_create_copy(name, json->arena),
+    };
+    return JSONE_OK;
+}
+
+enum JSONStatus json_cstr_put_simple(JSON* json,
+                                     const char* name,
+                                     enum JSONType type,
+                                     union JSONSimpleValue value) {
+    string str = str_view(name);
+    return json_put_simple(json, &str, type, value);
+}
+enum JSONStatus json_cstr_put_str(JSON* json, const char* name, const string* str) {
+    string name_str = str_view(name);
+    return json_put_str(json, &name_str, str);
+}
+enum JSONStatus json_cstr_put(JSON* json, const char* name, enum JSONType type) {
+    string str = str_view(name);
+    return json_put(json, &str, type);
+}
+
+enum JSONStatus json_set_bool(JSON* json, bool value) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_BOOL)
+        return JSONE_INCOMPATIBLE_TYPE;
+
+    token->data.simple.boolean = value;
+    return JSONE_OK;
+}
+
+enum JSONStatus json_set_int(JSON* json, i64 value) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_INT)
+        return JSONE_INCOMPATIBLE_TYPE;
+
+    token->data.simple.number = value;
+    return JSONE_OK;
+}
+
+enum JSONStatus json_set_float(JSON* json, f64 value) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_FLOAT)
+        return JSONE_INCOMPATIBLE_TYPE;
+
+    token->data.simple.fnumber = value;
+    return JSONE_OK;
+}
+
+enum JSONStatus json_write_file(const JSON* json, const string* path);
+enum JSONStatus json_write(const JSON* json, IOMux multiplexer);
+
+enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str);
+
+/* === Parsing part === */
+
+enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json);
+
+enum JSONStatus json_move_to_name(JSON* json, const string* name) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_OBJECT)
+        return JSONE_INVALID_PARENT;
+
+    i64 idx;
+    vect_peek(&json->stack, &idx);
+    idx++;
+    for (i32 i = 0; i < token->data.compound.size; i++) {
+        JSONToken* child_token = vect_ref(&json->tokens, idx);
+        if (str_compare(&child_token->name, name) == 0) {
+            vect_add(&json->stack, &idx);
+            return JSONE_OK;
+        }
+
+        idx += get_total_length(child_token);
+    }
+
+    log_errorf("Could not find a JSON token with name %s.", name->base);
+    return JSONE_NOT_FOUND;
+}
+enum JSONStatus json_move_to_cstr(JSON* json, const char* name) {
+    string str = str_view(name);
+    return json_move_to_name(json, &str);
+}
+
+enum JSONStatus json_move_to_index(JSON* json, i32 index) {
+    JSONToken* token = get_current_node(json);
+
+    if (index < 0 || index >= token->data.compound.size) {
+        log_errorf("NBT: Index %i is out of the list's bounds.", index);
+        return JSONE_NOT_FOUND;
+    }
+
+    i64 idx;
+    vect_peek(&json->stack, &idx);
+    for (i32 i = 0; i < index; i++) {
+        JSONToken* child_token = vect_ref(&json->tokens, idx);
+        idx += get_total_length(child_token);
+    }
+    vect_add(&json->stack, &idx);
+    return JSONE_OK;
+}
+enum JSONStatus json_move_to_parent(JSON* json) {
+    if (vect_size(&json->stack) == 1)
+        return JSONE_INVALID_PARENT;
+    return vect_pop(&json->stack, NULL) ? JSONE_OK : JSONE_NOT_FOUND;
+}
+enum JSONStatus json_move_to_next_sibling(JSON* json) {
+    JSONToken* token = get_current_node(json);
+    i64 prev_index;
+    if (!vect_pop(&json->stack, &prev_index))
+        return JSONE_NOT_FOUND;
+    prev_index += get_total_length(token);
+    vect_add(&json->stack, &prev_index);
+    return JSONE_OK;
+}
+enum JSONStatus json_move_to_prev_sibling(JSON* json) {
+    UNUSED(json);
+    abort();
+    return JSONE_NOT_FOUND;
+}
+
+i8 json_get_bool(JSON* json) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_BOOL) {
+        log_fatalf("Cannot get boolean value of JSON token of type %i", token->type);
+        abort();
+    }
+
+    return token->data.simple.boolean;
+}
+i64 json_get_int(JSON* json) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_INT) {
+        log_fatalf("Cannot get integer value of JSON token of type %i", token->type);
+        abort();
+    }
+
+    return token->data.simple.number;
+}
+f64 json_get_float(JSON* json) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_FLOAT) {
+        log_fatalf("Cannot get float value of JSON token of type %i", token->type);
+        abort();
+    }
+
+    return token->data.simple.fnumber;
+}
+
+i64 json_get_length(JSON* json) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_OBJECT || token->type != JSON_ARRAY) {
+        log_fatalf("Cannot get length of JSON token of type %i", token->type);
+        abort();
+    }
+
+    return token->data.compound.size;
+}
+
+string* json_get_name(JSON* json) {
+    JSONToken* token = get_current_node(json);
+    JSONToken* parent = vect_ref(&json->stack, json->stack.size - 2);
+    if (!parent || parent->type != JSON_OBJECT)
         return NULL;
-    return &node->data.string;
+    return &token->name;
 }
-
-bool json_get_int(const JSONNode* node, i64* out) {
-    if (!json_check_type(node, JSON_INT))
-        return FALSE;
-    *out = node->data.number;
-    return TRUE;
-}
-
-bool json_get_float(const JSONNode* node, f64* out) {
-    if (!json_check_type(node, JSON_FLOAT))
-        return FALSE;
-    *out = node->data.fnumber;
-    return TRUE;
-}
-
-bool json_get_bool(const JSONNode* node, bool* out) {
-    if (!json_check_type(node, JSON_BOOL))
-        return FALSE;
-    *out = node->data.boolean;
-    return TRUE;
-}
-
-bool json_is_null(const JSONNode* node) {
-    return node->type == JSON_NULL;
+string* json_get_string(JSON* json) {
+    JSONToken* token = get_current_node(json);
+    if (token->type != JSON_STRING) {
+        log_fatalf("Cannot get string value of tag of type %i", token->type);
+        abort();
+    }
+    return &token->data.str;
 }
