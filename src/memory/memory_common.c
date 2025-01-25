@@ -38,8 +38,9 @@ static const char* ALLOC_TAG_NAMES[] = {
     [ALLOC_TAG_DICT] = "Dictionary",
     [ALLOC_TAG_BYTEBUFFER] = "ByteBuffer",
     [ALLOC_TAG_PACKET] = "Packet",
-    [ALLOC_TAG_NBT] = "NBT",
     [ALLOC_TAG_JSON] = "JSON",
+    [ALLOC_TAG_NBT] = "NBT",
+    [ALLOC_TAG_WORLD] = "World",
     [ALLOC_TAG_EXTERNAL] = "External",
 };
 
@@ -50,6 +51,7 @@ static const char* BLK_TAG_NAMES[] = {
     [BLK_TAG_REGISTRY] = "Registry",
     [BLK_TAG_PLATFORM] = "Platform",
     [BLK_TAG_MEMORY] = "Memory",
+    [BLK_TAG_DATA] = "Data",
 };
 
 static u8 arena_buf[TRACKER_BUF_SIZE];

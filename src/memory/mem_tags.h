@@ -27,6 +27,7 @@ enum MemoryBlockTag {
     BLK_TAG_REGISTRY,
     BLK_TAG_PLATFORM,
     BLK_TAG_MEMORY,
+    BLK_TAG_DATA,
 
     _BLK_TAG_COUNT,
 };
