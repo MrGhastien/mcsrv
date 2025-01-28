@@ -145,6 +145,7 @@ enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
     };
     vect_add(&nbt->tags, &new_tag);
     tag->data.list.size++;
+    increment_parent_total_lengths(nbt);
     return NBTE_OK;
 }
 enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {

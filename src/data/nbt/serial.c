@@ -426,11 +426,13 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, 
         return NBTE_IO;
     }
 
+    Arena parsing_arena = arena_create(512 * sizeof(NBTTagMetadata), BLK_TAG_DATA);
+
     NBTReadContext ctx = {
         .arena = arena,
         .nbt = out_nbt,
     };
-    vect_init(&ctx.stack, arena, 512, sizeof(NBTTagMetadata));
+    vect_init(&ctx.stack, &parsing_arena, 512, sizeof(NBTTagMetadata));
 
     nbt_init_empty(arena, max_token_count, out_nbt);
 
