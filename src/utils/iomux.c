@@ -137,11 +137,19 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
 
     switch (mux->type) {
     case IO_FILE:
-        res = fread(data, size, 1, mux->backend.file);
+        if (!data) {
+            if (fseek(mux->backend.file, size, SEEK_CUR) == 0)
+                res = fread(NULL, 0, 0, mux->backend.file);
+        } else
+            res = fread(data, 1, size, mux->backend.file);
         if (res < 0)
             mux->error = errno;
         break;
     case IO_GZFILE:
+        if (!data) {
+            if (gzseek(mux->backend.gzFile, size, SEEK_CUR) >= 0)
+                res = gzread(mux->backend.gzFile, NULL, 0);
+        }
         res = gzread(mux->backend.gzFile, data, size);
         if (res < 0)
             mux->error = retrieve_gz_error(mux->backend.gzFile);
@@ -160,6 +168,71 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
     }
     }
     return res;
+}
+
+i32 iomux_getc(IOMux multiplexer) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    i32 res = 0;
+
+    switch (mux->type) {
+    case IO_FILE:
+        res = fgetc(mux->backend.file);
+        if (res == EOF)
+            mux->error = errno;
+        break;
+    case IO_GZFILE:
+        res = gzgetc(mux->backend.gzFile);
+        if (res < 0)
+            mux->error = errno;
+        break;
+    case IO_BUFFER: {
+        unsigned char c;
+        if (bytebuf_read(mux->backend.buffer, sizeof c, &c) <= 0)
+            res = -1;
+        else
+            res = (i32) c;
+        break;
+    }
+    case IO_STRING:
+        return strbuild_get(&mux->backend.string_backend.builder,
+                            mux->backend.string_backend.cursor);
+    }
+    return res == 0;
+}
+i32 iomux_ungetc(IOMux multiplexer, i32 c) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    i32 res = c;
+
+    switch (mux->type) {
+    case IO_FILE:
+        res = ungetc(c, mux->backend.file);
+        if (res == EOF)
+            mux->error = errno;
+        break;
+    case IO_GZFILE:
+        res = gzungetc(c, mux->backend.gzFile);
+        if (res < 0)
+            mux->error = errno;
+        break;
+    case IO_BUFFER: {
+        unsigned char chr = c & 0xff;
+        bytebuf_unwrite(mux->backend.buffer, sizeof c);
+        bytebuf_write(mux->backend.buffer, &chr, sizeof c);
+        break;
+    }
+    case IO_STRING:
+        if(!vect_pop(&mux->backend.string_backend.builder.chars, NULL))
+            res = -1;
+        strbuild_appendc(&mux->backend.string_backend.builder, c);
+        break;
+    }
+    return res & 0xff;
 }
 
 i32 iomux_writef(IOMux multiplexer, const char* format, ...) {

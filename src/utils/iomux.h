@@ -27,6 +27,8 @@ IOMux iomux_new_string(Arena* arena);
 
 i32 iomux_write(IOMux multiplexer, const void* data, u64 size);
 i32 iomux_read(IOMux multiplexer, void* data, u64 size);
+i32 iomux_getc(IOMux multiplexer);
+i32 iomux_ungetc(IOMux multiplexer, i32 c);
 
 i32 iomux_writef(IOMux multiplexer, const char* format, ...);
 bool iomux_writec(IOMux multiplexer, i32 chr);

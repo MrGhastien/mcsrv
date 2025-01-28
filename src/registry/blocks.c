@@ -1,5 +1,6 @@
 #include "containers/object_pool.h"
 #include "containers/vector.h"
+#include "data/json.h"
 #include "definitions.h"
 #include "logger.h"
 #include "memory/arena.h"
@@ -122,12 +123,12 @@ static void init_properties(void) {
 #define CREATE_SIMPLE_STATE_DEF(blk)                                                               \
     create_state_definition(&blk, NULL, &arena, &blk.state_definition)
 
-#define SIMPLE_BLOCK(name) register_simple_block(name, &arena)
+#define SIMPLE_BLOCK(name) register_simple_block(name, &arena, &b_props)
 
-static void register_simple_block(const char* name, Arena* arena) {
+static void register_simple_block(const char* name, Arena* arena, const BlockProperties* props) {
     Block blk = {
         .id = resid_default_cstr(name),
-        .properties = default_block_properties(),
+        .properties = *props,
     };
 
     create_state_definition(&blk, NULL, arena, &blk.state_definition);
@@ -147,6 +148,27 @@ void register_blocks(void) {
 
     Vector property_buffer;
     vect_init(&property_buffer, &arena, 16, sizeof(StateProperty*));
+    BlockProperties b_props = default_block_properties();
 
     SIMPLE_BLOCK("stone");
+    SIMPLE_BLOCK("granite");
+    SIMPLE_BLOCK("polished_granite");
+    SIMPLE_BLOCK("diorite");
+    SIMPLE_BLOCK("polished_diorite");
+    SIMPLE_BLOCK("andesite");
+    SIMPLE_BLOCK("polished_andesite");
+
+    b_props.destroy_time = b_props.explosion_resistance = 0.6f;
+    b_props.ticks_randomly = TRUE;
+    b_props.requires_correct_tools = FALSE;
+    SIMPLE_BLOCK("grass_block");
+    b_props.ticks_randomly = FALSE;
+    b_props.destroy_time = b_props.explosion_resistance = 0.5f;
+    SIMPLE_BLOCK("dirt");
+    SIMPLE_BLOCK("coarse_dirt");
+    SIMPLE_BLOCK("podzol");
+    b_props.destroy_time = 2.0f;
+    b_props.explosion_resistance = 6.0f;
+    b_props.requires_correct_tools = TRUE;
+    SIMPLE_BLOCK("cobblestone");
 }

@@ -46,7 +46,7 @@ typedef struct state_definition {
     u32 property_count;
     u32 state_count;
     const StateProperty** properties;
-    const BlockState* states;
+    BlockState* states;
 } StateDefinition;
 
 // Forward typedef, see at the beginning of the file

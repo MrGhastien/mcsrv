@@ -1,6 +1,7 @@
 #ifndef CHUNK_H
 #define CHUNK_H
 
+#include "containers/dict.h"
 #include "definitions.h"
 #include "world/data/block.h"
 
@@ -17,6 +18,12 @@ typedef struct chunk_section {
 typedef struct chunk {
     u32 section_count;
     ChunkSection* sections;
+
+    Vector block_entities;
+    Vector entities;
+
+    Dict entity_mappings;
+    Dict block_entity_mappings;
 } Chunk;
 
 #endif /* ! CHUNK_H */

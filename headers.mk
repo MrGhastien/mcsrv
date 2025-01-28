@@ -1,7 +1,7 @@
 HDRS := $(SRC_DIR)/data/json/json_internal.h \
 		$(SRC_DIR)/data/nbt/nbt_internal.h \
-		$(SRC_DIR)/data/json.h \
 		$(SRC_DIR)/data/nbt.h \
+		$(SRC_DIR)/data/json.h \
 		$(SRC_DIR)/definitions.h \
 		$(SRC_DIR)/logger.h \
 		$(SRC_DIR)/network/encoders.h \
@@ -16,18 +16,18 @@ HDRS := $(SRC_DIR)/data/json/json_internal.h \
 		$(SRC_DIR)/network/packet.h \
 		$(SRC_DIR)/network/packet_codec.h \
 		$(SRC_DIR)/memory/dyn_arena.h \
-		$(SRC_DIR)/memory/mem_tags.h \
 		$(SRC_DIR)/memory/_memory_internal.h \
 		$(SRC_DIR)/memory/arena.h \
+		$(SRC_DIR)/memory/mem_tags.h \
 		$(SRC_DIR)/utils/hash.h \
-		$(SRC_DIR)/utils/direction.h \
 		$(SRC_DIR)/utils/position.h \
+		$(SRC_DIR)/utils/string.h \
 		$(SRC_DIR)/utils/bitwise.h \
 		$(SRC_DIR)/utils/iomux.h \
 		$(SRC_DIR)/utils/math.h \
 		$(SRC_DIR)/utils/str_builder.h \
 		$(SRC_DIR)/utils/ansi_codes.h \
-		$(SRC_DIR)/utils/string.h \
+		$(SRC_DIR)/utils/direction.h \
 		$(SRC_DIR)/containers/ring_queue.h \
 		$(SRC_DIR)/containers/bytebuffer.h \
 		$(SRC_DIR)/containers/dict.h \
@@ -54,4 +54,11 @@ HDRS := $(SRC_DIR)/data/json/json_internal.h \
 		$(SRC_DIR)/platform/time.h \
 		$(SRC_DIR)/world/data/block.h \
 		$(SRC_DIR)/world/data/block_behavior.h \
-		$(SRC_DIR)/world/level.h 
+		$(SRC_DIR)/world/data/entity/player.h \
+		$(SRC_DIR)/world/data/explosion.h \
+		$(SRC_DIR)/world/data/chunk.h \
+		$(SRC_DIR)/world/data/level.h \
+		$(SRC_DIR)/world/level.h \
+		$(SRC_DIR)/world/physics/block_hit.h \
+		$(SRC_DIR)/world/physics/shape.h \
+		$(SRC_DIR)/world/simulation/simulation.h  

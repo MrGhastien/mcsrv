@@ -125,6 +125,9 @@ BlockProperties default_block_properties(void) {
         .opaque = TRUE,
         .spawn_brushing_particles = TRUE,
         .piston_behavior = PISTON_BEHAVIOR_NORMAL,
+        .requires_correct_tools = TRUE,
+        .destroy_time = 1.5f,
+        .explosion_resistance = 6.0f,
     };
 }
 

@@ -4,7 +4,6 @@
 #include "definitions.h"
 #include "utils/direction.h"
 #include "utils/position.h"
-#include "world/level.h"
 #include "explosion.h"
 #include "world/physics/block_hit.h"
 #include "world/data/entity/player.h"
@@ -12,6 +11,7 @@
 
 typedef struct block_state BlockState;
 typedef struct block Block;
+typedef struct level Level;
 
 enum PathFindingType {
     LAND,

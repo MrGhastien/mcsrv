@@ -28,6 +28,7 @@ enum MemoryBlockTag {
     BLK_TAG_PLATFORM,
     BLK_TAG_MEMORY,
     BLK_TAG_DATA,
+    BLK_TAG_LEVEL,
 
     _BLK_TAG_COUNT,
 };

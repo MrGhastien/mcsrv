@@ -14,7 +14,14 @@ The functions is invalid because the byte buffer might contain multiple raw pack
 ** FIXED Properly handle termination signals (SIGINT)
 CLOSED: [2024-06-24 lun. 00:05]
 Trying to interrupt with Ctrl-C does nothing.
-** BUG Memory leak when building a new JSON object.
+** Data structures
+*** FIXED Memory leak when building a new JSON object.
+CLOSED: [2025-01-23 jeu. 22:17]
+*** BUG Memory leak when parsing NBT trees
+allocated memory is unused outside of parsing functions
+*** BUG Invalid placement of new NBT tags / JSON tokens when adding
+ Adding a new token to a NBT complex tag / json complex token always adds it at the end of the tree,
+ whether the parent is at the last of its siblings or not.
 
 * Features                                                            :mcsrv:
 ** Internals
@@ -102,6 +109,10 @@ CLOSED: [2024-09-21 sam. 22:04]
   - [ ] Support for network NBTs
   - [ ] Proper error handling for the NBT parser and writer
 - [ ] JSON loader
+
+** TODO Complex data structures
+*** TODO Refactor the JSON structure & parser
+- [ ] Make dynamic arenas for the json parser
 
 
 * Ideas                                                               :mcsrv:
