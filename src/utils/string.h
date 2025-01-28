@@ -26,6 +26,8 @@
 
 #include <stdarg.h>
 
+#define STR_EMPTY ((string) {0})
+
 /**
 * The string structure.
 */

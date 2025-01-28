@@ -53,51 +53,40 @@ DEF_PKT_HANDLER(status) {
     UNUSED(pkt);
     PacketStatusResponse response;
 
-    JSON json;
     Arena arena = conn->scratch_arena;
-    json_create(&json, &arena);
-    json_set_root(&json, json_node_create(&json, JSON_OBJECT));
+    JSON json = json_create(&arena, 1024);
 
-    JSONNode* nodes[4];
+    string tmp;
+    json_push(&json, JSON_OBJECT);
+    json_cstr_put(&json, "version", JSON_OBJECT);
+    json_move_to_cstr(&json, "version");
 
-    nodes[0] = json_node_put(&json, json.root, "version", JSON_OBJECT);
+    tmp = str_view("1.21");
+    json_cstr_put_str(&json, "name", &tmp);
+    json_cstr_put_simple(&json, "protocol", JSON_INT, (union JSONSimpleValue){.number = 767});
+    json_move_to_parent(&json);
+    json_cstr_put(&json, "players", JSON_OBJECT);
+    json_move_to_cstr(&json, "players");
 
-    nodes[1] = json_node_put(&json, nodes[0], "name", JSON_STRING);
+    json_cstr_put_simple(&json, "max", JSON_INT, (union JSONSimpleValue){.number = 69});
+    json_cstr_put_simple(&json, "online", JSON_INT, (union JSONSimpleValue){.number = 0});
 
-    json_set_cstr(&json, nodes[1], "1.21");
+    json_move_to_parent(&json);
+    json_cstr_put_simple(
+        &json, "enforcesSecureChat", JSON_BOOL, (union JSONSimpleValue){.boolean = FALSE});
+    json_cstr_put_simple(
+        &json, "previewsChat", JSON_BOOL, (union JSONSimpleValue){.boolean = FALSE});
 
-    nodes[1] = json_node_put(&json, nodes[0], "protocol", JSON_INT);
-    json_set_int(nodes[1], 767);
-    nodes[0] = json_node_put(&json, json.root, "players", JSON_OBJECT);
+    json_cstr_put(&json, "description", JSON_OBJECT);
+    json_move_to_cstr(&json, "description");
+    tmp = str_view("Hello gamerz!");
+    json_cstr_put_str(&json, "text", &tmp);
 
-    nodes[1] = json_node_put(&json, nodes[0], "max", JSON_INT);
-    json_set_int(nodes[1], 69);
+    json_to_string(&json, &arena, &response.data);
 
-    nodes[1] = json_node_put(&json, nodes[0], "online", JSON_INT);
-    json_set_int(nodes[1], 0);
-
-    // nodes[1] = json_node_put(&json, nodes[0], "sample", JSON_ARRAY);
-    /* nodes[2] = json_node_add(&json, nodes[1], JSON_OBJECT); */
-    /* nodes[3] = json_node_put(&json, nodes[2], "name", JSON_STRING); */
-    /* json_set_cstr(nodes[3], "EPIC_GAMR"); */
-    /* nodes[3] = json_node_put(&json, nodes[2], "id", JSON_STRING); */
-    /* json_set_cstr(nodes[3], "4566e69f-c907-48ee-8d71-d7ba5aa00d20"); // Random UUID */
-
-    nodes[0] = json_node_put(&json, json.root, "description", JSON_OBJECT);
-    nodes[1] = json_node_put(&json, nodes[0], "text", JSON_STRING);
-    json_set_cstr(&json, nodes[1], "Hello gamerz!");
-
-    nodes[0] = json_node_put(&json, json.root, "enforcesSecureChat", JSON_BOOL);
-    json_set_bool(nodes[0], FALSE);
-
-    nodes[0] = json_node_put(&json, json.root, "previewsChat", JSON_BOOL);
-    json_set_bool(nodes[0], FALSE);
-
-    json_stringify(&json, &response.data, &arena);
     log_tracef("%s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     send_packet(&out_pkt, conn);
-    json_destroy(&json);
     return TRUE;
 }
 DEF_PKT_HANDLER(ping) {
@@ -163,40 +152,33 @@ static bool enable_compression(Connection* conn) {
     return TRUE;
 }
 static bool send_login_success(Connection* conn, JSON* json) {
-    JSONNode* json_id = json_get_obj_cstr(json->root, "id");
-    JSONNode* json_name = json_get_obj_cstr(json->root, "name");
-    JSONNode* json_properties = json_get_obj_cstr(json->root, "properties");
-
 #ifdef DEBUG
 
     string str;
-    json_stringify(json, &str, &conn->scratch_arena);
+    json_to_string(json, &conn->scratch_arena, &str);
 
     log_trace("Login success response: ");
     log_trace(str.base);
 
 #endif
 
-    if (!json_id)
+    if(json_move_to_cstr(json, "name") != JSONE_OK)
         return FALSE;
-    if (!json_name)
-        return FALSE;
-    if (!json_properties)
-        return FALSE;
-
-    string* name = json_get_str(json_name);
-    if (!name)
-        return FALSE;
+    string* name = json_get_string(json);
 
     PacketLoginSuccess login_success = {
         .username = str_create_copy(name, &conn->scratch_arena),
         .strict_errors = TRUE,
     };
-    string* uuid = json_get_str(json_id);
+    json_move_to_parent(json);
+    json_move_to_cstr(json, "id");
+    string* uuid = json_get_string(json);
     if (!parse_uuid(uuid, login_success.uuid))
         return FALSE;
 
-    i64 property_count = json_get_length(json_properties);
+    json_move_to_parent(json);
+    json_move_to_cstr(json, "properties");
+    i64 property_count = json_get_length(json);
     if (property_count == -1)
         return FALSE;
 
@@ -205,21 +187,19 @@ static bool send_login_success(Connection* conn, JSON* json) {
 
     for (i64 i = 0; i < property_count; i++) {
         PlayerProperty* property = vect_reserve(&login_success.properties);
-        JSONNode* json_property = json_get_array(json_properties, i);
-        if (!json_property)
-            return FALSE;
+        json_move_to_index(json, i);
 
-        JSONNode* json_prop_name = json_get_obj_cstr(json_property, "name");
-        string* prop_name = json_get_str(json_prop_name);
+        json_move_to_cstr(json, "name");
+        string* prop_name = json_get_string(json);
         property->name = str_create_copy(prop_name, &conn->scratch_arena);
 
-        JSONNode* json_prop_value = json_get_obj_cstr(json_property, "value");
-        string* prop_value = json_get_str(json_prop_value);
+        json_move_to_cstr(json, "value");
+        string* prop_value = json_get_string(json);
         property->value = str_create_copy(prop_value, &conn->scratch_arena);
 
-        JSONNode* json_prop_sig = json_get_obj_cstr(json_property, "signature");
-        if (json_prop_sig) {
-            string* prop_sig = json_get_str(json_prop_sig);
+        
+        if (json_move_to_cstr(json, "signature") == JSONE_OK) {
+            string* prop_sig = json_get_string(json);
             property->signature = *prop_sig;
             property->is_signed = TRUE;
         } else
@@ -288,8 +268,6 @@ DEF_PKT_HANDLER(crypt_response) {
 
     res = send_login_success(conn, &json);
 
-    json_destroy(&json);
-
     return res;
 }
 DEF_PKT_HANDLER(login_ack) {
@@ -323,7 +301,7 @@ DEF_PKT_HANDLER(login_ack) {
         .payload = &feature_flags_payload,
     };
     send_packet(&pkt_to_send, conn);
-    
+
     return TRUE;
 }
 

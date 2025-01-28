@@ -5,6 +5,7 @@
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
 #include "network/connection.h"
+#include "utils/iomux.h"
 #include "utils/string.h"
 
 #include <curl/curl.h>
@@ -314,8 +315,8 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
     bytebuf_write_varint(&buffer, 0);
 
-    *json = json_parse(&buffer, &conn->scratch_arena);
-    if (json->arena == NULL)
+    IOMux mux = iomux_wrap_buffer(&buffer);
+    if(json_parse(mux, &conn->scratch_arena, json) != JSONE_OK)
         return FALSE;
 
 #ifdef TRACE

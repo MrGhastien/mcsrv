@@ -2,6 +2,7 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "data/json.h"
+#include "utils/iomux.h"
 #include "utils/str_builder.h"
 #include "platform/platform.h"
 
@@ -30,38 +31,24 @@ int parse_json(const char* file) {
         log_errorf("JSON: Failed to open file '%s': %s.", file, strerror(errno));
         return 1;
     }
+    Arena arena = arena_create(1 << 18, BLK_TAG_UNKNOWN);
 
-    ByteBuffer buffer = bytebuf_create(256);
-    u8 tmp[64];
-    while (!feof(f)) {
-        u64 size = fread(tmp, 1, 64, f);
-        bytebuf_write(&buffer, tmp, size);
-        if (size < 64)
-            break;
-    }
-
-    Arena arena = arena_create(1 << 15, BLK_TAG_UNKNOWN);
-
-    JSON json = json_parse(&buffer, &arena);
-    if (!json.arena) {
+    JSON json;
+    IOMux mux = iomux_wrap_stdfile(f);
+    enum JSONStatus status = json_parse(mux, &arena, &json);
+    if (status != JSONE_OK) {
         arena_destroy(&arena);
-        fclose(f);
-        bytebuf_destroy(&buffer);
+        iomux_close(mux);
         return 2;
     }
 
-    /*
     string out;
-    json_stringify(&json, &out, 1 << 14, &arena);
+    json_to_string(&json, &arena, &out);
 
-    printf("%s\n", out.base);
-    */
-
-    json_destroy(&json);
+    printf("%s\n", cstr(&out));
 
     arena_destroy(&arena);
-    fclose(f);
-    bytebuf_destroy(&buffer);
+    iomux_close(mux);
     return 0;
 }
 
@@ -110,7 +97,6 @@ static void test_dir(const char* path, bool error_test) {
 int main(void) {
 
     memory_stats_init();
-    platform_init();
 
     logger_system_init();
 
@@ -119,7 +105,6 @@ int main(void) {
 
     memory_dump_stats();
     logger_system_cleanup();
-    platform_cleanup();
 
     return 0;
 }

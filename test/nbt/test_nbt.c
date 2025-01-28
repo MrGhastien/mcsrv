@@ -22,72 +22,76 @@ static bool str_ends_with(const char* str, const char* substr) {
 */
 
 static int test_write1(const char* file) {
+    log_infof("writing %s", file);
     Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
-    string tmp = str_create_view("test");
+    string tmp = str_view("test");
     nbt_put_simple(&nbt, &tmp, NBT_INT, (union NBTSimpleValue){.integer = 8274744});
 
-    string out_path = str_create_view(file);
-    nbt_write(&nbt, &out_path);
+    string out_path = str_view(file);
+    nbt_write_file(&nbt, &out_path);
 
     arena_destroy(&arena);
     return 0;
 }
 
 static int test_write2(const char* file) {
+    log_infof("writing %s", file);
     Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
-    string tmp = str_create_view("data");
+    string tmp = str_view("data");
     nbt_put(&nbt, &tmp, NBT_COMPOUND);
     nbt_move_to_name(&nbt, &tmp);
 
-    tmp = str_create_view("test");
+    tmp = str_view("test");
     nbt_put_simple(&nbt, &tmp, NBT_INT, (union NBTSimpleValue){.integer = 8274744});
 
-    string out_path = str_create_view(file);
-    nbt_write(&nbt, &out_path);
+    string out_path = str_view(file);
+    nbt_write_file(&nbt, &out_path);
 
     arena_destroy(&arena);
     return 0;
 }
 
 static int test_write3(const char* file) {
+    log_infof("writing %s", file);
     Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
-    string tmp = str_create_view("data");
+    string tmp = str_view("data");
     nbt_put(&nbt, &tmp, NBT_COMPOUND);
     nbt_move_to_name(&nbt, &tmp);
 
-    tmp = str_create_view("sf893*jnjew&xxx");
+    tmp = str_view("sf893*jnjew&xxx");
     nbt_put(&nbt, &tmp, NBT_LIST);
     nbt_move_to_name(&nbt, &tmp);
 
     nbt_push_simple(&nbt, NBT_INT, (union NBTSimpleValue){.integer = 8274744});
     nbt_push_simple(&nbt, NBT_INT, (union NBTSimpleValue){.integer = 123440006});
 
-    string out_path = str_create_view(file);
-    nbt_write(&nbt, &out_path);
+    string out_path = str_view(file);
+    nbt_write_file(&nbt, &out_path);
 
     arena_destroy(&arena);
     return 0;
 }
 
 static int test_read3(const char* file) {
+    log_infof("reading %s", file);
     Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
     NBT nbt;
 
-    string in_path = str_create_view(file);
+    string in_path = str_view(file);
     nbt_parse(&arena, 1024, &in_path, &nbt);
 
-    string out_path = str_create_view("inout3.nbt.gz");
-    nbt_write(&nbt, &out_path);
-    out_path = str_create_view("level.txt");
+    string out_path = str_view("inout3.nbt.gz");
+    nbt_write_file(&nbt, &out_path);
+    out_path = str_view("level.txt");
     nbt_write_snbt(&nbt, &out_path);
 
     arena_destroy(&arena);
