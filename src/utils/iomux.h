@@ -38,6 +38,9 @@ i32 iomux_write_str(IOMux multiplexer, const string* str);
 bool iomux_eof(IOMux multiplexer);
 string iomux_error(IOMux multiplexer, i32* out_code);
 
+i32 iomux_seek(IOMux multiplexer, i32 off, i32 method);
+i32 iomux_tell(IOMux multiplexer);
+
 void iomux_close(IOMux multiplexer);
 string iomux_string(IOMux multiplexer, Arena* arena);
 

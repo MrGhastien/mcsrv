@@ -1,5 +1,6 @@
 #include "iomux.h"
 
+#include "bitwise.h"
 #include "containers/bytebuffer.h"
 #include "containers/object_pool.h"
 #include "memory/arena.h"
@@ -7,6 +8,7 @@
 #include "utils/string.h"
 
 #include <errno.h>
+#include <logger.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -227,7 +229,7 @@ i32 iomux_ungetc(IOMux multiplexer, i32 c) {
         break;
     }
     case IO_STRING:
-        if(!vect_pop(&mux->backend.string_backend.builder.chars, NULL))
+        if (!vect_pop(&mux->backend.string_backend.builder.chars, NULL))
             res = -1;
         strbuild_appendc(&mux->backend.string_backend.builder, c);
         break;
@@ -408,6 +410,57 @@ string iomux_error(IOMux multiplexer, i32* out_code) {
     default:
         abort();
         return str_view(NULL);
+    }
+}
+
+i32 iomux_seek(IOMux multiplexer, i32 off, i32 method) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    switch (mux->type) {
+    case IO_FILE:
+        return fseek(mux->backend.file, off, method);
+    case IO_GZFILE:
+        return gzseek(mux->backend.gzFile, off, method);
+    case IO_BUFFER:
+        return -1;
+    case IO_STRING: {
+        StringBuilder* builder = &mux->backend.string_backend.builder;
+        switch (method) {
+        case SEEK_SET:
+            mux->backend.string_backend.cursor = off;
+            break;
+        case SEEK_CUR:
+            mux->backend.string_backend.cursor += off;
+            break;
+        case SEEK_END:
+            mux->backend.string_backend.cursor = strbuild_length(builder) - off;
+            break;
+        default:
+            log_errorf("Unknown seek method %i.", method);
+            return -1;
+        }
+        if (mux->backend.string_backend.cursor > strbuild_length(builder))
+            mux->backend.string_backend.cursor = strbuild_length(builder);
+        return mux->backend.string_backend.cursor;
+    }
+    }
+}
+i32 iomux_tell(IOMux multiplexer) {
+    IOMux_t* mux = iomux_get(multiplexer);
+    if (!mux)
+        return -1;
+
+    switch (mux->type) {
+    case IO_FILE:
+        return ftell(mux->backend.file);
+    case IO_GZFILE:
+        return gztell(mux->backend.gzFile);
+    case IO_BUFFER:
+        return -2;
+    case IO_STRING:
+        return mux->backend.string_backend.cursor;
     }
 }
 

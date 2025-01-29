@@ -140,6 +140,8 @@ char strbuild_get(const StringBuilder* builder, u64 index);
  */
 i32 strbuild_get_range(const StringBuilder* builder, char* out_text, u64 begin, u64 end);
 
+//i32 strbuild_length(const StringBuilder* builder);
+
 /**
  * Creates a new string from the contents of a string builder.
  *
@@ -148,5 +150,7 @@ i32 strbuild_get_range(const StringBuilder* builder, char* out_text, u64 begin, 
  * @return A new string containing characters of the builder.
  */
 string strbuild_to_string(const StringBuilder* builder, Arena* arena);
+
+#define strbuild_length(builder) vect_size(&(builder)->chars)
 
 #endif /* ! STR_BUILDER_H */
