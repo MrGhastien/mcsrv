@@ -10,6 +10,7 @@
 enum IOType {
     IO_FILE,
     IO_GZFILE,
+    IO_ZLIB,
     IO_BUFFER,
     IO_STRING
 };
@@ -20,6 +21,7 @@ IOMux iomux_wrap_buffer(ByteBuffer* buffer);
 IOMux iomux_wrap_stdfile(FILE* file);
 IOMux iomux_wrap_gz(gzFile file);
 IOMux iomux_wrap_string(const string* str);
+IOMux iomux_wrap_zlib(IOMux compressed_stream, Arena* arena);
 
 IOMux iomux_open(const string* path, const char* mode);
 IOMux iomux_gz_open(const string* path, const char* mode);

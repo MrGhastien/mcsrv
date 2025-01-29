@@ -9,6 +9,7 @@
 
 #include <errno.h>
 #include <logger.h>
+#include <network/compression.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,22 +24,28 @@ void strbuild_insert_buf(StringBuilder* builder, u64 index, const char* buf, u64
 static Arena arena;
 static ObjectPool multiplexers;
 
+typedef struct IOMux IOMux_t;
+
 union IOBackend {
     ByteBuffer* buffer;
     FILE* file;
     gzFile gzFile;
-    struct {
+    struct string_backend {
         StringBuilder builder;
         Arena* arena;
         u64 cursor;
     } string_backend;
+    struct zlib_backend {
+        IOMux source;
+        CompressionContext ctx;
+    } zlib;
 };
 
-typedef struct IOMux {
+struct IOMux {
     enum IOType type;
     union IOBackend backend;
     i32 error;
-} IOMux_t;
+};
 
 static IOMux iomux_create(enum IOType type, union IOBackend backend) {
 
@@ -74,6 +81,16 @@ IOMux iomux_wrap_stdfile(FILE* file) {
 }
 IOMux iomux_wrap_gz(gzFile file) {
     return iomux_create(IO_GZFILE, (union IOBackend){.gzFile = file});
+}
+IOMux iomux_wrap_zlib(IOMux compressed_stream, Arena* arena) {
+    IOMux_t* mux = iomux_get(compressed_stream);
+    if (!mux || mux->type == IO_STRING)
+        return -1;
+
+    union IOBackend backend = {.zlib = {.source = compressed_stream}};
+    compression_init(&backend.zlib.ctx, arena);
+
+    return iomux_create(IO_ZLIB, backend);
 }
 
 IOMux iomux_open(const string* path, const char* mode) {
@@ -126,6 +143,9 @@ i32 iomux_write(IOMux multiplexer, const void* data, u64 size) {
     case IO_STRING:
         strbuild_append_buf(&mux->backend.string_backend.builder, data, size);
         break;
+    case IO_ZLIB:
+        return compression_compress_to(
+            &mux->backend.zlib.ctx, mux->backend.zlib.source, data, size);
     }
     return res;
 }
@@ -168,6 +188,9 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
             mux->backend.string_backend.cursor += res;
         break;
     }
+    case IO_ZLIB:
+        return compression_decompress_from(
+            &mux->backend.zlib.ctx, mux->backend.zlib.source, data, size, size);
     }
     return res;
 }
@@ -201,6 +224,16 @@ i32 iomux_getc(IOMux multiplexer) {
     case IO_STRING:
         return strbuild_get(&mux->backend.string_backend.builder,
                             mux->backend.string_backend.cursor);
+    case IO_ZLIB: {
+        unsigned char c;
+        res = compression_decompress_from(
+            &mux->backend.zlib.ctx, mux->backend.zlib.source, &c, sizeof c, sizeof c);
+        if (res <= 0)
+            res = -1;
+        else
+            res = (i32) c;
+        break;
+    }
     }
     return res == 0;
 }
@@ -233,6 +266,8 @@ i32 iomux_ungetc(IOMux multiplexer, i32 c) {
             res = -1;
         strbuild_appendc(&mux->backend.string_backend.builder, c);
         break;
+    default:
+        return -1;
     }
     return res & 0xff;
 }
@@ -262,6 +297,7 @@ i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
         u64 size;
         char* formatted = format_str(&scratch, format, args, &size);
         bytebuf_write(mux->backend.buffer, formatted, size * sizeof *formatted);
+        res = size;
     } break;
     case IO_STRING: {
         res = strbuild_appendvf(&mux->backend.string_backend.builder, format, args);
@@ -271,6 +307,12 @@ i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
             mux->backend.string_backend.cursor += res;
         break;
     }
+    case IO_ZLIB:
+        Arena scratch = arena;
+        u64 size;
+        char* formatted = format_str(&scratch, format, args, &size);
+        compression_compress_to(&mux->backend.zlib.ctx, mux->backend.zlib.source, formatted, size);
+        res = size;
     }
     va_end(args);
     return res;
@@ -302,6 +344,10 @@ bool iomux_writec(IOMux multiplexer, i32 chr) {
     case IO_STRING:
         strbuild_appendc(&mux->backend.string_backend.builder, chr);
         break;
+    case IO_ZLIB:
+        log_fatalf(" TODO: %s", __FUNCTION__);
+        res = -1;
+        break;
     }
     return res == 0;
 }
@@ -332,6 +378,10 @@ i32 iomux_writes(IOMux multiplexer, const char* cstr) {
     case IO_STRING:
         strbuild_appends(&mux->backend.string_backend.builder, cstr);
         break;
+    case IO_ZLIB:
+        log_fatalf(" TODO: %s", __FUNCTION__);
+        res = -1;
+        break;
     }
     return res == 0;
 }
@@ -361,6 +411,10 @@ i32 iomux_write_str(IOMux multiplexer, const string* str) {
     case IO_STRING:
         strbuild_append(&mux->backend.string_backend.builder, str);
         res = str->length;
+        break;
+    case IO_ZLIB:
+        log_fatalf(" TODO: %s", __FUNCTION__);
+        res = -1;
         break;
     }
     return res == 0;
@@ -407,6 +461,8 @@ string iomux_error(IOMux multiplexer, i32* out_code) {
         return str_view(NULL);
     case IO_STRING:
         return str_view(strerror(mux->error));
+    case IO_ZLIB:
+        return iomux_error(mux->backend.zlib.source, out_code);
     default:
         abort();
         return str_view(NULL);
@@ -445,7 +501,11 @@ i32 iomux_seek(IOMux multiplexer, i32 off, i32 method) {
             mux->backend.string_backend.cursor = strbuild_length(builder);
         return mux->backend.string_backend.cursor;
     }
+    case IO_ZLIB:
+        log_error("Seeking mechanism not implemented for the IOMux ZLib backend");
+        return -1;
     }
+    return -1;
 }
 i32 iomux_tell(IOMux multiplexer) {
     IOMux_t* mux = iomux_get(multiplexer);
@@ -461,7 +521,11 @@ i32 iomux_tell(IOMux multiplexer) {
         return -2;
     case IO_STRING:
         return mux->backend.string_backend.cursor;
+    case IO_ZLIB:
+        log_error("Seeking mechanism not implemented for the IOMux ZLib backend");
+        return -1;
     }
+    return -1;
 }
 
 void iomux_close(IOMux multiplexer) {
@@ -476,6 +540,9 @@ void iomux_close(IOMux multiplexer) {
     case IO_GZFILE:
         gzclose(mux->backend.gzFile);
         break;
+    case IO_ZLIB:
+        compression_cleanup(&mux->backend.zlib.ctx);
+        break;
     default:
         break;
     }
@@ -486,6 +553,7 @@ void iomux_close(IOMux multiplexer) {
 string iomux_string(IOMux multiplexer, Arena* arena) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux || mux->error != 0)
+
         return str_view(NULL);
 
     return strbuild_to_string(&mux->backend.string_backend.builder, arena);
