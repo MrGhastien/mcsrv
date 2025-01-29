@@ -1,6 +1,7 @@
 #ifndef SIMULATION_H
 #define SIMULATION_H
 
-void simulate(void);
+void sim_start(void);
+void sim_stop(void);
 
 #endif /* ! SIMULATION_H */

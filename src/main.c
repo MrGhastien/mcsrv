@@ -1,11 +1,12 @@
 #include "definitions.h"
 #include "event/event.h"
 #include "logger.h"
+#include "memory/mem_tags.h"
 #include "network/network.h"
 #include "platform/platform.h"
 #include "registry/registry.h"
-#include "memory/mem_tags.h"
-#include "world/data/block.h"
+
+#include <world/simulation/simulation.h>
 
 typedef struct server_ctx {
     bool running;
@@ -25,17 +26,23 @@ static i32 init(char* host, i32 port, u64 max_connections) {
     registry_system_init();
     code = network_init(host, port, max_connections);
 
+
     if (code != 0) {
         log_fatal("Failed to initialize the server.");
         server_ctx.running = FALSE;
-    } else {
-        server_ctx.running = TRUE;
+        return code;
     }
+
+    sim_start();
+    server_ctx.running = TRUE;
+
     return code;
 }
 
 static void cleanup(void) {
     server_ctx.running = FALSE;
+
+    sim_stop();
 
     network_stop();
     registry_system_cleanup();
