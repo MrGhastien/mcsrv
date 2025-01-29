@@ -4,6 +4,7 @@
 #include "definitions.h"
 #include "utils/direction.h"
 #include "utils/position.h"
+#include "level.h"
 #include "explosion.h"
 #include "world/physics/block_hit.h"
 #include "world/data/entity/player.h"
