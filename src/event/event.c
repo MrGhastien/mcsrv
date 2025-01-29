@@ -6,7 +6,10 @@
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
 
-#include <pthread.h>
+#include "platform/mc_thread.h"
+#include "platform/mc_mutex.h"
+#include "platform/mc_cond_var.h"
+
 #include <stdio.h>
 
 #define MAX_EVENT_COUNT 256
@@ -30,8 +33,8 @@ typedef struct TriggeredEvent {
 typedef struct EventContext {
     Arena arena;
     Dict event_registry;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond_var;
+    MCMutex mutex;
+    MCCondVar cond_var;
     RingQueue queue;
     bool running;
 } EventContext;
@@ -49,8 +52,8 @@ void event_system_init(void) {
                     &ctx.event_registry, NULL, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
     ctx.queue = rqueue_create(MAX_TRIGGERED_EVENTS, sizeof(TriggeredEvent), &ctx.arena);
 
-    pthread_mutex_init(&ctx.mutex, 0);
-    pthread_cond_init(&ctx.cond_var, 0);
+    mcmutex_create(&ctx.mutex);
+    mcvar_create(&ctx.cond_var);
 
     register_builtin_events();
 
@@ -78,17 +81,17 @@ void event_system_cleanup(void) {
 
     arena_destroy(&ctx.arena);
 
-    pthread_mutex_destroy(&ctx.mutex);
-    pthread_cond_destroy(&ctx.cond_var);
+    mcmutex_destroy(&ctx.mutex);
+    mcvar_destroy(&ctx.cond_var);
 }
 
 void event_register_event(u32 code, string name) {
-    pthread_mutex_lock(&ctx.mutex);
+    mcmutex_lock(&ctx.mutex);
 
     i64 idx = dict_get(&ctx.event_registry, &code, NULL);
     if (idx >= 0) {
         log_errorf("Can not register the already registered event %u.", code);
-        pthread_mutex_unlock(&ctx.mutex);
+        mcmutex_unlock(&ctx.mutex);
         return;
     }
     EventEntry e;
@@ -96,7 +99,7 @@ void event_register_event(u32 code, string name) {
     vect_init(&e.listeners, &ctx.arena, 256, sizeof(EventListener));
     dict_put(&ctx.event_registry, &code, &e);
 
-    pthread_mutex_unlock(&ctx.mutex);
+    mcmutex_unlock(&ctx.mutex);
 }
 
 void event_register_listener(u32 code, event_listener handler, void* data) {
@@ -110,12 +113,12 @@ void event_register_listener(u32 code, event_listener handler, void* data) {
         return;
     }
 
-    pthread_mutex_lock(&ctx.mutex);
+    mcmutex_lock(&ctx.mutex);
 
     i64 idx = dict_get(&ctx.event_registry, &code, NULL);
     if (idx == -1) {
         log_errorf("Cannot register listener for unregistered event %u.", code);
-        pthread_mutex_unlock(&ctx.mutex);
+        mcmutex_unlock(&ctx.mutex);
         return;
     }
     EventEntry* e = dict_ref(&ctx.event_registry, idx);
@@ -126,7 +129,7 @@ void event_register_listener(u32 code, event_listener handler, void* data) {
     };
     vect_add(&e->listeners, &listener);
 
-    pthread_mutex_unlock(&ctx.mutex);
+    mcmutex_unlock(&ctx.mutex);
 }
 
 void event_trigger(u32 event, EventInfo info) {
@@ -134,14 +137,14 @@ void event_trigger(u32 event, EventInfo info) {
         .code = event,
         .info = info,
     };
-    pthread_mutex_lock(&ctx.mutex);
+    mcmutex_lock(&ctx.mutex);
 
     rqueue_enqueue(&ctx.queue, &e);
 
-    pthread_mutex_unlock(&ctx.mutex);
+    mcmutex_unlock(&ctx.mutex);
 
     log_tracef("New event received (%u).", event);
-    pthread_cond_signal(&ctx.cond_var);
+    mcvar_signal(&ctx.cond_var);
 }
 
 static bool process_event_queue(void) {
@@ -173,12 +176,12 @@ static bool process_event_queue(void) {
 
 void event_handle(void) {
     while (ctx.running) {
-        pthread_mutex_lock(&ctx.mutex);
+        mcmutex_lock(&ctx.mutex);
         if (ctx.queue.length == 0)
-            pthread_cond_wait(&ctx.cond_var, &ctx.mutex);
+            mcvar_wait(&ctx.cond_var, &ctx.mutex);
 
         ctx.running = process_event_queue();
 
-        pthread_mutex_unlock(&ctx.mutex);
+        mcmutex_unlock(&ctx.mutex);
     }
 }
