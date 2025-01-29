@@ -13,6 +13,7 @@
 #include "containers/bytebuffer.h"
 #include "definitions.h"
 #include "memory/arena.h"
+#include "utils/iomux.h"
 
 #include <zlib.h>
 
@@ -81,5 +82,9 @@ i64 compression_compress(CompressionContext* ctx, ByteBuffer* out_buffer, ByteBu
  * @return The length in bytes of the uncompressed data, or -1 if decompression failed.
  */
 i64 compression_decompress(CompressionContext* ctx, ByteBuffer* out_buffer, ByteBuffer* in_buffer);
+
+i64 compression_decompress_from(CompressionContext* ctx, IOMux mux, void* out_buffer, u64 length, u64 output_length);
+i64 compression_compress_to(CompressionContext* ctx, IOMux mux, const void* in_buffer, u64 length);
+i64 compression_compress_buffer_to(CompressionContext* ctx, IOMux mux, ByteBuffer* in_buffer);
 
 #endif /* ! COMPRESSION_H */

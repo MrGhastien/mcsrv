@@ -3,7 +3,9 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
+#include "utils/math.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <zlib.h>
 
@@ -145,4 +147,113 @@ i64 compression_compress(CompressionContext* ctx, ByteBuffer* out_buffer, ByteBu
 i64 compression_decompress(CompressionContext* ctx, ByteBuffer* out_buffer, ByteBuffer* in_buffer) {
     return zlib_execute(
         &ctx->inflate_stream, out_buffer, in_buffer, &zlib_inflate, &zlib_reset_inflate);
+}
+
+i64 compression_decompress_from(
+    CompressionContext* ctx, IOMux mux, void* out_buffer, u64 length, u64 output_length) {
+    int flush;
+
+    u8 file_buffer[CHUNK];
+    u64 total = 0;
+
+    ctx->inflate_stream.avail_out = output_length;
+    ctx->inflate_stream.next_out = out_buffer;
+
+    do {
+
+        i32 res = iomux_read(mux, file_buffer, min_u64(CHUNK, length));
+        if (res == -1) {
+            log_errorf("Error when decompressing file: %s", iomux_error(mux, NULL));
+            return -1;
+        }
+        length -= res;
+        ctx->inflate_stream.avail_in = res;
+        ctx->inflate_stream.next_in = file_buffer;
+        flush = length == 0 || iomux_eof(mux) ? Z_FINISH : Z_NO_FLUSH;
+
+        do {
+            res = inflate(&ctx->inflate_stream, flush);
+        } while (ctx->inflate_stream.avail_in > 0);
+
+    } while (flush != Z_FINISH);
+
+    bytebuf_register_write(out_buffer, total);
+    return output_length - ctx->inflate_stream.avail_out;
+}
+i64 compression_compress_to(CompressionContext* ctx, IOMux mux, const void* in_buffer, u64 length) {
+    u8 file_buffer[CHUNK];
+    u64 total = 0;
+
+    ctx->deflate_stream.avail_in = length;
+    // WARNING: deleting const !
+    ctx->deflate_stream.next_in = (unsigned char*)in_buffer;
+
+    do {
+        ctx->deflate_stream.avail_out = CHUNK;
+        ctx->deflate_stream.next_out = file_buffer;
+
+        i32 res = deflate(&ctx->inflate_stream, Z_FINISH);
+        if (res != Z_OK && res != Z_STREAM_END) {
+            log_errorf("ZLib: %s", zError(res));
+            deflateReset(&ctx->deflate_stream);
+            return -1;
+        }
+
+        i32 round_total = CHUNK - ctx->deflate_stream.avail_out;
+        if (iomux_write(mux, file_buffer, min_u64(CHUNK, round_total)) != round_total) {
+            log_errorf("Error when compressing to file: %s", iomux_error(mux, NULL));
+            deflateReset(&ctx->deflate_stream);
+            return -1;
+        }
+        total += round_total;
+    } while (ctx->deflate_stream.avail_out == 0);
+
+    assert(ctx->inflate_stream.avail_in == 0);
+    return total;
+}
+i64 compression_compress_buffer_to(CompressionContext* ctx, IOMux mux, ByteBuffer* in_buffer) {
+    BufferRegion regions[2];
+    u64 region_count = 2;
+    u64 region_index = 0;
+    bytebuf_get_read_regions(in_buffer, regions, &region_count, 0);
+    int flush;
+
+    u8 file_buffer[CHUNK];
+    u64 total = 0;
+
+    ctx->deflate_stream.avail_in = regions[region_index].size;
+    ctx->deflate_stream.next_in = regions[region_index].start;
+
+    do {
+
+        flush = region_index == region_count ? Z_FINISH : Z_NO_FLUSH;
+
+        do {
+            ctx->deflate_stream.avail_out = CHUNK;
+            ctx->deflate_stream.next_out = file_buffer;
+
+            i32 res = deflate(&ctx->inflate_stream, flush);
+            if (res != Z_STREAM_END) {
+                log_errorf("ZLib: %s", zError(res));
+                deflateReset(&ctx->deflate_stream);
+                return -1;
+            }
+
+            i32 round_total = CHUNK - ctx->deflate_stream.avail_out;
+            if (iomux_write(mux, file_buffer, min_u64(CHUNK, round_total)) != round_total) {
+                log_errorf("Error when compressing to file: %s", iomux_error(mux, NULL));
+                deflateReset(&ctx->deflate_stream);
+                return -1;
+            }
+            total += round_total;
+        } while (ctx->deflate_stream.avail_out == 0);
+
+        region_index++;
+        ctx->deflate_stream.avail_in = regions[region_index].size;
+        ctx->deflate_stream.next_in = regions[region_index].start;
+
+    } while (flush != Z_FINISH);
+
+    bytebuf_register_read(in_buffer, bytebuf_size(in_buffer));
+    return total;
 }
