@@ -83,11 +83,11 @@ static int test_write3(const char* file) {
 
 static int test_read3(const char* file) {
     log_infof("reading %s", file);
-    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
+    Arena arena = arena_create(1 << 30, BLK_TAG_UNKNOWN);
     NBT nbt;
 
     string in_path = str_view(file);
-    nbt_parse(&arena, 1024, &in_path, &nbt);
+    nbt_from_file(&arena, 1024, &in_path, &nbt);
 
     string out_path = str_view("inout3.nbt.gz");
     nbt_write_file(&nbt, &out_path);

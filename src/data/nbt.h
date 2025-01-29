@@ -364,6 +364,7 @@ enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str);
 
 /* === Parsing part === */
 
+enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, IOMux input, NBT* out_nbt);
 /**
 * Restores a NBT tree from a file.
 *
@@ -376,7 +377,7 @@ enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str);
 * @param[out] out_nbt A pointer to an uninitialized NBT tree.
 * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
 */
-enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
+enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
 
 /**
 * Moves the current tag pointer to the child tag with the given name.
@@ -387,6 +388,7 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, const string* path, 
 * @param[in] name The name of the child tag to find.
 */
 enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name);
+enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name);
 /**
 * Moves the current tag pointer to the child tag at the given index.
 *
@@ -423,6 +425,8 @@ enum NBTStatus nbt_move_to_next_sibling(NBT* nbt);
 * @param[in] nbt The NBT tree.
 */
 enum NBTStatus nbt_move_to_prev_sibling(NBT* nbt);
+
+enum NBTTagType nbt_get_type(NBT* nbt);
 
 /**
 * Retrieves the byte value of the current tag.
@@ -490,6 +494,8 @@ f32 nbt_get_float(NBT* nbt);
 * @return The double-precision floating-point value.
 */
 f64 nbt_get_double(NBT* nbt);
+
+u64 nbt_get_size(NBT* nbt);
 
 /**
 * Retrieves the name of the current tag.

@@ -32,10 +32,9 @@ static void add_meta(SNBTContext* ctx, enum NBTTagType type, i32 size, const NBT
 
 static i32 get_tag_size(const NBTTag* tag) {
     switch (tag->type) {
-    case NBT_COMPOUND:
-        return tag->data.compound.size;
     case NBT_LIST:
-        return tag->data.list.size;
+    case NBT_COMPOUND:
+        return tag->data.composite.size;
     case NBT_STRING:
         return tag->data.str.length;
     case NBT_BYTE_ARRAY:
@@ -96,11 +95,11 @@ static void write_snbt_tag(const NBTTag* tag, IOMux fd, SNBTContext* ctx) {
         break;
     case NBT_LIST:
         iomux_writec(fd, '[');
-        add_meta(ctx, tag->type, tag->data.list.size, tag);
+        add_meta(ctx, tag->type, tag->data.composite.size, tag);
         break;
     case NBT_COMPOUND:
         iomux_writec(fd, '{');
-        add_meta(ctx, tag->type, tag->data.compound.size, tag);
+        add_meta(ctx, tag->type, tag->data.composite.size, tag);
         break;
     case NBT_BYTE_ARRAY:
         iomux_writes(fd, "[B;");

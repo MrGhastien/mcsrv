@@ -28,10 +28,8 @@ static void increment_parent_total_lengths(NBT* nbt) {
 
         switch (tag->type) {
         case NBT_COMPOUND:
-            tag->data.compound.total_tag_length++;
-            break;
         case NBT_LIST:
-            tag->data.list.total_tag_length++;
+            tag->data.composite.total_tag_length++;
             break;
         default:
             log_fatalf("NBTag of type %i cannot be in the NBT stack !", tag->type);
@@ -44,9 +42,8 @@ static void increment_parent_total_lengths(NBT* nbt) {
 static i32 get_total_length(const NBTTag* tag) {
     switch (tag->type) {
     case NBT_COMPOUND:
-        return tag->data.compound.total_tag_length;
     case NBT_LIST:
-        return tag->data.list.total_tag_length;
+        return tag->data.composite.total_tag_length;
     case NBT_BYTE_ARRAY:
     case NBT_INT_ARRAY:
     case NBT_LONG_ARRAY:
@@ -56,10 +53,25 @@ static i32 get_total_length(const NBTTag* tag) {
     }
 }
 
+static void append_tag(NBT* nbt, NBTTag* new_tag) {
+    NBTTag* parent = get_current_tag(nbt);
+    new_tag->local_idx = nbt_get_size(nbt);
+    vect_peek(&nbt->stack, &new_tag->parent_idx);
+    new_tag->prev_sibling_idx = parent->data.composite.last_child;
+    vect_add(&nbt->tags, new_tag);
+    parent->data.composite.size++;
+    increment_parent_total_lengths(nbt);
+}
+
 bool is_not_array(const enum NBTTagType type) {
     return !(type == NBT_LIST || type == NBT_BYTE_ARRAY || type == NBT_INT_ARRAY ||
              type == NBT_LONG_ARRAY);
 }
+
+// static bool is_composite(const NBTTag* tag) {
+//     return tag->type == NBT_LIST || tag->type == NBT_BYTE_ARRAY || tag->type == NBT_INT_ARRAY ||
+//            tag->type == NBT_LONG_ARRAY || tag->type == NBT_COMPOUND;
+// }
 
 NBT nbt_create(Arena* arena, u64 max_token_count) {
     NBT nbt;
@@ -68,8 +80,10 @@ NBT nbt_create(Arena* arena, u64 max_token_count) {
     NBTTag* root = vect_reserve(&nbt.tags);
     *root = (NBTTag){
         .type = NBT_COMPOUND,
-        .data.compound.total_tag_length = 1,
-        .data.compound.size = 0,
+        .data.composite = {
+            .total_tag_length = 1,
+            .last_child = -1,
+        },
     };
 
     vect_add_imm(&nbt.stack, 0LL, i64);
@@ -124,9 +138,7 @@ enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleVa
         .type = tag->data.list.elem_type,
         .data.simple = value,
     };
-    vect_add(&nbt->tags, &new_tag);
-    tag->data.list.size++;
-    increment_parent_total_lengths(nbt);
+    append_tag(nbt, &new_tag);
     return TRUE;
 }
 enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
@@ -143,9 +155,7 @@ enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
         .type = tag->data.list.elem_type,
         .data.str = str_create_copy(str, nbt->arena),
     };
-    vect_add(&nbt->tags, &new_tag);
-    tag->data.list.size++;
-    increment_parent_total_lengths(nbt);
+    append_tag(nbt, &new_tag);
     return NBTE_OK;
 }
 enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {
@@ -161,8 +171,7 @@ enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {
     NBTTag new_tag = {
         .type = tag->data.list.elem_type,
     };
-    vect_add(&nbt->tags, &new_tag);
-    tag->data.list.size++;
+    append_tag(nbt, &new_tag);
     return NBTE_OK;
 }
 
@@ -177,8 +186,7 @@ nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimp
         .data.simple = value,
         .name = str_create_copy(name, nbt->arena),
     };
-    vect_add(&nbt->tags, &new_tag);
-    tag->data.compound.size++;
+    append_tag(nbt, &new_tag);
     return NBTE_OK;
 }
 enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str) {
@@ -191,8 +199,7 @@ enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str) {
         .data.str = str_create_copy(str, nbt->arena),
         .name = str_create_copy(name, nbt->arena),
     };
-    vect_add(&nbt->tags, &new_tag);
-    tag->data.compound.size++;
+    append_tag(nbt, &new_tag);
     return NBTE_OK;
 }
 
@@ -206,11 +213,10 @@ enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type) {
         .name = str_create_copy(name, nbt->arena),
     };
     if (type == NBT_COMPOUND)
-        new_tag.data.compound.total_tag_length = 1;
+        new_tag.data.composite.total_tag_length = 1;
     else if (type == NBT_LIST)
-        new_tag.data.list.total_tag_length = 1;
-    vect_add(&nbt->tags, &new_tag);
-    tag->data.compound.size++;
+        new_tag.data.composite.total_tag_length = 1;
+    append_tag(nbt, &new_tag);
     return NBTE_OK;
 }
 
@@ -293,13 +299,17 @@ enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
     log_errorf("Could not find NBTag with name %s.", name->base);
     return NBTE_NOT_FOUND;
 }
+enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name) {
+    string str = str_view(name);
+    return nbt_move_to_name(nbt, &str);
+}
 enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index) {
     NBTTag* tag = get_current_tag(nbt);
 
     if (tag->type != NBT_LIST)
         return NBTE_INVALID_PARENT;
 
-    if (index >= tag->data.list.size) {
+    if (index >= tag->data.composite.size || index < 0) {
         log_errorf("NBT: Index %i is out of the list's bounds.", index);
         return NBTE_NOT_FOUND;
     }
@@ -318,17 +328,34 @@ enum NBTStatus nbt_move_to_parent(NBT* nbt) {
 }
 enum NBTStatus nbt_move_to_next_sibling(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
-    i64 prev_index;
-    if (!vect_pop(&nbt->stack, &prev_index))
+    i64 global_index;
+    if (!vect_pop(&nbt->stack, &global_index))
         return NBTE_NOT_FOUND;
-    prev_index += get_total_length(tag);
-    vect_add(&nbt->stack, &prev_index);
-    return NBTE_OK;
+    enum NBTStatus status = NBTE_OK;
+    if (tag->local_idx + 1 > (i64)nbt_get_size(nbt))
+        status = NBTE_NOT_FOUND;
+    else
+        global_index += get_total_length(tag);
+    vect_add(&nbt->stack, &global_index);
+    return status;
 }
 enum NBTStatus nbt_move_to_prev_sibling(NBT* nbt) {
-    UNUSED(nbt);
-    abort();
-    return NBTE_NOT_FOUND;
+    NBTTag* tag = get_current_tag(nbt);
+    i64 global_index;
+    if (!vect_pop(&nbt->stack, &global_index))
+        return NBTE_NOT_FOUND;
+    enum NBTStatus status = NBTE_OK;
+    if (tag->local_idx == 0)
+        status = NBTE_NOT_FOUND;
+    else
+        global_index = tag->prev_sibling_idx;
+    vect_add(&nbt->stack, &global_index);
+    return status;
+}
+
+enum NBTTagType nbt_get_type(NBT* nbt) {
+    NBTTag* tag = get_current_tag(nbt);
+    return tag->type;
 }
 i8 nbt_get_byte(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
@@ -384,6 +411,24 @@ f64 nbt_get_double(NBT* nbt) {
     }
 
     return tag->data.simple.double_num;
+}
+
+u64 nbt_get_size(NBT* nbt) {
+    NBTTag* tag = get_current_tag(nbt);
+    switch (tag->type) {
+    case NBT_LIST:
+    case NBT_COMPOUND:
+        return tag->data.composite.size;
+    case NBT_BYTE_ARRAY:
+    case NBT_INT_ARRAY:
+    case NBT_LONG_ARRAY:
+        return tag->data.array_size;
+    case NBT_STRING:
+        return tag->data.str.length;
+    default:
+        log_errorf("Cannot get size of tag of type %i", tag->type);
+        return -1;
+    }
 }
 string* nbt_get_name(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
