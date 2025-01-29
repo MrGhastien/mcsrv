@@ -4,7 +4,10 @@
 #include "containers/dict.h"
 #include "containers/object_pool.h"
 #include "utils/position.h"
-#include "chunk.h"
+
+#include "utils/string.h"
+
+typedef struct chunk Chunk;
 
 typedef struct level {
     Arena arena;
@@ -13,9 +16,11 @@ typedef struct level {
     // Chunk tickets
     // Chunk sections
     Dict chunks;
+
+    string path;
 } Level;
 
-void level_init(Level* level);
+void level_init(Level* level, string path);
 
 Chunk* level_get_chunk(Level* level, BlockPos pos);
 

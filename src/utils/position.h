@@ -104,6 +104,8 @@ u64 vec2i_hash(const void* str);
  */
 i32 vec2i_compare(const Vec2i* lhs, const Vec2i* rhs);
 
+#define CHUNK_POS(px, py) (ChunkPos){ .x = (px), .y = (py)}
+
 // TODO: Add utility functions
 
 #endif /* ! POSITION_H */
