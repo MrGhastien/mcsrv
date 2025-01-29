@@ -10,4 +10,8 @@ bool timestamp(struct timespec *out_timestamp) {
     return clock_gettime(CLOCK_MONOTONIC, out_timestamp) == 0;
 }
 
+void milli_sleep(u64 millis) {
+    usleep(millis * 1000);
+}
+
 #endif

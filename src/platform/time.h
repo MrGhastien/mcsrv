@@ -10,4 +10,6 @@
 
 bool timestamp(struct timespec* out_timestamp);
 
+void milli_sleep(u64 millis);
+
 #endif /* ! TIME_H */

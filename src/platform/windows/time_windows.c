@@ -27,4 +27,8 @@ bool timestamp(struct timespec *out_timestamp) {
     return TRUE;
 }
 
+void milli_sleep(u64 millis) {
+    Sleep(millis);
+}
+
 #endif
