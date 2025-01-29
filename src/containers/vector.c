@@ -2,9 +2,9 @@
 #include "_array_internal.h"
 #include "definitions.h"
 #include "logger.h"
+#include "memory/mem_tags.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
-#include "memory/mem_tags.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -18,13 +18,14 @@ struct data_block* alloc_block(Arena* arena, u64 capacity, u64 stride, i32 mem_t
     return blk;
 }
 
-struct data_block* get_block_from_index(struct data_block* start, u64 index, u64* out_blk_local_index) {
+struct data_block*
+get_block_from_index(struct data_block* start, u64 index, u64* out_blk_local_index) {
     while (index >= start->capacity) {
         index -= start->capacity;
         start = start->next;
     }
 
-    if(out_blk_local_index)
+    if (out_blk_local_index)
         *out_blk_local_index = index;
 
     return start;
@@ -39,7 +40,8 @@ static bool ensure_capacity(Vector* vector, u64 size) {
         return FALSE;
     }
 
-    struct data_block* blk = alloc_block(vector->arena, vector->capacity >> 1, vector->stride, ALLOC_TAG_VECTOR);
+    struct data_block* blk =
+        alloc_block(vector->arena, vector->capacity >> 1, vector->stride, ALLOC_TAG_VECTOR);
     blk->prev = vector->current;
     vector->current->next = blk;
     vector->capacity += blk->capacity;
@@ -232,7 +234,12 @@ bool vect_peek(const Vector* vector, void* out) {
     if (vect_size(vector) == 0)
         return FALSE;
     u64 stride = vect_stride(vector);
-    void* src = offset(vector->current->data, vector->next_insert_index * stride);
+    void* src;
+    if (vector->next_insert_index == 0) {
+        struct data_block* blk = vector->current->prev;
+        src = offset(blk->data, (blk->capacity - 1) * stride);
+    } else
+        src = offset(vector->current->data, (vector->next_insert_index - 1) * stride);
 
     if (out)
         memcpy(out, src, stride);
