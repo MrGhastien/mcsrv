@@ -11,17 +11,16 @@ typedef struct json_token {
         struct json_compound {
             i32 size;
             i32 total_node_length;
+            i64 last_child;
         } compound;
     } data;
     string name;
     i64 parent_index;
+    i64 local_index;
+    i64 prev_sibling_index;
 } JSONToken;
 
-/**
- * Adds a token to a JSON tree.
- * 
- */
-enum JSONStatus append_token(JSON* json, enum JSONType parent_type, JSONToken** out_token, i64* out_index);
+void append_token(JSON* json, JSONToken* new_token);
 
 void increment_parent_total_lengths(JSON* json);
 

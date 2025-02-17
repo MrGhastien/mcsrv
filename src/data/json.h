@@ -23,7 +23,6 @@ union JSONSimpleValue {
     f64 fnumber;
 };
 
-
 typedef struct json {
     Arena* arena;
     Vector tokens;
@@ -34,10 +33,15 @@ enum JSONStatus {
     JSONE_OK = 0,
     JSONE_INVALID_TYPE,
     JSONE_INCOMPATIBLE_TYPE,
-    JSONE_NO_ROOT,
     JSONE_INVALID_PARENT,
+    JSONE_INCOMPATIBLE_PARENT,
+    JSONE_MISSING_PARENT,
     JSONE_MAX_NESTING,
     JSONE_NOT_FOUND,
+
+    JSONE_NO_ROOT,
+
+    // Related to parsing
     JSONE_IO,
     JSONE_UNKNOWN_TOKEN,
     JSONE_UNEXPECTED_TOKEN,
@@ -210,7 +214,7 @@ enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str);
 /**
  * Reads and creates a JSON tree from an input stream.
  *
- * This function initializes and populates a new JSON tree by reading the giben input stream.
+ * This function initializes and populates a new JSON tree by reading the given input stream.
  * The file can be compressed using gzip.
  *
  * @param[in] multiplexer An IO multiplexer used to read from the input stream.
@@ -219,6 +223,23 @@ enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str);
  * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
  */
 enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json);
+
+/**
+ * Reads and creates a JSON tree from file.
+ *
+ * This is a convenience function that creates and closes an file-backed IO multiplexer
+ * automatically.
+ *
+ * @param[in] path The path of the file to parse.
+ * @param[in] arena The arena used to allocate memory for the tree.
+ * @param[out] out_json A pointer to an uninitialized JSON tree.
+ * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
+ * @see json_parse()
+ */
+enum JSONStatus json_from_file(string path, Arena* arena, JSON* out_json);
+
+enum JSONStatus json_move(JSON* json, string path);
+enum JSONStatus json_move_cstr(JSON* json, const char* path);
 
 /**
  * Moves the current token pointer to the child token with the given name.
@@ -234,7 +255,7 @@ enum JSONStatus json_move_to_name(JSON* json, const string* name);
  * Moves the current token pointer to the child token with the given name.
  *
  * If the current token is not a `JSON_OBJECT` token, this function does nothing.
- * 
+ *
  * @note This is the equivalent of @ref json_move_to_name for C strings.
  *
  * @param[in] json The JSON tree.
@@ -308,7 +329,8 @@ f64 json_get_float(JSON* json);
 /**
  * Retrieves the length of the current object or list token.
  *
- * If the current token is not a `JSON_OBJECT` of `JSON_ARRAY` token, this function aborts the server.
+ * If the current token is not a `JSON_OBJECT` of `JSON_ARRAY` token, this function aborts the
+ * server.
  *
  * @param[in] json The JSON tree.
  * @return The length of the array.

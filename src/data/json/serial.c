@@ -5,6 +5,7 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
+#include "platform/platform.h"
 #include "utils/iomux.h"
 #include "utils/str_builder.h"
 #include "utils/string.h"
@@ -219,9 +220,8 @@ static bool token_has_value(enum JSONLexUnit token) {
     return token >= TOK_STRING;
 }
 
-static bool lex_string(IOMux multiplexer, LexUnitValue* value, Arena* arena) {
+static bool lex_string(IOMux multiplexer, LexUnitValue* value, Arena scratch, Arena* arena) {
     char c;
-    Arena scratch = *arena;
     StringBuilder builder = strbuild_create(&scratch);
     while (iomux_read(multiplexer, &c, 1) == 1 && c != '"') {
         strbuild_appendc(&builder, c);
@@ -239,11 +239,10 @@ static bool lex_string(IOMux multiplexer, LexUnitValue* value, Arena* arena) {
 }
 
 static enum JSONLexUnit
-lex_number(IOMux multiplexer, char first, LexUnitValue* value, Arena* arena) {
+lex_number(IOMux multiplexer, char first, LexUnitValue* value, Arena scratch) {
     bool frac = FALSE;
     bool exponent = FALSE;
 
-    Arena scratch = *arena;
     StringBuilder builder = strbuild_create(&scratch);
     strbuild_appendc(&builder, first);
     char c;
@@ -313,7 +312,7 @@ static bool lex_null(IOMux multiplexer) {
     return memcmp(tmp, "ull", 3) == 0;
 }
 
-static enum JSONLexUnit lex_token(IOMux multiplexer, LexUnitValue* value, Arena* arena) {
+static enum JSONLexUnit lex_token(IOMux multiplexer, LexUnitValue* value, Arena* scratch, Arena* arena) {
     char c;
     do {
         if (iomux_read(multiplexer, &c, 1) < 1)
@@ -334,7 +333,7 @@ static enum JSONLexUnit lex_token(IOMux multiplexer, LexUnitValue* value, Arena*
     case ':':
         return TOK_COLON;
     case '"':
-        if (lex_string(multiplexer, value, arena))
+        if (lex_string(multiplexer, value, *scratch, arena))
             return TOK_STRING;
         else
             return TOK_ERROR;
@@ -354,17 +353,17 @@ static enum JSONLexUnit lex_token(IOMux multiplexer, LexUnitValue* value, Arena*
         return TOK_EOF;
     default:
         if ((c >= '0' && c <= '9') || c == '-')
-            return lex_number(multiplexer, c, value, arena);
+            return lex_number(multiplexer, c, value, *scratch);
         log_errorf("JSON: Lexical error: Unknown character '%c'.", c);
         return TOK_ERROR;
     }
 }
 
-static bool json_lex(IOMux multiplexer, Vector* tok_list, Vector* tok_values, Arena* arena) {
+static bool json_lex(IOMux multiplexer, Vector* tok_list, Vector* tok_values, Arena* scratch, Arena* arena) {
     enum JSONLexUnit token;
     LexUnitValue value;
     do {
-        token = lex_token(multiplexer, &value, arena);
+        token = lex_token(multiplexer, &value, scratch, arena);
         vect_add(tok_list, &token);
         if (token_has_value(token))
             vect_add(tok_values, &value);
@@ -394,14 +393,6 @@ static LexUnitValue* pop_value(ParsingInfo* info) {
     LexUnitValue* value = vect_ref(info->tok_values, info->val_idx);
     info->val_idx++;
     return value;
-}
-
-static void add_token(ParsingInfo* info, JSONToken* new_token) {
-    JSONToken* parent = vect_ref(&info->json->tokens, new_token->parent_index);
-    increment_parent_total_lengths(info->json);
-    if (parent)
-        parent->data.compound.size++;
-    vect_add(&info->json->tokens, new_token);
 }
 
 static void json_assign_value(JSONToken* token, LexUnitValue* value) {
@@ -490,19 +481,16 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
     enum JSONStatus status;
     enum JSONLexUnit unit = pop_token(info);
     LexUnitValue* val = NULL;
-    i64 parent_index = -1;
-    vect_get(&info->json->stack, vect_size(&info->json->stack) - 1, &parent_index);
 
     JSONToken new_token = {
         .name = info->name,
-        .parent_index = parent_index,
         .type = types[unit],
     };
 
     switch (unit) {
     case TOK_LBRACE: {
         i64 new_index = vect_size(&info->json->tokens);
-        add_token(info, &new_token);
+        append_token(info->json, &new_token);
         if(!vect_add(&info->json->stack, &new_index)) {
             log_error("Reached maximum nesting depth of 512");
             return JSONE_MAX_NESTING;
@@ -513,7 +501,7 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
     }
     case TOK_LBRACKET: {
         i64 new_index = vect_size(&info->json->tokens);
-        add_token(info, &new_token);
+        append_token(info->json, &new_token);
         if(!vect_add(&info->json->stack, &new_index)) {
             log_error("Reached maximum nesting depth of 512");
             return JSONE_MAX_NESTING;
@@ -531,7 +519,7 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
         json_assign_value(&new_token, val);
         EXPLICIT_FALLTHROUGH;
     case TOK_NULL:
-        add_token(info, &new_token);
+        append_token(info->json, &new_token);
         return JSONE_OK;
     default:
         log_errorf("Unexpected token %s.", names[unit]);
@@ -543,7 +531,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
     Vector units;
     Vector unit_values;
 
-    Arena parsing_arena = arena_create(1 << 16, BLK_TAG_DATA);
+    Arena parsing_arena = arena_create(1 << 25, BLK_TAG_DATA);
 
     vect_init_dynamic(&units, &parsing_arena, 16, sizeof(enum JSONLexUnit));
     vect_init_dynamic(&unit_values, &parsing_arena, 4, sizeof(LexUnitValue));
@@ -553,7 +541,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
        - allocated buffers of strings will be used as-is in the json tree.
        - Other tokens do not require dynamic memory allocations.
     */
-    bool res = json_lex(multiplexer, &units, &unit_values, arena);
+    bool res = json_lex(multiplexer, &units, &unit_values, &parsing_arena, arena);
     if (!res) {
         arena_destroy(&parsing_arena);
         return JSONE_UNKNOWN_TOKEN;
@@ -585,5 +573,18 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
         }
     }
     arena_destroy(&parsing_arena);
+    return status;
+}
+
+enum JSONStatus json_from_file(string path, Arena* arena, JSON* out_json) {
+    IOMux mux = iomux_open(&path, "r");
+    if(mux == -1) {
+        log_errorf("Could not open file for JSON parsing: %s", get_last_error());
+        return JSONE_IO;
+    }
+
+    enum JSONStatus status = json_parse(mux, arena, out_json);
+
+    iomux_close(mux);
     return status;
 }

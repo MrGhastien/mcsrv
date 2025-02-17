@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "utils/string.h"
 #include <stdlib.h>
+#include <string.h>
 
 void increment_parent_total_lengths(JSON* json) {
     for (u32 i = 0; i < json->stack.size; i++) {
@@ -44,6 +45,16 @@ static i32 get_total_length(const JSONToken* token) {
     }
 }
 
+static enum JSONStatus check_parent_type(JSON* json, enum JSONType expected) {
+    JSONToken* parent = get_current_node(json);
+    if (!parent)
+        return JSONE_MISSING_PARENT;
+
+    if (parent->type != expected)
+        return JSONE_INCOMPATIBLE_PARENT;
+    return JSONE_OK;
+}
+
 JSON json_create(Arena* arena, u64 max_token_count) {
     JSON json;
     json.arena = arena;
@@ -66,113 +77,93 @@ enum JSONStatus json_set_root(JSON* json, enum JSONType type) {
     return JSONE_OK;
 }
 
-enum JSONStatus append_token(JSON* json, enum JSONType parent_type, JSONToken** out_token, i64* out_index) {
-    i64 current_index = 0;
-    JSONToken* current_token;
-    if (!vect_peek(&json->stack, &current_index))
-        current_token = NULL;
-    else
-        current_token = vect_ref(&json->tokens, current_index);
-
-    if(parent_type != _JSON_COUNT) {
-        if(!current_token)
-            return JSONE_NO_ROOT;
-
-        if(current_token->type != parent_type)
-            return JSONE_INVALID_PARENT;
+void append_token(JSON* json, JSONToken* new_token) {
+    JSONToken* parent = get_current_node(json);
+    if (!parent) {
+        new_token->local_index = 0;
+        new_token->prev_sibling_index = -1;
+        new_token->parent_index = -1;
+    } else {
+        new_token->local_index = json_get_length(json);
+        vect_peek(&json->stack, &new_token->parent_index);
+        new_token->prev_sibling_index = parent->data.compound.last_child;
+        parent->data.compound.size++;
+        increment_parent_total_lengths(json);
     }
-
-    JSONToken new_token = {
-        .parent_index = current_index,
-    };
-    i64 new_index = current_index + get_total_length(current_token);
-    vect_insert(&json->tokens, &new_token, new_index);
-    *out_token = vect_ref(&json->tokens, new_index);
-
-    if(current_token)
-        current_token->data.compound.size++;
-    increment_parent_total_lengths(json);
-    if(out_index)
-        *out_index = new_index;
-
-    return JSONE_OK;
+    vect_add(&json->tokens, new_token);
 }
 
 enum JSONStatus json_push_simple(JSON* json, enum JSONType type, union JSONSimpleValue value) {
     if (type != JSON_BOOL || type != JSON_INT || type != JSON_FLOAT)
         return JSONE_INCOMPATIBLE_TYPE;
-    JSONToken* new_token;
-    enum JSONStatus status = append_token(json, JSON_ARRAY, &new_token, NULL);
+    enum JSONStatus status = check_parent_type(json, JSON_ARRAY);
     if (status != JSONE_OK)
         return status;
-
-    *new_token = (JSONToken) {
+    JSONToken new_token = {
         .type = type,
         .data.simple = value,
     };
+    append_token(json, &new_token);
+
     return JSONE_OK;
 }
 enum JSONStatus json_push_str(JSON* json, const string* str) {
-    JSONToken* new_token;
-    enum JSONStatus status = append_token(json, JSON_ARRAY, &new_token, NULL);
+    enum JSONStatus status = check_parent_type(json, JSON_ARRAY);
     if (status != JSONE_OK)
         return status;
-
-    *new_token = (JSONToken) {
+    JSONToken new_token = {
         .type = JSON_STRING,
         .data.str = str_create_copy(str, json->arena),
     };
+    append_token(json, &new_token);
+
     return JSONE_OK;
 }
 enum JSONStatus json_push(JSON* json, enum JSONType type) {
-    JSONToken* new_token;
-    enum JSONStatus status = append_token(json, JSON_ARRAY, &new_token, NULL);
+    enum JSONStatus status = check_parent_type(json, JSON_ARRAY);
     if (status != JSONE_OK)
         return status;
-
-    *new_token = (JSONToken) {
+    JSONToken new_token = {
         .type = type,
     };
+    append_token(json, &new_token);
     return JSONE_OK;
 }
 
 enum JSONStatus
 json_put_simple(JSON* json, const string* name, enum JSONType type, union JSONSimpleValue value) {
-    JSONToken* new_token;
-    enum JSONStatus status = append_token(json, JSON_OBJECT, &new_token, NULL);
+    enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
     if (status != JSONE_OK)
         return status;
-
-    *new_token = (JSONToken) {
+    JSONToken new_token = {
         .type = type,
         .data.simple = value,
         .name = str_create_copy(name, json->arena),
     };
+    append_token(json, &new_token);
     return JSONE_OK;
 }
 enum JSONStatus json_put_str(JSON* json, const string* name, const string* str) {
-    JSONToken* new_token;
-    enum JSONStatus status = append_token(json, JSON_OBJECT, &new_token, NULL);
+    enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
     if (status != JSONE_OK)
         return status;
-
-    *new_token = (JSONToken) {
+    JSONToken new_token = {
         .type = JSON_STRING,
         .data.str = str_create_copy(str, json->arena),
         .name = str_create_copy(name, json->arena),
     };
+    append_token(json, &new_token);
     return JSONE_OK;
 }
 enum JSONStatus json_put(JSON* json, const string* name, enum JSONType type) {
-    JSONToken* new_token;
-    enum JSONStatus status = append_token(json, JSON_OBJECT, &new_token, NULL);
+    enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
     if (status != JSONE_OK)
         return status;
-
-    *new_token = (JSONToken) {
+    JSONToken new_token = {
         .type = type,
         .name = str_create_copy(name, json->arena),
     };
+    append_token(json, &new_token);
     return JSONE_OK;
 }
 
@@ -228,10 +219,57 @@ enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str);
 
 enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json);
 
+enum JSONStatus json_move_cstr(JSON* json, const char* path) {
+    return json_move(json, str_view(path));
+}
+
+enum JSONStatus json_move(JSON* json, string path) {
+    if (path.length == 0)
+        return JSONE_OK;
+    string view;
+    i64 idx = 0;
+
+    enum JSONStatus status = JSONE_OK;
+
+    if (path.base[0] == '/') {
+        vect_clear(&json->stack);
+        vect_add_imm(&json->stack, 0, i64);
+    }
+
+    while ((idx = str_find_char(&path, '/')) >= 0) {
+        if (idx == 0) {
+            path.base++;
+            path.length--;
+            continue;
+        }
+
+        view = str_substring(&path, 0, idx);
+        if (str_compare_cstr(&view, "..") == 0)
+            status = json_move_to_parent(json);
+        else if (str_compare_cstr(&view, ".") != 0) {
+            status = json_move_to_name(json, &view);
+        }
+        if (status != JSONE_OK)
+            return status;
+
+        if ((u64) idx >= path.length - 1)
+            path = STR_EMPTY;
+        else {
+            path.base += idx + 1;
+            path.length -= idx + 1;
+        }
+    }
+    if (path.length > 0)
+        return json_move_to_name(json, &path);
+
+    return JSONE_OK;
+}
+
 enum JSONStatus json_move_to_name(JSON* json, const string* name) {
+    enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
+    if (status != JSONE_OK)
+        return status;
     JSONToken* token = get_current_node(json);
-    if (token->type != JSON_OBJECT)
-        return JSONE_INVALID_PARENT;
 
     i64 idx;
     vect_peek(&json->stack, &idx);
@@ -256,14 +294,19 @@ enum JSONStatus json_move_to_cstr(JSON* json, const char* name) {
 
 enum JSONStatus json_move_to_index(JSON* json, i32 index) {
     JSONToken* token = get_current_node(json);
+    if (token == NULL)
+        return JSONE_MISSING_PARENT;
+    if (token->type != JSON_OBJECT && token->type != JSON_ARRAY)
+        return JSONE_INCOMPATIBLE_TYPE;
 
     if (index < 0 || index >= token->data.compound.size) {
-        log_errorf("NBT: Index %i is out of the list's bounds.", index);
+        log_errorf("JSON: Index %i is out of the compound element bounds.", index);
         return JSONE_NOT_FOUND;
     }
 
     i64 idx;
     vect_peek(&json->stack, &idx);
+    idx++;
     for (i32 i = 0; i < index; i++) {
         JSONToken* child_token = vect_ref(&json->tokens, idx);
         idx += get_total_length(child_token);
@@ -273,22 +316,34 @@ enum JSONStatus json_move_to_index(JSON* json, i32 index) {
 }
 enum JSONStatus json_move_to_parent(JSON* json) {
     if (vect_size(&json->stack) == 1)
-        return JSONE_INVALID_PARENT;
+        return JSONE_MISSING_PARENT;
     return vect_pop(&json->stack, NULL) ? JSONE_OK : JSONE_NOT_FOUND;
 }
 enum JSONStatus json_move_to_next_sibling(JSON* json) {
     JSONToken* token = get_current_node(json);
     i64 prev_index;
+    enum JSONStatus status = JSONE_OK;
     if (!vect_pop(&json->stack, &prev_index))
         return JSONE_NOT_FOUND;
-    prev_index += get_total_length(token);
+    if (token->local_index + 1 == json_get_length(json))
+        status = JSONE_NOT_FOUND;
+    else
+        prev_index += get_total_length(token);
     vect_add(&json->stack, &prev_index);
-    return JSONE_OK;
+    return status;
 }
 enum JSONStatus json_move_to_prev_sibling(JSON* json) {
-    UNUSED(json);
-    abort();
-    return JSONE_NOT_FOUND;
+    JSONToken* token = get_current_node(json);
+    i64 prev_index;
+    enum JSONStatus status = JSONE_OK;
+    if (!vect_pop(&json->stack, &prev_index))
+        return JSONE_NOT_FOUND;
+    if (token->local_index == 0)
+        status = JSONE_NOT_FOUND;
+    else
+        prev_index = token->prev_sibling_index;
+    vect_add(&json->stack, &prev_index);
+    return status;
 }
 
 i8 json_get_bool(JSON* json) {
@@ -321,7 +376,7 @@ f64 json_get_float(JSON* json) {
 
 i64 json_get_length(JSON* json) {
     JSONToken* token = get_current_node(json);
-    if (token->type != JSON_OBJECT || token->type != JSON_ARRAY) {
+    if (token->type != JSON_OBJECT && token->type != JSON_ARRAY) {
         log_fatalf("Cannot get length of JSON token of type %i", token->type);
         abort();
     }
@@ -331,8 +386,11 @@ i64 json_get_length(JSON* json) {
 
 string* json_get_name(JSON* json) {
     JSONToken* token = get_current_node(json);
-    JSONToken* parent = vect_ref(&json->stack, json->stack.size - 2);
-    if (!parent || parent->type != JSON_OBJECT)
+    i64 parent_idx;
+    if(!vect_get(&json->stack, json->stack.size - 2, &parent_idx))
+        return NULL;
+    JSONToken* parent = vect_ref(&json->tokens, parent_idx);
+    if (parent->type != JSON_OBJECT)
         return NULL;
     return &token->name;
 }
