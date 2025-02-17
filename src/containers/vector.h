@@ -11,14 +11,15 @@
 struct data_block;
 
 typedef struct vector {
-    struct data_block* start;   /**< Array of blocks storing elements of this vector. */
+    struct data_block* start; /**< Array of blocks storing elements of this vector. */
+    struct data_block* end;
     struct data_block* current; /**< The next block in which a new element is inserted. */
-    u32 next_insert_index;        /**< The next index of the current block at which a new element is
-                                     inserted. */
-    u32 capacity;                 /**< The total capacity of this vector. */
-    u32 size;                     /**< The number of elements stored inside this vector. */
-    u32 stride;                   /**< The size in bytes of elements. */
-    Arena* arena;                 /**< The arena used to allocate new blocks to grow the vector. */
+    u32 next_insert_index;      /**< The next index of the current block at which a new element is
+                                   inserted. */
+    u32 capacity;               /**< The total capacity of this vector. */
+    u32 size;                   /**< The number of elements stored inside this vector. */
+    u32 stride;                 /**< The size in bytes of elements. */
+    Arena* arena;               /**< The arena used to allocate new blocks to grow the vector. */
 } Vector;
 
 /**
@@ -32,13 +33,13 @@ typedef struct vector {
 void vect_init(Vector* vector, Arena* arena, u64 capacity, u64 stride);
 
 /**
-* Initializes a new dynamic vector.
-*
-* @param[out] vector A pointer to the dynamic vector structure to initialize.
-* @param[in] arena The arena to use for memory allocations. This is kept by the vector.
-* @param[in] initial_capacity The initial capacity of the vector.
-* @param[in] stride The size in bytes of the elements stored inside the vector.
-*/
+ * Initializes a new dynamic vector.
+ *
+ * @param[out] vector A pointer to the dynamic vector structure to initialize.
+ * @param[in] arena The arena to use for memory allocations. This is kept by the vector.
+ * @param[in] initial_capacity The initial capacity of the vector.
+ * @param[in] stride The size in bytes of the elements stored inside the vector.
+ */
 void vect_init_dynamic(Vector* vector, Arena* arena, u64 initial_capacity, u64 stride);
 
 /**
@@ -49,7 +50,6 @@ void vect_init_dynamic(Vector* vector, Arena* arena, u64 initial_capacity, u64 s
  * @param[inout] vector The vector to clear.
  */
 void vect_clear(Vector* vector);
-
 
 /**
  * Adds an element at the end of a vector.
@@ -153,7 +153,7 @@ void* vect_ref(const Vector* vector, u64 index);
  */
 #define vect_add_imm(vector, elem, type)                                                           \
     {                                                                                              \
-        typeof(elem) holder = elem;                                                                \
+        type holder = elem;                                                                        \
         vect_add(vector, &holder);                                                                 \
     }
 
@@ -167,7 +167,7 @@ void* vect_ref(const Vector* vector, u64 index);
  */
 #define vect_insert_imm(vector, elem, idx, type)                                                   \
     {                                                                                              \
-        typeof(elem) holder = elem;                                                                \
+        type holder = elem;                                                                        \
         vect_insert(vector, &holder, idx);                                                         \
     }
 
@@ -175,6 +175,5 @@ void* vect_ref(const Vector* vector, u64 index);
 #define vect_cap(vector) ((vector)->capacity)
 #define vect_stride(vector) ((vector)->stride)
 #define vect_is_dynamic(vector) ((vector)->arena != NULL)
-
 
 #endif /* ! VECTOR_H */

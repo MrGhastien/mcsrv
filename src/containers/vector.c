@@ -42,20 +42,23 @@ static bool ensure_capacity(Vector* vector, u64 size) {
 
     struct data_block* blk =
         alloc_block(vector->arena, vector->capacity >> 1, vector->stride, ALLOC_TAG_VECTOR);
-    blk->prev = vector->current;
-    vector->current->next = blk;
+    blk->prev = vector->end;
+    vector->end->next = blk;
+    vector->end = blk;
     vector->capacity += blk->capacity;
 
-    if (vector->next_insert_index == vector->current->capacity) {
-        vector->current = vector->current->next;
-        vector->next_insert_index = 0;
-    }
     return TRUE;
 }
 
 static void register_addition(Vector* vector) {
     vector->size++;
     vector->next_insert_index++;
+    if(vector->next_insert_index >= vector->current->capacity) {
+        if(vect_is_dynamic(vector))
+            ensure_capacity(vector, vector->size + 1);
+        vector->next_insert_index -= vector->current->capacity;
+        vector->current = vector->current->next;
+    }
 }
 
 static void register_removal(Vector* vector) {
@@ -139,6 +142,7 @@ static void shift_elements_forwards(Vector* vector, u64 global_index) {
 
 void vect_init_dynamic(Vector* vector, Arena* arena, u64 initial_capacity, u64 stride) {
     vector->start = alloc_block(arena, initial_capacity, stride, ALLOC_TAG_VECTOR);
+    vector->end = vector->start;
     vector->current = vector->start;
     vector->next_insert_index = 0;
     vector->capacity = initial_capacity;
@@ -148,6 +152,7 @@ void vect_init_dynamic(Vector* vector, Arena* arena, u64 initial_capacity, u64 s
 }
 void vect_init(Vector* vector, Arena* arena, u64 capacity, u64 stride) {
     vector->start = alloc_block(arena, capacity, stride, ALLOC_TAG_VECTOR);
+    vector->end = vector->start;
     vector->current = vector->start;
     vector->next_insert_index = 0;
     vector->capacity = capacity;

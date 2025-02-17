@@ -96,7 +96,7 @@ static void shrink(Dict* map) {
 }
 
 i64 dict_put(Dict* map, const void* key, const void* value) {
-    if (key == NULL)
+    if (key == NULL || map->size == map->capacity)
         return -1;
 
     u64 h = cmp_hash(map->comparator, key, map->key_stride);
