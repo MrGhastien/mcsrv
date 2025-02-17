@@ -105,7 +105,7 @@ void str_set(string* str, const char* cstr) {
 void str_copy(string* dst, const string* src) {
     u64 len = min_u64(src->length, dst->length);
 
-    memcpy(dst->base, src->base, len);
+    memmove(dst->base, src->base, len);
     memset(dst->base + len, 0, dst->length - len + 1);
 }
 
@@ -143,6 +143,12 @@ i32 str_compare(const string* lhs, const string* rhs) {
     if (lhs->length != rhs->length)
         return lhs->length - rhs->length;
     return memcmp(lhs->base, rhs->base, lhs->length);
+}
+
+i32 str_compare_cstr(const string* lhs, const char* rhs) {
+    string rhs_view = str_view(rhs);
+
+    return str_compare(lhs, &rhs_view);
 }
 
 char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size) {

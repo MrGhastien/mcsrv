@@ -27,6 +27,7 @@
 #include <stdarg.h>
 
 #define STR_EMPTY ((string) {0})
+#define STR_INVALID ((string) {.base = NULL, .length = -1})
 
 /**
 * The string structure.
@@ -203,6 +204,7 @@ u64 str_hash(const void* str);
 * @return `0` if the strings are equal, a negative number if @p lhs is less than @p rhs, and a positive number otherwise.
 */
 i32 str_compare(const string* lhs, const string* rhs);
+i32 str_compare_cstr(const string* lhs, const char* rhs);
 
 /**
 * Small utility function to allocate a sufficiently sized buffer and to format a string.

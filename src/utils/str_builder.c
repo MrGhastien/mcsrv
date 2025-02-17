@@ -1,6 +1,9 @@
 #include "str_builder.h"
 #include "containers/vector.h"
+#include "logger.h"
 #include "memory/arena.h"
+#include "memory/mem_tags.h"
+#include "utils/string.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -114,18 +117,22 @@ i32 strbuild_get_range(const StringBuilder* builder, char* out_text, u64 begin, 
 
 string strbuild_to_string(const StringBuilder* builder, Arena* arena) {
     u32 char_count = builder->chars.size;
-    string str;
-    if (arena_is_mem_shared(builder->arena, arena))
-        str = str_alloc(char_count, builder->arena);
-    else
-        str = str_alloc(char_count, arena);
 
+    if (arena_is_mem_shared(builder->arena, arena)) {
+        Arena scratch = arena_create((char_count + 1) * sizeof(char), BLK_TAG_UNKNOWN);
+
+        string str = str_alloc(char_count, &scratch);
+        for (u32 i = 0; i < char_count; i++) {
+            vect_get(&builder->chars, i, &str.base[i]);
+        }
+        string res = str_create_copy(&str, arena);
+        arena_destroy(&scratch);
+        return res;
+    }
+
+    string str = str_alloc(char_count, arena);
     for (u32 i = 0; i < char_count; i++) {
         vect_get(&builder->chars, i, &str.base[i]);
     }
-
-    if (arena_is_mem_shared(builder->arena, arena))
-        return str_create_copy(&str, arena);
-
     return str;
 }
