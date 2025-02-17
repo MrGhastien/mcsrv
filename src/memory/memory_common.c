@@ -15,7 +15,7 @@
 
 #include <stdlib.h>
 
-#define TRACKER_BUF_SIZE (1 << 24)
+#define TRACKER_BUF_SIZE (1 << 26)
 
 struct alloc_track {
     enum AllocTag tag;
@@ -138,8 +138,6 @@ void register_alloc(i64 arena_idx, u64 start, u64 end, enum AllocTag tag) {
         }
 
         if (tmp_alloc->start < start) {
-            if (tmp_alloc->end < start)
-                log_warn("Memory: A region of memory is allocated after a gap");
             tmp_alloc->end = start;
             break;
         }

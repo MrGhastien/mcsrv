@@ -10,6 +10,7 @@
 
 
 Arena arena_create(u64 size, enum MemoryBlockTag tag) {
+    size = ceil_u64(size, sizeof(uintptr_t));
     void* block = malloc(size);
 
     if (!block)
@@ -29,6 +30,7 @@ Arena arena_create(u64 size, enum MemoryBlockTag tag) {
 }
 
 Arena arena_create_silent(u64 size, enum MemoryBlockTag tag) {
+    size = ceil_u64(size, sizeof(uintptr_t));
     void* block = malloc(size);
 
     if (!block)
