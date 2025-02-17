@@ -96,4 +96,8 @@ STATIC_ASSERT(sizeof(i64) >= sizeof(void*), "Cannot convert pointers to long int
 #define UNUSED(x) ((void)(x))
 #define EXPLICIT_FALLTHROUGH __attribute__ ((fallthrough))
 
+#if defined(_WIN32)
+#define strtok_r strtok_s
+#endif
+
 #endif /* ! DEFINITIONS_H */
