@@ -111,9 +111,14 @@ struct block {
     StateDefinition state_definition;
 };
 
+typedef struct state_selection_ctx {
+    const Block* block;
+    i64* value_indices;
+} StateSelectionContext;
+
 i64 register_integer_state_property(string name, i32 minimum, i32 maximum);
 i64 register_bool_state_property(string name);
-i64 register_enum_state_property(string name, Arena* arena, string* values, u64 value_count);
+i64 register_enum_state_property(string name, string* values, u64 value_count);
 
 bool create_state_definition(const Block* block, Vector* properties, Arena* arena, StateDefinition* out_definition);
 
@@ -121,5 +126,9 @@ BlockProperties default_block_properties(void);
 
 const BlockState* state_any(const StateDefinition* definition);
 const BlockState* state_with_value(const BlockState* state, const StateProperty* property, union StatePropertyValue value);
+
+bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID block_id);
+void selector_set(StateSelectionContext* ctx, StateProperty* property, union StatePropertyValue value);
+const BlockState* selector_select(const StateSelectionContext* ctx);
 
 #endif /* ! BLOCK_H */

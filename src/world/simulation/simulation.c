@@ -15,7 +15,7 @@ static bool running = FALSE;
 
 static void* simulate(void*) {
     Level level;
-    level_init(&level);
+    level_init(&level, str_view("./world"));
 
     level_load_chunk(&level, CHUNK_POS(0, 0));
 

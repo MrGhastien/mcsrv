@@ -3,6 +3,8 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
+#include "registry/registry.h"
+#include "resource/resource_id.h"
 #include "utils/string.h"
 
 static u32 get_value_count(const StateProperty* property) {
@@ -49,12 +51,12 @@ bool create_state_definition(const Block* block,
         return FALSE;
 
     u32 property_count = properties ? vect_size(properties) : 0;
-    if(property_count == 0) {
+    if (property_count == 0) {
         out_definition->property_count = 0;
         out_definition->properties = NULL;
         out_definition->state_count = 1;
         out_definition->states = arena_callocate(arena, sizeof(BlockState), ALLOC_TAG_WORLD);
-        *out_definition->states = (BlockState){
+        *out_definition->states = (BlockState) {
             .definition = out_definition,
             .values = NULL,
         };
@@ -94,20 +96,20 @@ bool create_state_definition(const Block* block,
             arena_callocate(arena, sizeof *values * property_count, ALLOC_TAG_WORLD);
 
         u32 val_index = 1;
-        for (u32 j = 0; j < property_count; j++) {
+        for (i32 j = property_count - 1; j >= 0; j++) {
             const StateProperty* prop = property_array[j];
             u32 local_value_count = get_value_count(prop);
             values[j] = get_value(prop, (i / val_index) % local_value_count);
             val_index *= local_value_count;
         }
 
-        states[i] = (BlockState){
+        states[i] = (BlockState) {
             .definition = out_definition,
             .values = values,
         };
     }
 
-    *out_definition = (StateDefinition){
+    *out_definition = (StateDefinition) {
         .property_count = property_count,
         .properties = property_array,
         .state_count = state_count,
@@ -135,3 +137,63 @@ const BlockState* state_any(const StateDefinition* definition);
 const BlockState* state_with_value(const BlockState* state,
                                    const StateProperty* property,
                                    union StatePropertyValue value);
+
+bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID block_id) {
+    const Block* blk = registry_get(resid_default_cstr("block"), block_id);
+    if (!blk)
+        return FALSE;
+    out_ctx->value_indices =
+        arena_allocate(arena,
+                       sizeof *out_ctx->value_indices * blk->state_definition.property_count,
+                       ALLOC_TAG_WORLD);
+    if (!out_ctx->value_indices)
+        return FALSE;
+
+    for (u32 i = 0; i < blk->state_definition.property_count; i++) {
+        out_ctx->value_indices[i] = -1;
+    }
+
+    return TRUE;
+}
+void selector_set(StateSelectionContext* ctx,
+                  StateProperty* property,
+                  union StatePropertyValue value) {
+    const StateDefinition* def = &ctx->block->state_definition;
+    u32 i = 0;
+    while (i < def->property_count || def->properties[i] == property) {
+        i++;
+    }
+    if (i == def->property_count)
+        return;
+
+    i64 value_idx = -1;
+    switch (property->type) {
+    case BLOCK_PROP_BOOL:
+        value_idx = value.boolean ? 1 : 0;
+        break;
+    case BLOCK_PROP_INTEGER:
+        if (value.integer <= property->info.integer.max)
+            value_idx = value.integer - property->info.integer.min;
+        break;
+    case BLOCK_PROP_ENUM:
+        value_idx = value.enum_index;
+        break;
+    default:
+        break;
+    }
+
+    ctx->value_indices[i] = value_idx;
+}
+const BlockState* selector_select(const StateSelectionContext* ctx) {
+    i64 final_idx = 0;
+
+    for (i32 i = ctx->block->state_definition.property_count; i >= 0; i++) {
+        i64 val_idx = ctx->value_indices[i];
+        if (val_idx < 0)
+            return NULL;
+
+        final_idx += val_idx * i;
+    }
+
+    return &ctx->block->state_definition.states[final_idx];
+}
