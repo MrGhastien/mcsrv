@@ -50,7 +50,7 @@ void logger_system_cleanup(void) {
     mcmutex_destroy(&ctx.mutex);
 }
 
-void _log_msg(enum LogLevel lvl, char* msg) {
+void _log_msg(enum LogLevel lvl, const char* msg) {
     if (lvl < LOG_LEVEL_FATAL || lvl >= _LOG_LEVEL_COUNT)
         return;
 
@@ -68,7 +68,7 @@ void _log_msg(enum LogLevel lvl, char* msg) {
     fprintf(stream, "%s%s %s" ANSI_RESET "\n", colors[lvl], names[lvl], msg);
 }
 
-void _log_msgf(enum LogLevel lvl, char* msg, ...) {
+void _log_msgf(enum LogLevel lvl, const char* msg, ...) {
     if (lvl < LOG_LEVEL_FATAL || lvl >= _LOG_LEVEL_COUNT)
         return;
 

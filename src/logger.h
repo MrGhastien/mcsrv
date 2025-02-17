@@ -81,7 +81,7 @@ void logger_system_cleanup(void);
  *
  *
  */
-void _log_msg(enum LogLevel lvl, char* msg);
-void _log_msgf(enum LogLevel lvl, char* format, ...);
+void _log_msg(enum LogLevel lvl, const char* msg);
+void _log_msgf(enum LogLevel lvl, const char* format, ...);
 
 #endif /* ! LOGGER_H */
