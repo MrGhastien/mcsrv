@@ -39,15 +39,38 @@ void registry_system_cleanup(void) {
 
 bool registry_create(ResourceID name, u64 stride) {
     Registry reg = {.name = name};
-    dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
+    //dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
+    dict_init(&reg.entries, NULL, sizeof(ResourceID), stride);
 
-    return dict_put(&root.entries, &name, &reg);
+    return dict_put(&root.entries, &name, &reg) >= 0;
 }
 
 void registry_register(ResourceID registry_name, ResourceID id, void* instance) {
-    Registry reg;
-    if (dict_get(&root.entries, &registry_name, &reg) < 0)
+    Registry* reg;
+    i64 reg_idx;
+    if ((reg_idx = dict_get(&root.entries, &registry_name, NULL)) < 0)
         abort();
 
-    dict_put(&reg.entries, &id, instance);
+    reg = dict_ref(&root.entries, reg_idx);
+
+    log_debugf("Registering " RESID " into registry " RESID ".", RESID_EXTRACT_STRING(id), RESID_EXTRACT_STRING(registry_name));
+    if(dict_put(&reg->entries, &id, instance) < 0)
+        log_errorf("Registration of " RESID " into registry " RESID " failed.", RESID_EXTRACT_STRING(id), RESID_EXTRACT_STRING(registry_name));
+}
+
+const void* registry_get(ResourceID registry_name, ResourceID element_id) {
+    Registry* reg;
+    i64 reg_idx;
+    if ((reg_idx = dict_get(&root.entries, &registry_name, NULL)) < 0)
+        abort();
+
+    reg = dict_ref(&root.entries, reg_idx);
+
+    i64 idx = dict_get(&reg->entries, &element_id, NULL);
+    if(idx == -1) {
+        log_errorf("Failed to get element " RESID " of registry " RESID ".", RESID_EXTRACT_STRING(element_id), RESID_EXTRACT_STRING(registry_name));
+        return NULL;
+    }
+
+    return dict_ref(&reg->entries, idx);
 }

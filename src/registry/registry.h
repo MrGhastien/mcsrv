@@ -10,5 +10,6 @@ void registry_system_cleanup(void);
 bool registry_create(ResourceID name, u64 stride);
 
 void registry_register(ResourceID registry_name, ResourceID id, void* instance);
+const void* registry_get(ResourceID registry_name, ResourceID element_id);
 
 #endif /* ! REGISTRY_H */
