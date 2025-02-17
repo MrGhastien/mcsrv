@@ -3,6 +3,9 @@
 
 #include "utils/string.h"
 
+#define RESID_EXTRACT_STRING(resid) cstr(&(resid).namespace), cstr(&(resid).path)
+#define RESID "[%s:%s]"
+
 typedef struct resid {
     string namespace;
     string path;
