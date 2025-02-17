@@ -321,9 +321,10 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
 #ifdef TRACE
     string str;
-    json_stringify(json, &str, &conn->scratch_arena);
+    json_to_string(json, &conn->scratch_arena, &str);
     log_tracef("%s", str.base);
 #endif
+
 
     return res_code == 200;
 }
