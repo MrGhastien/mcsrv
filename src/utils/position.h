@@ -59,7 +59,7 @@ i32 vec3i_compare(const Vec3i* lhs, const Vec3i* rhs);
 /**
  * Computes the hash value of a 3D vector.
  *
- * This function should not be used directly. Instead, use the @ref CMP_VEC3I @ref Comparator
+ * This function should not be used directly. Instead, use the @ref CMP_VEC3D @ref Comparator
  * "comparator".
  *
  * @note This function does not compute a cryptographic hash. It should be used to get a simple
@@ -103,6 +103,8 @@ u64 vec2i_hash(const void* str);
  * positive number otherwise.
  */
 i32 vec2i_compare(const Vec2i* lhs, const Vec2i* rhs);
+
+#define pos_chunk_to_region(cpos) ((RegionPos) {.x = cpos.x >> 5, .y = cpos.y >> 5})
 
 #define CHUNK_POS(px, py) (ChunkPos){ .x = (px), .y = (py)}
 
