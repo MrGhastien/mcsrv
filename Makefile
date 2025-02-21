@@ -52,18 +52,21 @@ test: CFLAGS += -O0 -g -DDEBUG
 test: $(TEST_TARGETS)
 
 $(CORE_LIB): $(OBJS) $(HDRS)
-	$(AR) rc $@ $(OBJS)
+	@$(AR) rc $@ $(OBJS)
+	@echo -e "	\e[35mAR	$(notdir $@)\e[0m"
 
 $(MAIN_TARGET): $(MAIN_OBJ) $(CORE_LIB)
-	$(CC) $(LDFLAGS)  -o $@ $^ $(LDLIBS)
+	@$(CC) $(LDFLAGS)  -o $@ $^ $(LDLIBS)
+	@echo -e "	\e[34mLD	$(notdir $@)\e[0m"
 
 $(TEST_TARGETS): $(CORE_LIB)
 	$(MAKE) -C $(dir $@)
 
 %.o: %.c $(HDRS)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	@$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	@echo -e "	\e[36mCC	$(notdir $@)\e[0m"
 
 clean:
-	rm $(OBJS)
-	rm $(MAIN_TARGET)
-	rm libsrv.a
+	rm -f $(OBJS)
+	rm -f $(MAIN_TARGET)
+	rm -f $(CORE_LIB)
