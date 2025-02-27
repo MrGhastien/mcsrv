@@ -177,7 +177,8 @@ enum NBTStatus {
     NBTE_INVALID_PARENT,
     NBTE_MAX_NESTING,
     NBTE_NOT_FOUND,
-    NBTE_IO
+    NBTE_IO,
+    NBTE_UNEXPECTED
 };
 
 enum NBTTagType {
