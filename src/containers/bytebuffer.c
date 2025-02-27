@@ -1,10 +1,10 @@
 #include "containers/bytebuffer.h"
 #include "logger.h"
+#include "memory/mem_tags.h"
 #include "network/utils.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
 #include "utils/string.h"
-#include "memory/mem_tags.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -177,14 +177,17 @@ static inline bool has_more_regions(const ByteBuffer* buffer, u64 total, bool wr
     return writable ? total < buffer->capacity - buffer->size : total < buffer->size;
 }
 
-static u64
-get_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, bool writable, i64 start_offset) {
-    u64 max_size =  writable ? bytebuf_available(buffer) : bytebuf_size(buffer);
+static u64 get_regions(const ByteBuffer* buffer,
+                       BufferRegion* out_regions,
+                       u64* out_count,
+                       bool writable,
+                       i64 start_offset) {
+    u64 max_size = writable ? bytebuf_available(buffer) : bytebuf_size(buffer);
     u64 index = 0;
     u64 total = 0;
-    if(start_offset < 0)
+    if (start_offset < 0)
         start_offset = 0;
-    if((u64)start_offset > max_size)
+    if ((u64) start_offset > max_size)
         start_offset = max_size;
     i64 region_start = start_offset + (writable ? buffer->write_head : buffer->read_head);
 
@@ -208,7 +211,7 @@ get_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count,
 // -- Byte Buffer initialization / destruction --
 
 ByteBuffer bytebuf_create(u64 size) {
-    return (ByteBuffer){
+    return (ByteBuffer) {
         .buf = malloc(size),
         .read_head = -1,
         .write_head = -1,
@@ -218,8 +221,18 @@ ByteBuffer bytebuf_create(u64 size) {
 }
 
 ByteBuffer bytebuf_create_fixed(u64 size, Arena* arena) {
-    return (ByteBuffer){
+    return (ByteBuffer) {
         .buf = arena_allocate(arena, size, ALLOC_TAG_BYTEBUFFER),
+        .read_head = 0,
+        .write_head = 0,
+        .size = 0,
+        .capacity = size,
+    };
+}
+
+ByteBuffer bytebuf_wrap(u64 size, void* array) {
+    return (ByteBuffer) {
+        .buf = array,
         .read_head = 0,
         .write_head = 0,
         .size = 0,
@@ -249,7 +262,7 @@ u64 bytebuf_cap(const ByteBuffer* buffer) {
 
 i64 bytebuf_current_pos(const ByteBuffer* buffer) {
     i64 res = buffer->write_head - buffer->read_head;
-    if(res < 0)
+    if (res < 0)
         res += buffer->capacity;
     return res;
 }
@@ -281,7 +294,7 @@ void bytebuf_write_buffer(ByteBuffer* dst, const ByteBuffer* src) {
     BufferRegion regions[2];
     bytebuf_get_read_regions(src, regions, &region_count, 0);
 
-    for(u64 i = 0; i < region_count; i++) {
+    for (u64 i = 0; i < region_count; i++) {
         bytebuf_write(dst, regions[i].start, regions[i].size);
     }
 }
@@ -395,10 +408,16 @@ i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data) {
     bytebuf_read_const(buffer, size, out_data);
     return size;
 }
-u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset) {
+u64 bytebuf_get_read_regions(const ByteBuffer* buffer,
+                             BufferRegion* out_regions,
+                             u64* out_count,
+                             i64 start_offset) {
     return get_regions(buffer, out_regions, out_count, FALSE, start_offset);
 }
-u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset) {
+u64 bytebuf_get_write_regions(const ByteBuffer* buffer,
+                              BufferRegion* out_regions,
+                              u64* out_count,
+                              i64 start_offset) {
     return get_regions(buffer, out_regions, out_count, TRUE, start_offset);
 }
 

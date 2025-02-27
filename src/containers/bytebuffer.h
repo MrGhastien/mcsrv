@@ -67,6 +67,15 @@ ByteBuffer bytebuf_create(u64 size);
 ByteBuffer bytebuf_create_fixed(u64 size, Arena* arena);
 
 /**
+ * Create a fixed byte buffer, using the given array as its underlying memory.
+ *
+ * @param size The size of the array.
+ * @param array The allocated array to use.
+ * @return The newly created byte buffer
+ */
+ByteBuffer bytebuf_wrap(u64 size, void* array);
+
+/**
  * Frees memory associated with a byte buffer.
  *
  * @param buffer The byte buffer to destroy.
