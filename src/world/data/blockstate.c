@@ -6,6 +6,8 @@
 #include "registry/registry.h"
 #include "resource/resource_id.h"
 #include "utils/string.h"
+#include <stddef.h>
+#include <stdlib.h>
 
 static u32 get_value_count(const StateProperty* property) {
     switch (property->type) {
@@ -96,7 +98,7 @@ bool create_state_definition(const Block* block,
             arena_callocate(arena, sizeof *values * property_count, ALLOC_TAG_WORLD);
 
         u32 val_index = 1;
-        for (i32 j = property_count - 1; j >= 0; j++) {
+        for (i32 j = property_count - 1; j >= 0; j--) {
             const StateProperty* prop = property_array[j];
             u32 local_value_count = get_value_count(prop);
             values[j] = get_value(prop, (i / val_index) % local_value_count);
@@ -156,7 +158,7 @@ bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID bloc
     return TRUE;
 }
 void selector_set(StateSelectionContext* ctx,
-                  StateProperty* property,
+                  const StateProperty* property,
                   union StatePropertyValue value) {
     const StateDefinition* def = &ctx->block->state_definition;
     u32 i = 0;
@@ -196,4 +198,35 @@ const BlockState* selector_select(const StateSelectionContext* ctx) {
     }
 
     return &ctx->block->state_definition.states[final_idx];
+}
+
+union StatePropertyValue parse_state_property_value(string value, const StateProperty* prop) {
+    union StatePropertyValue res;
+    switch (prop->type) {
+    case BLOCK_PROP_BOOL:
+        if (str_compare_cstr(&value, "true") == 0)
+            res.boolean = TRUE;
+        else if (str_compare_cstr(&value, "false") == 0)
+            res.boolean = FALSE;
+        else
+            abort();
+        break;
+    case BLOCK_PROP_INTEGER:
+        i64 num = strtol(cstr(&value), NULL, 10);
+        res.integer = num;
+        break;
+    case BLOCK_PROP_ENUM:
+        u32 i;
+        for (i = 0; i < prop->info.enumeration.value_count; i++) {
+            string* possible_value = &prop->info.enumeration.values[i];
+            if (str_compare(possible_value, &value) == 0)
+                break;
+        }
+        res.enum_index = i;
+        break;
+    default:
+        res.integer = -1;
+        break;
+    }
+    return res;
 }

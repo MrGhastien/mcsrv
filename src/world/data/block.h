@@ -127,8 +127,11 @@ BlockProperties default_block_properties(void);
 const BlockState* state_any(const StateDefinition* definition);
 const BlockState* state_with_value(const BlockState* state, const StateProperty* property, union StatePropertyValue value);
 
+const StateProperty* get_state_property_by_name(string name);
+union StatePropertyValue parse_state_property_value(string value, const StateProperty* prop);
+
 bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID block_id);
-void selector_set(StateSelectionContext* ctx, StateProperty* property, union StatePropertyValue value);
+void selector_set(StateSelectionContext* ctx, const StateProperty* property, union StatePropertyValue value);
 const BlockState* selector_select(const StateSelectionContext* ctx);
 
 #endif /* ! BLOCK_H */

@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
+#include "resource/resource_id.h"
 #include "utils/bitwise.h"
 #include "utils/iomux.h"
 #include "utils/position.h"
@@ -42,19 +43,23 @@ read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena
 
     u32 length;
     iomux_read(region->mux, &length, 4);
-    length = untoh32(length);
+    length = untoh32(length) - 1; // quirk of the anvil file format
 
     u8 compression;
     iomux_read(region->mux, &compression, 1);
 
-    assert(compression == 4 || compression == 0);
+    assert(compression == 2 || compression == 0);
 
     NBT nbt;
     switch (compression) {
-    case 4: {
-        IOMux compressed_stream = iomux_wrap_zlib(region->mux, &arena);
-        nbt_parse(&arena, 8192, compressed_stream, &nbt);
+    case 2: {
+        IOMux compressed_stream = iomux_wrap_zlib(region->mux, length, &arena);
+        enum NBTStatus status = nbt_parse(&arena, 8192, compressed_stream, &nbt);
         iomux_close(compressed_stream);
+        if (status != NBTE_OK) {
+            log_fatalf("An error occurred when reading a chunk's data: %i", status);
+            abort();
+        }
         break;
     }
     case 0:
@@ -89,13 +94,36 @@ read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena
         section->palette =
             arena_callocate(&arena, section->palette_size * sizeof(BlockState*), ALLOC_TAG_WORLD);
         nbt_move_to_index(&nbt, 0);
+        i32 idx = 0;
 
         do {
             nbt_move_to_cstr(&nbt, "Name");
             string* name = nbt_get_string(&nbt);
+            ResourceID id;
+            assert(resid_parse(name, &arena, &id));
 
+
+            StateSelectionContext selector;
+            assert(selector_init(&selector, &arena, id));
+
+            nbt_move_to_parent(&nbt);
+            nbt_move_to_cstr(&nbt, "Properties");
+            nbt_move_to_index(&nbt, 0);
+
+            do {
+                const string* prop_name = nbt_get_name(&nbt);
+                const string* prop_value = nbt_get_string(&nbt);
+                const StateProperty* prop = get_state_property_by_name(*prop_name);
+                assert(prop != NULL);
+                selector_set(&selector, prop, parse_state_property_value(*prop_value, prop));
+            } while(nbt_move_to_next_sibling(&nbt) == NBTE_OK);
             
-            
+            const BlockState* state = selector_select(&selector);
+            assert(state != NULL);
+
+            section->palette[idx] = state;
+            idx++;
+
         } while (nbt_move_to_next_sibling(&nbt) == NBTE_OK);
 
     } while (nbt_move_to_next_sibling(&nbt) == NBTE_OK);
@@ -107,9 +135,9 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
 
     u32 chunk_offset = 0;
     iomux_read(region->mux, &chunk_offset, 4);
+    chunk_offset = untoh32(chunk_offset);
     u32 sector_count = chunk_offset & 0xff;
-
-    chunk_offset = untoh32(chunk_offset >> 8);
+    chunk_offset >>= 8;
 
     Chunk chunk;
     read_chunk(region, &chunk, chunk_offset, sector_count, level->arena);
@@ -117,6 +145,8 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
 }
 
 void level_load_chunk(Level* level, ChunkPos pos) {
+
+    log_tracef("Loading chunk at position (%lli,%lli)...", pos.x, pos.y);
 
     i64 chunk_idx = dict_get(&level->chunks, &pos, NULL);
     if (chunk_idx != -1)
@@ -137,7 +167,7 @@ void level_load_chunk(Level* level, ChunkPos pos) {
         string region_path = strbuild_to_string(&builder, &level->arena);
 
         Region new_region = {
-            .mux = iomux_open(&region_path, "rwb"),
+            .mux = iomux_open(&region_path, "r+b"),
             .pos = region_pos,
         };
         log_tracef("Opening region file %s...", cstr(&region_path));
