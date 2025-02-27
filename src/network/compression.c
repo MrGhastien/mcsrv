@@ -3,6 +3,8 @@
 #include "logger.h"
 #include "memory/arena.h"
 #include "memory/mem_tags.h"
+#include "utils/bitwise.h"
+#include "utils/iomux.h"
 #include "utils/math.h"
 
 #include <assert.h>
@@ -21,7 +23,6 @@ static void* zlib_alloc(void* arena, u32 item_count, u32 size) {
 static void zlib_free(void* arena, void* addr) {
     (void) arena;
     (void) addr;
-    log_debug("Cleaning up the zlib context.");
     arena_free_ptr(arena, addr);
 }
 
@@ -33,6 +34,8 @@ bool compression_init(CompressionContext* ctx, Arena* arena) {
     ctx->inflate_stream.zalloc = &zlib_alloc;
     ctx->inflate_stream.zfree = &zlib_free;
     ctx->inflate_stream.opaque = arena;
+    ctx->inflate_stream.avail_in = 0;
+    ctx->inflate_stream.next_in = Z_NULL;
 
     i32 code = deflateInit(&ctx->deflate_stream, Z_DEFAULT_COMPRESSION);
     if (code != Z_OK) {
@@ -43,7 +46,7 @@ bool compression_init(CompressionContext* ctx, Arena* arena) {
     code = inflateInit(&ctx->inflate_stream);
     if (code != Z_OK) {
         log_errorf("ZLib: %s.", ctx->inflate_stream.msg);
-        log_error("Failed to initialize the compression context.");
+        log_error("Failed to initialize the decompression context.");
         return FALSE;
     }
     ctx->threshold = COMPRESS_THRESHOLD;
@@ -149,36 +152,82 @@ i64 compression_decompress(CompressionContext* ctx, ByteBuffer* out_buffer, Byte
         &ctx->inflate_stream, out_buffer, in_buffer, &zlib_inflate, &zlib_reset_inflate);
 }
 
-i64 compression_decompress_from(
-    CompressionContext* ctx, IOMux mux, void* out_buffer, u64 length, u64 output_length) {
-    int flush;
+/*
+static i64 fill_buffer_from_mux(IOMux mux, ByteBuffer* buffer, u64 requested_size) {
+    BufferRegion regions[2];
+    u64 region_count = 2;
 
-    u8 file_buffer[CHUNK];
-    u64 total = 0;
+    u64 writable_size = bytebuf_get_write_regions(buffer, regions, &region_count, 0);
+    requested_size = min_u64(requested_size, writable_size);
 
-    ctx->inflate_stream.avail_out = output_length;
+    u64 total_read = 0;
+
+    for (u64 i = 0; i < region_count; i++) {
+        u64 read_size = 0;
+        while(requested_size > 0 && read_size < regions[i].size) {
+            read_size = iomux_read(mux, regions[i].start, min_u64(regions[i].size, requested_size));
+            if (read_size == 0)
+                break;
+            if (read_size < 0)
+                return -1;
+            regions[i].size -= read_size;
+            regions[i].start = offset(regions[i].start, read_size);
+            requested_size -= read_size;
+            total_read += read_size;
+        }
+    }
+    bytebuf_register_write(buffer, total_read);
+
+    return total_read;
+}
+*/
+
+i64 compression_decompress_from(CompressionContext* ctx,
+                                IOMux mux,
+                                ByteBuffer* in_buffer,
+                                void* out_buffer,
+                                i64* remaining_in_length,
+                                u64 out_length) {
+
+    ctx->inflate_stream.avail_out = out_length;
     ctx->inflate_stream.next_out = out_buffer;
 
+    i64 filled;
     do {
 
-        i32 res = iomux_read(mux, file_buffer, min_u64(CHUNK, length));
-        if (res == -1) {
-            log_errorf("Error when decompressing file: %s", iomux_error(mux, NULL));
-            return -1;
+
+        if (ctx->inflate_stream.avail_in == 0 && *remaining_in_length > 0) {
+            u64 region_count = 1;
+            BufferRegion region;
+
+            bytebuf_get_write_regions(in_buffer, &region, &region_count, 0);
+
+            filled = iomux_read(mux, region.start, min_u64(region.size, *remaining_in_length));
+            if (filled < 0) {
+                log_errorf("Error when decompressing file: %s", iomux_error(mux, NULL));
+                return -1;
+            }
+            bytebuf_register_write(in_buffer, filled);
+            *remaining_in_length -= filled;
+            ctx->inflate_stream.avail_in = filled;
+            ctx->inflate_stream.next_in = region.start;
         }
-        length -= res;
-        ctx->inflate_stream.avail_in = res;
-        ctx->inflate_stream.next_in = file_buffer;
-        flush = length == 0 || iomux_eof(mux) ? Z_FINISH : Z_NO_FLUSH;
+
+        i64 previous_available = ctx->inflate_stream.avail_in;
 
         do {
-            res = inflate(&ctx->inflate_stream, flush);
-        } while (ctx->inflate_stream.avail_in > 0);
+            filled = inflate(&ctx->inflate_stream, Z_NO_FLUSH);
+            if (filled < 0) {
+                log_errorf("Zlib error when decompressing file: %i.", filled);
+                return -1;
+            }
+            // here avail_in is still greater than zero (1) after inflate returns Z_STREAM_END
+        } while (filled == Z_OK && ctx->inflate_stream.avail_in > 0 && ctx->inflate_stream.avail_out > 0);
+        bytebuf_register_read(in_buffer, previous_available - ctx->inflate_stream.avail_in);
 
-    } while (flush != Z_FINISH);
+    } while (filled == Z_OK && ctx->inflate_stream.avail_out > 0);
 
-    bytebuf_register_write(out_buffer, total);
-    return output_length - ctx->inflate_stream.avail_out;
+    return out_length - ctx->inflate_stream.avail_out;
 }
 i64 compression_compress_to(CompressionContext* ctx, IOMux mux, const void* in_buffer, u64 length) {
     u8 file_buffer[CHUNK];
@@ -186,13 +235,13 @@ i64 compression_compress_to(CompressionContext* ctx, IOMux mux, const void* in_b
 
     ctx->deflate_stream.avail_in = length;
     // WARNING: deleting const !
-    ctx->deflate_stream.next_in = (unsigned char*)in_buffer;
+    ctx->deflate_stream.next_in = (unsigned char*) in_buffer;
 
     do {
         ctx->deflate_stream.avail_out = CHUNK;
         ctx->deflate_stream.next_out = file_buffer;
 
-        i32 res = deflate(&ctx->inflate_stream, Z_FINISH);
+        i32 res = deflate(&ctx->deflate_stream, Z_FINISH);
         if (res != Z_OK && res != Z_STREAM_END) {
             log_errorf("ZLib: %s", zError(res));
             deflateReset(&ctx->deflate_stream);
@@ -208,7 +257,7 @@ i64 compression_compress_to(CompressionContext* ctx, IOMux mux, const void* in_b
         total += round_total;
     } while (ctx->deflate_stream.avail_out == 0);
 
-    assert(ctx->inflate_stream.avail_in == 0);
+    assert(ctx->deflate_stream.avail_in == 0);
     return total;
 }
 i64 compression_compress_buffer_to(CompressionContext* ctx, IOMux mux, ByteBuffer* in_buffer) {
