@@ -302,3 +302,28 @@ void register_blocks(void) {
     register_blocks_internal(&json);
     UNUSED(register_simple_block);
 }
+
+struct property_search_data {
+    StateProperty* out;
+    const string* name;
+};
+
+static void property_search_iterate(void* elem, i64 idx, void* user_data) {
+    UNUSED(idx);
+    struct property_search_data* data = user_data;
+    if (data->out)
+        return;
+    StateProperty* prop = elem;
+    if (str_compare(data->name, &prop->name) == 0)
+        data->out = prop;
+}
+
+const StateProperty* get_state_property_by_name(string name) {
+    struct property_search_data data = {
+        .name = &name,
+        .out = NULL,
+    };
+    objpool_foreach(&property_pool, &property_search_iterate, &data);
+
+    return data.out;
+}
