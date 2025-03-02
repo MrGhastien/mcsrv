@@ -17,7 +17,7 @@ static void* simulate(void*) {
     Level level;
     level_init(&level, str_view("./world"));
 
-    level_load_chunk(&level, CHUNK_POS(0, 0));
+    level_load_chunk(&level, CHUNK_POS(-1, 2));
 
     while (running) {
         milli_sleep(500);
