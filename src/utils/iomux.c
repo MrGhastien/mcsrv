@@ -159,6 +159,9 @@ i32 iomux_write(IOMux multiplexer, const void* data, u64 size) {
     case IO_ZLIB:
         return compression_compress_to(
             &mux->backend.zlib.ctx, mux->backend.zlib.source, data, size);
+    default:
+        abort();
+        break;
     }
     return res;
 }
@@ -209,6 +212,9 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
         if (res < 0)
             mux->error = res;
         break;
+    default:
+        abort();
+        break;
     }
     if (mux->error == 0)
         mux->total_read += res;
@@ -249,6 +255,9 @@ i32 iomux_getc(IOMux multiplexer) {
         res = iomux_read(multiplexer, &c, 1);
         break;
     }
+    default:
+        abort();
+        break;
     }
     mux->total_read += res == 0;
     return res == 0;
@@ -284,6 +293,7 @@ i32 iomux_ungetc(IOMux multiplexer, i32 c) {
         strbuild_appendc(&mux->backend.string_backend.builder, c);
         break;
     default:
+        abort();
         return -1;
     }
     return res & 0xff;
@@ -332,6 +342,9 @@ i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
         res = size;
         break;
     }
+    default:
+        abort();
+        break;
     }
     va_end(args);
     return res;
@@ -367,6 +380,9 @@ bool iomux_writec(IOMux multiplexer, i32 chr) {
         log_fatalf(" TODO: %s", __FUNCTION__);
         res = -1;
         break;
+    default:
+        abort();
+        break;
     }
     return res == 0;
 }
@@ -400,6 +416,9 @@ i32 iomux_writes(IOMux multiplexer, const char* cstr) {
     case IO_ZLIB:
         log_fatalf(" TODO: %s", __FUNCTION__);
         res = -1;
+        break;
+    default:
+        abort();
         break;
     }
     return res == 0;
@@ -435,6 +454,9 @@ i32 iomux_write_str(IOMux multiplexer, const string* str) {
         log_fatalf(" TODO: %s", __FUNCTION__);
         res = -1;
         break;
+    default:
+        abort();
+        break;
     }
     return res == 0;
 }
@@ -453,6 +475,8 @@ bool iomux_eof(IOMux multiplexer) {
         return bytebuf_size(mux->backend.buffer) == 0;
     case IO_STRING:
         return mux->backend.string_backend.cursor == mux->backend.string_backend.builder.chars.size;
+    case IO_ZLIB:
+        return mux->backend.zlib.max_in == 0 && mux->backend.zlib.inflate_buffer.size == 0;
     default:
         abort();
         return TRUE;
@@ -523,6 +547,9 @@ i32 iomux_seek(IOMux multiplexer, i32 off, i32 method) {
     case IO_ZLIB:
         log_error("Seeking mechanism not implemented for the IOMux ZLib backend");
         return -1;
+    default:
+        abort();
+        break;
     }
     return -1;
 }
@@ -543,6 +570,9 @@ i32 iomux_tell(IOMux multiplexer) {
     case IO_ZLIB:
         log_error("Seeking mechanism not implemented for the IOMux ZLib backend");
         return -1;
+    default:
+        abort();
+        break;
     }
     return -1;
 }
