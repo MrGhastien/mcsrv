@@ -121,6 +121,8 @@ string str_concat(string* lhs, const string* rhs, Arena* arena) {
 }
 
 const char* cstr(const string* str) {
+    if(str->length == 0)
+        return "";
     if (str->base[str->length] != 0) {
         log_warn("String is not null terminated, setting a null byte.");
         str->base[str->length] = 0;
