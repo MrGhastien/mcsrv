@@ -66,7 +66,7 @@ static void write_snbt_tag(const NBTTag* tag, IOMux fd, SNBTContext* ctx) {
     }
 
     if (parent) {
-        if (is_not_array(parent->type))
+        if (!is_array(parent->type))
             iomux_writef(fd, "'%s': ", tag->name.base);
         parent->size--;
     }

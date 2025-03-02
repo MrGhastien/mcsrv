@@ -37,7 +37,7 @@ typedef struct NBTTag {
     i64 prev_sibling_idx;
 } NBTTag;
 
-bool is_not_array(const enum NBTTagType type);
+bool is_array(const enum NBTTagType type);
 
 /**
  * Initializes a NBT tree without any root component.

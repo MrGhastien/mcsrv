@@ -221,7 +221,6 @@ i64 compression_decompress_from(CompressionContext* ctx,
                 log_errorf("Zlib error when decompressing file: %i.", filled);
                 return -1;
             }
-            // here avail_in is still greater than zero (1) after inflate returns Z_STREAM_END
         } while (filled == Z_OK && ctx->inflate_stream.avail_in > 0 && ctx->inflate_stream.avail_out > 0);
         bytebuf_register_read(in_buffer, previous_available - ctx->inflate_stream.avail_in);
 

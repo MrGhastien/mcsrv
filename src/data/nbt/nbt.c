@@ -63,9 +63,9 @@ static void append_tag(NBT* nbt, NBTTag* new_tag) {
     increment_parent_total_lengths(nbt);
 }
 
-bool is_not_array(const enum NBTTagType type) {
-    return !(type == NBT_LIST || type == NBT_BYTE_ARRAY || type == NBT_INT_ARRAY ||
-             type == NBT_LONG_ARRAY);
+bool is_array(const enum NBTTagType type) {
+    return type == NBT_LIST || type == NBT_BYTE_ARRAY || type == NBT_INT_ARRAY ||
+             type == NBT_LONG_ARRAY;
 }
 
 // static bool is_composite(const NBTTag* tag) {
@@ -316,6 +316,7 @@ enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index) {
 
     i64 idx;
     vect_peek(&nbt->stack, &idx);
+    idx++;
     for (i32 i = 0; i < index; i++) {
         NBTTag* child_tag = vect_ref(&nbt->tags, idx);
         idx += get_total_length(child_tag);
@@ -433,7 +434,7 @@ u64 nbt_get_size(NBT* nbt) {
 string* nbt_get_name(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     NBTTag* parent = vect_ref(&nbt->stack, nbt->stack.size - 1);
-    if (!parent || is_not_array(parent->type))
+    if (!parent || !is_array(parent->type))
         return NULL;
     return &tag->name;
 }
