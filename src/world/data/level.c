@@ -71,10 +71,12 @@ read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena
     }
 
     nbt_move_to_cstr(&nbt, "sections");
+    out_chunk->section_count = nbt_get_size(&nbt);
     nbt_move_to_index(&nbt, 0);
 
     do {
         i32 y;
+        nbt_move_to_cstr(&nbt, "Y");
         enum NBTTagType type = nbt_get_type(&nbt);
         if (type == NBT_BYTE)
             y = (i32) nbt_get_byte(&nbt);
@@ -86,6 +88,7 @@ read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena
             abort();
             return;
         }
+        nbt_move_to_parent(&nbt);
         nbt_move_to_cstr(&nbt, "block_states");
         nbt_move_to_cstr(&nbt, "palette");
         ChunkSection* section = &out_chunk->sections[y];
@@ -101,7 +104,6 @@ read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena
             string* name = nbt_get_string(&nbt);
             ResourceID id;
             assert(resid_parse(name, &arena, &id));
-
 
             StateSelectionContext selector;
             assert(selector_init(&selector, &arena, id));
@@ -140,6 +142,8 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
     chunk_offset >>= 8;
 
     Chunk chunk;
+    log_fatal("TODO: Actually allocate the section array !");
+    abort();
     read_chunk(region, &chunk, chunk_offset, sector_count, level->arena);
     dict_put(&level->chunks, &pos, &chunk);
 }
@@ -157,8 +161,6 @@ void level_load_chunk(Level* level, ChunkPos pos) {
 
     Region* region;
     if (region_idx == -1) {
-        // TODO: Add region and open file
-        // path + "/region/r." + rpos.x + "." + rpos.y + ".mca"
         Arena scratch = level->arena;
         StringBuilder builder = strbuild_create(&scratch);
         strbuild_append(&builder, &level->path);
