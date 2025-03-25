@@ -1,6 +1,7 @@
 #include "level.h"
 #include "chunk.h"
 #include "containers/dict.h"
+#include "containers/object_pool.h"
 #include "data/json.h"
 #include "data/nbt.h"
 #include "logger.h"
@@ -29,10 +30,14 @@ void level_init(Level* level, string path) {
     level->arena = arena_create(1 << 30, BLK_TAG_LEVEL);
     level->path = str_create_copy(&path, &level->arena);
 
-    dict_init_fixed(
-        &level->regions, &CMP_VEC2I, &level->arena, 64, sizeof(RegionPos), sizeof(Region));
-    dict_init_fixed(
-        &level->chunks, &CMP_VEC2I, &level->arena, 512, sizeof(ChunkPos), sizeof(Chunk));
+    dict_init(
+        &level->region_dict, &CMP_VEC2I, sizeof(RegionPos), sizeof(i64));
+    dict_init(
+        &level->chunk_dict, &CMP_VEC2I, sizeof(ChunkPos), sizeof(i64));
+
+    objpool_init_dynamic(&level->regions, &level->arena, 8, sizeof(Region));
+    objpool_init_dynamic(&level->chunks, &level->arena, 64, sizeof(Chunk));
+    objpool_init_dynamic(&level->chunk_sections, &level->arena, 512, sizeof(ChunkSection));
 }
 
 static void
@@ -141,26 +146,26 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
     u32 sector_count = chunk_offset & 0xff;
     chunk_offset >>= 8;
 
-    Chunk chunk;
     log_fatal("TODO: Actually allocate the section array !");
     abort();
-    read_chunk(region, &chunk, chunk_offset, sector_count, level->arena);
-    dict_put(&level->chunks, &pos, &chunk);
+    i64 chunk_index;
+    Chunk* new_chunk = objpool_add(&level->chunks, &chunk_index);
+    read_chunk(region, new_chunk, chunk_offset, sector_count, level->arena);
+    dict_put(&level->chunk_dict, &pos, &chunk_index);
 }
 
 void level_load_chunk(Level* level, ChunkPos pos) {
 
     log_tracef("Loading chunk at position (%lli,%lli)...", pos.x, pos.y);
 
-    i64 chunk_idx = dict_get(&level->chunks, &pos, NULL);
-    if (chunk_idx != -1)
+    i64 chunk_idx;
+    if(dict_get(&level->chunk_dict, &pos, &chunk_idx) != -1)
         return;
 
     RegionPos region_pos = pos_chunk_to_region(pos);
-    i64 region_idx = dict_get(&level->regions, &region_pos, NULL);
-
     Region* region;
-    if (region_idx == -1) {
+    i64 region_idx;
+    if(dict_get(&level->region_dict, &region_pos, &region_idx) == -1) {
         Arena scratch = level->arena;
         StringBuilder builder = strbuild_create(&scratch);
         strbuild_append(&builder, &level->path);
@@ -168,15 +173,14 @@ void level_load_chunk(Level* level, ChunkPos pos) {
         strbuild_appendf(&builder, "%lli.%lli.mca", region_pos.x, region_pos.y);
         string region_path = strbuild_to_string(&builder, &level->arena);
 
-        Region new_region = {
-            .mux = iomux_open(&region_path, "r+b"),
-            .pos = region_pos,
-        };
         log_tracef("Opening region file %s...", cstr(&region_path));
-        region_idx = dict_put(&level->regions, &region_pos, &new_region);
+        Region* new_region = objpool_add(&level->regions, &region_idx);
+        new_region->mux = iomux_open(&region_path, "r+b");
+        new_region->pos = region_pos;
+        dict_put(&level->region_dict, &region_pos, &region_idx);
     }
 
-    region = dict_ref(&level->regions, region_idx);
+    region = objpool_get(&level->regions, region_idx);
     ChunkPos relative_pos = {.x = pos.x & 31, .y = pos.y & 31};
 
     locate_and_read_chunk(level, region, relative_pos);

@@ -11,11 +11,15 @@ typedef struct chunk Chunk;
 
 typedef struct level {
     Arena arena;
-    Dict regions;
+    Dict region_dict;
     // Chunks
     // Chunk tickets
     // Chunk sections
-    Dict chunks;
+    Dict chunk_dict;
+
+    ObjectPool chunks;
+    ObjectPool regions;
+    ObjectPool chunk_sections;
 
     string path;
 } Level;

@@ -6,6 +6,8 @@
 #include "world/data/block.h"
 
 #define SECTION_SIZE 4096
+#define MIN_SECTION_Y -4
+#define MAX_SECTION_Y 20
 
 typedef struct chunk_section {
     u32 palette_size;
