@@ -57,7 +57,7 @@ i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
 }
 i32 network_init(char* host, i32 port, u64 max_connections) {
 
-    ctx.arena = arena_create(40960, BLK_TAG_NETWORK);
+    ctx.arena = arena_create(40960, BLK_TAG_NETWORK, -1);
     ctx.host = str_view(host);
     ctx.port = port;
     ctx.code = 0;
@@ -98,7 +98,7 @@ void network_clean_connections(NetworkContext* ctx) {
     struct check_keep_alive_data data = {.ctx = ctx};
     timestamp(&data.now);
 
-    objpool_foreach(&ctx->connections, &check_keep_alive, &data);
+    pool_foreach(&ctx->connections, &check_keep_alive, &data);
 }
 
 void network_finish(NetworkContext* ctx) {
@@ -106,7 +106,7 @@ void network_finish(NetworkContext* ctx) {
     encryption_cleanup(&ctx->enc_ctx);
 
     for (i64 i = 0; i < ctx->connections.capacity; i++) {
-        Connection* conn = objpool_get(&ctx->connections, i);
+        Connection* conn = pool_get(&ctx->connections, i);
         if (conn)
             close_connection(ctx, conn);
     }

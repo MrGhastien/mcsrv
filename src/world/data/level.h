@@ -2,7 +2,7 @@
 #define LEVEL_H
 
 #include "containers/dict.h"
-#include "containers/object_pool.h"
+#include "memory/allocators/pool.h"
 #include "utils/position.h"
 
 #include "utils/string.h"
@@ -17,9 +17,9 @@ typedef struct level {
     // Chunk sections
     Dict chunk_dict;
 
-    ObjectPool chunks;
-    ObjectPool regions;
-    ObjectPool chunk_sections;
+    PoolAllocator chunks;
+    PoolAllocator regions;
+    PoolAllocator chunk_sections;
 
     string path;
 } Level;

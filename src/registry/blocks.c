@@ -1,11 +1,9 @@
-#include "containers/object_pool.h"
 #include "containers/vector.h"
 #include "data/json.h"
 #include "definitions.h"
 #include "logger.h"
-#include "memory/_memory_internal.h"
-#include "memory/arena.h"
 #include "memory/mem_tags.h"
+#include "memory/memory.h"
 #include "registries.h"
 #include "registry.h"
 #include "resource/resource_id.h"
@@ -15,7 +13,7 @@
 #include <stdlib.h>
 
 static Arena arena;
-static ObjectPool property_pool;
+static PoolAllocator property_pool;
 
 // static i64 PROPERTY_LEVEL;
 
@@ -55,7 +53,7 @@ i64 register_bool_state_property(string name) {
         return -1;
     }
 
-    StateProperty* property = objpool_add(&property_pool, &index);
+    StateProperty* property = pool_alloc(&property_pool, &index);
     *property = (StateProperty) {
         .type = BLOCK_PROP_BOOL,
         .name = name,
@@ -70,7 +68,7 @@ i64 register_integer_state_property(string name, i32 minimum, i32 maximum) {
         return -1;
     }
 
-    StateProperty* property = objpool_add(&property_pool, &index);
+    StateProperty* property = pool_alloc(&property_pool, &index);
     *property = (StateProperty) {
         .type = BLOCK_PROP_INTEGER,
         .name = name,
@@ -90,7 +88,7 @@ i64 register_enum_state_property(string name, string* values, u64 value_count) {
         return FALSE;
     }
 
-    StateProperty* property = objpool_add(&property_pool, &index);
+    StateProperty* property = pool_alloc(&property_pool, &index);
     *property = (StateProperty) {
         .name = name,
         .type = BLOCK_PROP_ENUM,
@@ -158,7 +156,7 @@ static void register_state_properties(JSON* json) {
             json_move_cstr(json, "../values");
             i64 len = json_get_length(json);
 
-            string* values = arena_callocate(&arena, sizeof *values * len, ALLOC_TAG_WORLD);
+            string* values = arena_callocate(&arena, sizeof *values * len/* , ALLOC_TAG_WORLD */);
 
             i64 idx = 0;
             json_move_to_index(json, 0);
@@ -205,7 +203,7 @@ static void register_blocks_internal(JSON* json) {
             json_move_to_index(json, 0);
             do {
                 i64 idx = json_get_int(json);
-                StateProperty* prop = objpool_get(&property_pool, idx);
+                StateProperty* prop = pool_get(&property_pool, idx);
                 vect_add(&state_properties, &prop);
             } while (json_move_to_next_sibling(json) == JSONE_OK);
             json_move_to_parent(json);
@@ -268,13 +266,13 @@ static void print_property(void* obj, i64 idx, void* data) {
 }
 
 static void print_state_properties(void) {
-    objpool_foreach(&property_pool, &print_property, NULL);
+    pool_foreach(&property_pool, &print_property, NULL);
 }
 
 void register_blocks(void) {
 
-    arena = arena_create(1 << 25, BLK_TAG_REGISTRY);
-    objpool_init(&property_pool, &arena, 128, sizeof(StateProperty));
+    arena = arena_create(1 << 25, BLK_TAG_REGISTRY, INVALID_CHAIN);
+    pool_init(&property_pool, 128, sizeof(StateProperty), BLK_TAG_REGISTRY, INVALID_CHAIN);
     if (!registry_create(BLOCK_KEY, sizeof(Block))) {
         log_fatal("Could not create blocks registry.");
         return;
@@ -284,7 +282,7 @@ void register_blocks(void) {
 
     Vector property_buffer;
     vect_init(&property_buffer, &arena, 16, sizeof(StateProperty*));
-    Arena scratch = arena_create(1 << 30, BLK_TAG_REGISTRY);
+    Arena scratch = arena_create(1 << 30, BLK_TAG_REGISTRY, INVALID_CHAIN);
     JSON json;
     enum JSONStatus status =
         json_from_file(str_view("./data/minecraft/block.json"), &scratch, &json);
@@ -323,7 +321,7 @@ const StateProperty* get_state_property_by_name(string name) {
         .name = &name,
         .out = NULL,
     };
-    objpool_foreach(&property_pool, &property_search_iterate, &data);
+    pool_foreach(&property_pool, &property_search_iterate, &data);
 
     return data.out;
 }

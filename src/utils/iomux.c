@@ -2,9 +2,8 @@
 
 #include "bitwise.h"
 #include "containers/bytebuffer.h"
-#include "containers/object_pool.h"
-#include "memory/arena.h"
-#include "memory/mem_tags.h"
+#include "memory/_memory_internal.h"
+#include "memory/memory.h"
 #include "str_builder.h"
 #include "utils/string.h"
 #include "network/compression.h"
@@ -22,9 +21,6 @@
 
 void strbuild_append_buf(StringBuilder* builder, const char* buf, u64 size);
 void strbuild_insert_buf(StringBuilder* builder, u64 index, const char* buf, u64 size);
-
-static Arena arena;
-static ObjectPool multiplexers;
 
 typedef struct IOMux IOMux_t;
 
@@ -53,15 +49,16 @@ struct IOMux {
     u64 total_read;
 };
 
+static PoolAllocator multiplexers = {.mem = INVALID_CHAIN};
+
 static IOMux iomux_create(enum IOType type, union IOBackend backend) {
 
-    if (!arena.block) {
-        arena = arena_create(MAX_MULTIPLEXERS * sizeof(IOMux_t) << 1, BLK_TAG_PLATFORM);
-        objpool_init(&multiplexers, &arena, MAX_MULTIPLEXERS, sizeof(IOMux_t));
+    if (multiplexers.mem == INVALID_CHAIN) {
+        pool_init_dynamic(&multiplexers, MAX_MULTIPLEXERS, sizeof(IOMux_t), BLK_TAG_PLATFORM, INVALID_CHAIN);
     }
 
     i64 index;
-    IOMux_t* mux = objpool_add(&multiplexers, &index);
+    IOMux_t* mux = pool_alloc(&multiplexers, &index);
     mux->total_read = 0;
     mux->backend = backend;
     mux->type = type;
@@ -69,7 +66,7 @@ static IOMux iomux_create(enum IOType type, union IOBackend backend) {
 }
 
 static inline IOMux_t* iomux_get(i64 index) {
-    return objpool_get(&multiplexers, index);
+    return pool_get(&multiplexers, index);
 }
 
 static i32 retrieve_gz_error(gzFile gzfile) {
@@ -320,10 +317,11 @@ i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
             mux->error = retrieve_gz_error(mux->backend.gzFile);
         break;
     case IO_BUFFER: {
-        Arena scratch = arena;
+        Arena scratch = arena_create(8192, BLK_TAG_PLATFORM, INVALID_CHAIN);
         u64 size;
         char* formatted = format_str(&scratch, format, args, &size);
         bytebuf_write(mux->backend.buffer, formatted, size * sizeof *formatted);
+        arena_destroy(&scratch);
         res = size;
     } break;
     case IO_STRING: {
@@ -335,10 +333,11 @@ i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
         break;
     }
     case IO_ZLIB: {
-        Arena scratch = arena;
+        Arena scratch = arena_create(8192, BLK_TAG_PLATFORM, INVALID_CHAIN);
         u64 size;
         char* formatted = format_str(&scratch, format, args, &size);
         compression_compress_to(&mux->backend.zlib.ctx, mux->backend.zlib.source, formatted, size);
+        arena_destroy(&scratch);
         res = size;
         break;
     }
@@ -596,7 +595,7 @@ void iomux_close(IOMux multiplexer) {
         break;
     }
 
-    objpool_remove(&multiplexers, multiplexer);
+    pool_free_idx(&multiplexers, multiplexer);
 }
 
 string iomux_string(IOMux multiplexer, Arena* arena) {

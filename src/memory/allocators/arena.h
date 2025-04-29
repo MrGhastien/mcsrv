@@ -7,7 +7,8 @@
 #define ARENA_H
 
 #include "definitions.h"
-#include "mem_tags.h"
+#include "memory/mem_tags.h"
+#include "memory/_memory_internal.h"
 
 /**
    Simple linear allocator.
@@ -15,11 +16,11 @@
    The allocated memory is contiguous, but is limited.
  */
 typedef struct arena {
+    memory_chain chain;
     void* block;
     u64 capacity;
     u64 length;
     u64 saved_length;
-    i64 stats_index;
     bool logging;
 } Arena;
 
@@ -30,7 +31,7 @@ typedef struct arena {
  * @param tag
  * @return The new arena allocator.
  */
-Arena arena_create(u64 size, enum MemoryBlockTag tag);
+Arena arena_create(u64 size, enum MemoryChainTag tag, memory_chain parent);
 /**
  * Creates an arena allocator of the specified size, without logging anything.
  *
@@ -41,7 +42,7 @@ Arena arena_create(u64 size, enum MemoryBlockTag tag);
  * @param tag
  * @return The new arena allocator.
  */
-Arena arena_create_silent(u64 size, enum MemoryBlockTag tag);
+Arena arena_create_silent(u64 size, enum MemoryChainTag tag, memory_chain parent);
 /**
  * Frees all memory associated with an arena.
  *
@@ -61,7 +62,7 @@ void arena_destroy(Arena* arena);
  * @param bytes The amount of bytes to allocate.
  * @param tags Tags for the allocations. Used by memory instrumentation.
  */
-void* arena_allocate(Arena* arena, u64 bytes, enum AllocTag tags);
+void* arena_allocate(Arena* arena, u64 bytes /*, enum AllocTag tags */);
 /**
  * Allocates memory in an arena and fills it with 0.
  *
@@ -71,7 +72,7 @@ void* arena_allocate(Arena* arena, u64 bytes, enum AllocTag tags);
  * @param bytes The amount of bytes to allocate.
  * @param tags Tags for the allocations. Used by memory instrumentation.
  */
-void* arena_callocate(Arena* arena, u64 bytes, enum AllocTag tags);
+void* arena_callocate(Arena* arena, u64 bytes /*, enum AllocTag tags */);
 
 void* arena_allocate_aligned(Arena* arena, u64 bytes);
 void* arena_callocate_aligned(Arena* arena, u64 bytes);

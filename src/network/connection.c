@@ -8,7 +8,7 @@
 #include "security.h"
 
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 
 #include "platform/mc_mutex.h"
 #include "platform/socket.h"
@@ -265,8 +265,8 @@ bool conn_is_resuming_read(const Connection* conn) {
 Connection
 conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string addr, u32 port) {
     Connection conn = {
-        .persistent_arena = arena_create(CONN_PARENA_SIZE, BLK_TAG_NETWORK),
-        .scratch_arena = arena_create(CONN_SARENA_SIZE, BLK_TAG_NETWORK),
+        .persistent_arena = arena_create(CONN_PARENA_SIZE, BLK_TAG_NETWORK, -1),
+        .scratch_arena = arena_create(CONN_SARENA_SIZE, BLK_TAG_NETWORK, -1),
         .compression = FALSE,
         .encryption = FALSE,
         .state = STATE_HANDSHAKE,

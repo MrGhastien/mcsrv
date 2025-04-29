@@ -1,6 +1,6 @@
 #include "ring_queue.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/allocators/arena.h"
 #include "utils/bitwise.h"
 #include "memory/mem_tags.h"
 
@@ -8,7 +8,7 @@
 
 RingQueue rqueue_create(u32 size, u32 stride, Arena* arena) {
     return (RingQueue){
-        .block = arena_allocate(arena, size * stride, ALLOC_TAG_VECTOR),
+        .block = arena_allocate(arena, size * stride/* , ALLOC_TAG_VECTOR */),
         .start = 0,
         .end = 0,
         .capacity = size,

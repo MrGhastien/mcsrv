@@ -1,7 +1,7 @@
 #include "block.h"
 #include "containers/vector.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
 #include "registry/registry.h"
 #include "resource/resource_id.h"
@@ -57,7 +57,7 @@ bool create_state_definition(const Block* block,
         out_definition->property_count = 0;
         out_definition->properties = NULL;
         out_definition->state_count = 1;
-        out_definition->states = arena_callocate(arena, sizeof(BlockState), ALLOC_TAG_WORLD);
+        out_definition->states = arena_callocate(arena, sizeof(BlockState) /*, ALLOC_TAG_WORLD */);
         *out_definition->states = (BlockState) {
             .definition = out_definition,
             .values = NULL,
@@ -66,7 +66,7 @@ bool create_state_definition(const Block* block,
     }
 
     const StateProperty** property_array =
-        arena_callocate(arena, sizeof(StateProperty*) * property_count, ALLOC_TAG_WORLD);
+        arena_callocate(arena, sizeof(StateProperty*) * property_count /*, ALLOC_TAG_WORLD */);
 
     u32 state_count = 1;
 
@@ -91,11 +91,11 @@ bool create_state_definition(const Block* block,
         state_count *= get_value_count(prop);
     }
 
-    BlockState* states = arena_callocate(arena, sizeof *states * state_count, ALLOC_TAG_WORLD);
+    BlockState* states = arena_callocate(arena, sizeof *states * state_count /*, ALLOC_TAG_WORLD */);
 
     for (u32 i = 0; i < state_count; i++) {
         union StatePropertyValue* values =
-            arena_callocate(arena, sizeof *values * property_count, ALLOC_TAG_WORLD);
+            arena_callocate(arena, sizeof *values * property_count/* , ALLOC_TAG_WORLD */);
 
         u32 val_index = 1;
         for (i32 j = property_count - 1; j >= 0; j--) {
@@ -146,8 +146,8 @@ bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID bloc
         return FALSE;
     out_ctx->value_indices =
         arena_allocate(arena,
-                       sizeof *out_ctx->value_indices * blk->state_definition.property_count,
-                       ALLOC_TAG_WORLD);
+                       sizeof *out_ctx->value_indices * blk->state_definition.property_count/* ,
+                       ALLOC_TAG_WORLD */);
     if (!out_ctx->value_indices)
         return FALSE;
 

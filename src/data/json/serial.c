@@ -3,8 +3,7 @@
 #include "definitions.h"
 #include "json_internal.h"
 #include "logger.h"
-#include "memory/arena.h"
-#include "memory/mem_tags.h"
+#include "memory/memory.h"
 #include "platform/platform.h"
 #include "utils/iomux.h"
 #include "utils/str_builder.h"
@@ -531,7 +530,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
     Vector units;
     Vector unit_values;
 
-    Arena parsing_arena = arena_create(1 << 25, BLK_TAG_DATA);
+    Arena parsing_arena = arena_create(1 << 25, BLK_TAG_DATA, arena->chain);
 
     vect_init_dynamic(&units, &parsing_arena, 16, sizeof(enum JSONLexUnit));
     vect_init_dynamic(&unit_values, &parsing_arena, 4, sizeof(LexUnitValue));

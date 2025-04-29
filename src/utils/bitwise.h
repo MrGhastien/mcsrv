@@ -15,8 +15,11 @@
 #define UNTOH(size) u##size untoh##size(u##size x)
 
 u64 ceil_two_pow(u64 num);
+u64 u64_log2(u64 x);
 void* offset(const void* ptr, i64 offset);
 void* offsetu(const void* ptr, u64 offset);
+
+bool is_addr_aligned(void* addr, u64 alignment);
 
 HTON(16);
 HTON(32);

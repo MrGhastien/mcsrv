@@ -6,7 +6,7 @@
 #define VECTOR_H
 
 #include "definitions.h"
-#include "memory/arena.h"
+#include "memory/allocators/arena.h"
 
 struct data_block;
 

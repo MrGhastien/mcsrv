@@ -6,7 +6,7 @@
 
 #include "containers/bytebuffer.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "platform/network.h"
 
 #define MAX_PACKET_SIZE 2097151

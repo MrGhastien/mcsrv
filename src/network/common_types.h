@@ -7,8 +7,7 @@
 
 #include "security.h"
 
-#include "memory/arena.h"
-#include "containers/object_pool.h"
+#include "memory/memory.h"
 #include "platform/socket.h"
 #include "platform/mc_thread.h"
 #include "platform/time.h"
@@ -33,7 +32,7 @@ enum IOCode {
 typedef struct NetworkContext {
     Arena arena;
 
-    ObjectPool connections;
+    PoolAllocator connections;
 
     socketfd server_socket;
     MCThread thread;

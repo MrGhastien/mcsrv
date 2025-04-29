@@ -16,7 +16,7 @@
 #include "security.h"
 
 #include "containers/bytebuffer.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "utils/string.h"
 
 #include "platform/mc_mutex.h"

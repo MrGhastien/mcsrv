@@ -1,7 +1,7 @@
 #include "compression.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "memory/mem_tags.h"
 #include "utils/bitwise.h"
 #include "utils/iomux.h"
@@ -17,7 +17,7 @@ typedef i32 (*zlib_action)(z_streamp stream, int flush);
 typedef i32 (*zlib_resetter)(z_streamp stream);
 
 static void* zlib_alloc(void* arena, u32 item_count, u32 size) {
-    return arena_allocate(arena, item_count * size, ALLOC_TAG_EXTERNAL);
+    return arena_allocate(arena, item_count * size/* , ALLOC_TAG_EXTERNAL */);
 }
 
 static void zlib_free(void* arena, void* addr) {

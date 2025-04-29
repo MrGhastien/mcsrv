@@ -1,7 +1,7 @@
 #include "registry.h"
 #include "containers/dict.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "resource/resource_id.h"
 
 #include "registries.h"
@@ -24,7 +24,7 @@ static void register_game_elements(void) {
 }
 
 void registry_system_init(void) {
-    arena = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY);
+    arena = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY, INVALID_CHAIN);
     root.name = resid_default_cstr("root");
     dict_init_fixed(&root.entries, NULL, &arena, 100, sizeof(ResourceID), sizeof(Registry));
 

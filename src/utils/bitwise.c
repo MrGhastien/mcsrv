@@ -25,6 +25,14 @@ u64 ceil_two_pow(u64 num) {
     return num + 1;
 }
 
+u64 u64_log2(u64 x) {
+    u64 res = 0;
+    while(x >>= 1) {
+        res++;
+    }
+    return res;
+}
+
 void* offset(const void* ptr, i64 offset) {
     u64 a = (u64) ptr;
     a += offset;
@@ -35,6 +43,12 @@ void* offsetu(const void* ptr, u64 offset) {
     u64 a = (u64) ptr;
     a += offset;
     return (void*) a;
+}
+
+bool is_addr_aligned(void* addr, u64 alignment) {
+    u64 integer_addr = (u64)addr;
+
+    return integer_addr % alignment == 0;
 }
 
 static void swap_bytes(void* x, u64 size) {

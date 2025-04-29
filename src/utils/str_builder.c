@@ -1,7 +1,8 @@
 #include "str_builder.h"
 #include "containers/vector.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/_memory_internal.h"
+#include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
 #include "utils/string.h"
 
@@ -119,7 +120,7 @@ string strbuild_to_string(const StringBuilder* builder, Arena* arena) {
     u32 char_count = builder->chars.size;
 
     if (arena_is_mem_shared(builder->arena, arena)) {
-        Arena scratch = arena_create((char_count + 1) * sizeof(char), BLK_TAG_UNKNOWN);
+        Arena scratch = arena_create((char_count + 1) * sizeof(char), BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
         string str = str_alloc(char_count, &scratch);
         for (u32 i = 0; i < char_count; i++) {

@@ -2,7 +2,7 @@
 #define RING_QUEUE_H
 
 #include "definitions.h"
-#include "memory/arena.h"
+#include "memory/allocators/arena.h"
 
 typedef struct ring_queue {
     void* block;

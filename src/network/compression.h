@@ -12,7 +12,7 @@
 
 #include "containers/bytebuffer.h"
 #include "definitions.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "utils/iomux.h"
 
 #include <zlib.h>

@@ -3,8 +3,7 @@
 #include "containers/ring_queue.h"
 #include "containers/vector.h"
 #include "logger.h"
-#include "memory/arena.h"
-#include "memory/mem_tags.h"
+#include "memory/memory.h"
 
 #include "platform/mc_thread.h"
 #include "platform/mc_mutex.h"
@@ -46,7 +45,7 @@ static void register_builtin_events(void) {
 }
 
 void event_system_init(void) {
-    ctx.arena = arena_create(1L << 20, BLK_TAG_EVENT);
+    ctx.arena = arena_create(1L << 20, BLK_TAG_EVENT, INVALID_CHAIN);
 
     dict_init_fixed(
                     &ctx.event_registry, NULL, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));

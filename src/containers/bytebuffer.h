@@ -31,7 +31,7 @@
 #define BYTEBUFFER_H
 
 #include "definitions.h"
-#include "memory/arena.h"
+#include "memory/allocators/arena.h"
 #include "utils/string.h"
 
 typedef struct byte_buffer {

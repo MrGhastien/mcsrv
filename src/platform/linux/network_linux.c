@@ -1,7 +1,7 @@
+#include "memory/mem_tags.h"
 #ifdef MC_PLATFORM_LINUX
 
 #include "containers/bytebuffer.h"
-#include "containers/object_pool.h"
 #include "definitions.h"
 #include "logger.h"
 #include "network/common_types.h"
@@ -221,7 +221,7 @@ i32 network_platform_init(NetworkContext* ctx, u64 max_connections) {
         return 1;
     }
 
-    objpool_init(&ctx->connections, &ctx->arena, max_connections, sizeof(Connection));
+    pool_init(&ctx->connections, max_connections, sizeof(Connection), BLK_TAG_NETWORK, ctx->arena.chain);
     return 0;
 }
 void platform_network_finish(void) {
@@ -251,7 +251,7 @@ static enum IOCode accept_connection(NetworkContext* ctx) {
     }
 
     i64 index;
-    Connection* conn = objpool_add(&ctx->connections, &index);
+    Connection* conn = pool_alloc(&ctx->connections, &index);
     if (!conn) {
         log_warn("Reached maximum connection amount, rejecting.");
         sock_close(peer_socket);
@@ -379,7 +379,7 @@ void close_connection(NetworkContext* ctx, Connection* conn) {
     arena_destroy(&conn->persistent_arena);
     mcmutex_destroy(&conn->mutex);
     conn->peer_socket = SOCKFD_INVALID;
-    objpool_remove(&ctx->connections, conn->table_index);
+    pool_free_idx(&ctx->connections, conn->table_index);
 }
 
 void* network_handle(void* params) {
@@ -396,7 +396,7 @@ void* network_handle(void* params) {
     log_infof("Listening for connections on %s:%u...", ctx->host.base, ctx->port);
     while (ctx->should_continue) {
         log_trace("Waiting for EPoll notifications...");
-        u32 timeout = objpool_size(&ctx->connections) > 0 ? MAX_TIMEOUT : -1;
+        u32 timeout = pool_size(&ctx->connections) > 0 ? MAX_TIMEOUT : -1;
         eventCount = epoll_wait(platform_ctx.epollfd, events, 10, timeout);
         if (eventCount == 0) {
             log_debug("Closing unresponsive connections.");
@@ -415,7 +415,7 @@ void* network_handle(void* params) {
             else if (e->data.fd == -2) // eventfd
                 ctx->should_continue = FALSE;
             else {
-                Connection* conn = objpool_get(&ctx->connections, e->data.u64);
+                Connection* conn = pool_get(&ctx->connections, e->data.u64);
                 memory_dump_stats();
                 handle_connection_io(ctx, conn, e->events);
             }

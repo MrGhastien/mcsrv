@@ -6,7 +6,7 @@
 #include "data/nbt/nbt_internal.h"
 #include "definitions.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "utils/bitwise.h"
 #include "utils/iomux.h"
 #include "utils/string.h"
@@ -439,7 +439,7 @@ static enum NBTStatus nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagTy
 
 enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, IOMux input, NBT* out_nbt) {
 
-    Arena parsing_arena = arena_create(600 * sizeof(NBTTagMetadata), BLK_TAG_DATA);
+    Arena parsing_arena = arena_create(600 * sizeof(NBTTagMetadata), BLK_TAG_DATA, arena->chain);
 
     NBTReadContext ctx = {
         .arena = arena,

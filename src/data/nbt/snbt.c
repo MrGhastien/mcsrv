@@ -125,7 +125,7 @@ enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
         return NBTE_IO;
     }
 
-    Arena scratch = arena_create(1 << 18, BLK_TAG_UNKNOWN);
+    Arena scratch = arena_create(1 << 18, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     SNBTContext ctx = {
         .pretty_print = TRUE,

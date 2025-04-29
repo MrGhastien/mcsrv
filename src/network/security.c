@@ -2,7 +2,7 @@
 #include "data/json.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "memory/mem_tags.h"
 #include "network/connection.h"
 #include "utils/iomux.h"
@@ -100,7 +100,7 @@ u8* encryption_decrypt(EncryptionContext* ctx, Arena* arena, u64* out_size, u8* 
         return NULL;
     }
 
-    out = arena_callocate(arena, *out_size, ALLOC_TAG_PACKET);
+    out = arena_callocate(arena, *out_size/* , ALLOC_TAG_PACKET */);
 
     if (EVP_PKEY_decrypt(ctx->key_ctx, out, out_size, in, in_size) <= 0) {
         encryption_get_errors();
@@ -115,7 +115,7 @@ bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_s
     ctx->cipher_ctx = EVP_CIPHER_CTX_new();
     ctx->decipher_ctx = EVP_CIPHER_CTX_new();
 
-    ctx->shared_secret = arena_allocate(arena, SHARED_SECRET_SIZE, ALLOC_TAG_UNKNOWN);
+    ctx->shared_secret = arena_allocate(arena, SHARED_SECRET_SIZE/* , ALLOC_TAG_UNKNOWN */);
     memcpy(ctx->shared_secret, shared_secret, SHARED_SECRET_SIZE);
 
     if (EVP_EncryptInit_ex(
@@ -283,7 +283,7 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
     ByteBuffer buffer = bytebuf_create_fixed(8192, &conn->scratch_arena);
     char url[2048];
-    char* error_buffer = arena_callocate(&conn->scratch_arena, CURL_ERROR_SIZE, ALLOC_TAG_STRING);
+    char* error_buffer = arena_callocate(&conn->scratch_arena, CURL_ERROR_SIZE/* , ALLOC_TAG_STRING */);
     snprintf(url,
              2048,
              "https://sessionserver.mojang.com/session/minecraft/"

@@ -12,7 +12,7 @@
 #include "containers/vector.h"
 #include "data/json.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "memory/mem_tags.h"
 #include "platform/platform.h"
 #include "platform/time.h"
@@ -106,18 +106,18 @@ DEF_PKT_HANDLER(login_start) {
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
 
-    PacketCryptRequest* req = arena_callocate(&conn->scratch_arena, sizeof *req, ALLOC_TAG_PACKET);
+    PacketCryptRequest* req = arena_callocate(&conn->scratch_arena, sizeof *req/* , ALLOC_TAG_PACKET */);
     *req = (PacketCryptRequest){
         .server_id = str_view(""),
         .pkey_length = conn->global_enc_ctx->encoded_key_size,
         .pkey = conn->global_enc_ctx->encoded_key,
         .verify_tok_length = 4,
-        .verify_tok = arena_allocate(&conn->scratch_arena, 4, ALLOC_TAG_UNKNOWN),
+        .verify_tok = arena_allocate(&conn->scratch_arena, 4/* , ALLOC_TAG_UNKNOWN */),
         .authenticate = TRUE,
     };
     memset(req->verify_tok, 78, req->verify_tok_length);
     conn->verify_token =
-        arena_allocate(&conn->persistent_arena, req->verify_tok_length, ALLOC_TAG_UNKNOWN);
+        arena_allocate(&conn->persistent_arena, req->verify_tok_length/* , ALLOC_TAG_UNKNOWN */);
     memcpy(conn->verify_token, req->verify_tok, req->verify_tok_length);
     conn->verify_token_size = req->verify_tok_length;
 
