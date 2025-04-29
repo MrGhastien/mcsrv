@@ -3,6 +3,11 @@
 
 typedef struct str string;
 
+enum AllocationType {
+    ALLOC_TYPE_DYNAMIC,
+    ALLOC_TYPE_STATIC,
+};
+
 enum AllocTag {
     ALLOC_TAG_UNKNOWN = 0,
     ALLOC_TAG_VECTOR,
@@ -20,7 +25,7 @@ enum AllocTag {
     _ALLOC_TAG_COUNT,
 };
 
-enum MemoryBlockTag {
+enum MemoryChainTag {
     BLK_TAG_UNKNOWN = 0,
     BLK_TAG_NETWORK,
     BLK_TAG_EVENT,
@@ -33,7 +38,7 @@ enum MemoryBlockTag {
     _BLK_TAG_COUNT,
 };
 string get_alloc_tag_name(enum AllocTag tag);
-string get_blk_tag_name(enum MemoryBlockTag tag);
+string get_blk_tag_name(enum MemoryChainTag tag);
 
 //void set_global_tags(i32 tags);
 void memory_stats_init(void);
