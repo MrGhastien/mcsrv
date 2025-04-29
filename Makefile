@@ -1,7 +1,10 @@
+MAKEFLAGS += --no-print-directory
+
 export SRC_DIR := $(CURDIR)/src
 export INC_DIR := $(CURDIR)/include
 export OBJ_DIR := $(CURDIR)/obj
 export TEST_DIR := $(CURDIR)/test
+export LIBDIR := $(CURDIR)/libs
 
 ifeq ($(OS),Windows_NT)
 	detected_os := WINDOWS
@@ -12,7 +15,7 @@ endif
 export CC = gcc
 export CFLAGS = -Wall -Wextra -Wreturn-type -Werror #-fsanitize=address
 export CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_$(detected_os)
-#export LDFLAGS = -fsanitize=address
+export LDFLAGS = -L"$(LIBDIR)"
 export LDLIBS := -lcrypto -lcurl
 
 ifeq ($(detected_os),WINDOWS)
@@ -40,31 +43,43 @@ export CORE_LIB := $(CURDIR)/libsrv.a
 all: debug
 
 debug: CFLAGS += -O0 -g -DDEBUG 
+debug: LDFLAGS += -rdynamic 
 debug: $(MAIN_TARGET)
 
 trace: CFLAGS += -O0 -g -DDEBUG -DTRACE
+debug: LDFLAGS += -rdynamic 
 trace: $(MAIN_TARGET)
 
 release: CFLAGS += -O2
 release: $(MAIN_TARGET)
 
 test: CFLAGS += -O0 -g -DDEBUG
+test: LDLIBS += -lunity
+test: LDFLAGS += -rdynamic 
+test: CPPFLAGS += -I"$(LIBDIR)/unity-2.6.1/src"
 test: $(TEST_TARGETS)
 
 $(CORE_LIB): $(OBJS) $(HDRS)
-	@$(AR) rc $@ $(OBJS)
 	@echo -e "	\e[35mAR	$(notdir $@)\e[0m"
+	@$(AR) rc $@ $(OBJS)
 
 $(MAIN_TARGET): $(MAIN_OBJ) $(CORE_LIB)
-	@$(CC) $(LDFLAGS)  -o $@ $^ $(LDLIBS)
 	@echo -e "	\e[34mLD	$(notdir $@)\e[0m"
+	@$(CC) $(LDFLAGS)  -o $@ $^ $(LDLIBS)
 
-$(TEST_TARGETS): $(CORE_LIB)
-	$(MAKE) -C $(dir $@)
+$(TEST_TARGETS): $(CORE_LIB) $(LIBDIR)/libunity.a
+	@echo -e "\e[32m>>	MAKE	$(dir $@)\e[0m"
+	@$(MAKE) -C $(dir $@)
+	@echo -e "\e[32m<<	. . .\e[0m"
 
 %.o: %.c $(HDRS)
-	@$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 	@echo -e "	\e[36mCC	$(notdir $@)\e[0m"
+	@$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
+$(LIBDIR)/libunity.a:
+	@echo -e "\e[32m>>	MAKE	$(LIBDIR)\e[0m"
+	@$(MAKE) -C $(LIBDIR)
+	@echo -e "\e[32m<<	. . .\e[0m"
 
 clean:
 	rm -f $(OBJS)
