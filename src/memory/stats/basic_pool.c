@@ -32,8 +32,6 @@ static inline u64 total_stride(const struct basic_pool* pool) {
 
 void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType type) {
     pool->size = 0;
-    pool->head = pool->blocks;
-    pool->tail = pool->blocks + (pool->capacity - 1);
     pool->type = type;
 
     u64 cap64 = capacity * sizeof(struct node);
@@ -45,6 +43,8 @@ void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType ty
         n->data.next = i + 1;
         n->allocated = FALSE;
     }
+    pool->head = pool->blocks;
+    pool->tail = pool->blocks + (pool->capacity - 1);
     pool->blocks[pool->capacity - 1].data.next = -1;
 }
 

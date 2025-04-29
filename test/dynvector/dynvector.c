@@ -1,10 +1,10 @@
 #include "containers/vector.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include <assert.h>
 
 static void test1(void) {
-    Arena arena = arena_create(1 << 20, BLK_TAG_UNKNOWN);
+    Arena arena = arena_create(1 << 20, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     Vector vector;
     vect_init_dynamic(&vector, &arena, 4, sizeof(u64));

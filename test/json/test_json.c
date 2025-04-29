@@ -1,7 +1,9 @@
+#include <unity.h>
 #include "containers/bytebuffer.h"
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "data/json.h"
+#include "unity_internals.h"
 #include "utils/iomux.h"
 #include "utils/str_builder.h"
 #include "platform/platform.h"
@@ -9,7 +11,19 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
+
 #include <string.h>
+
+void setUp(void) {
+    memory_stats_init();
+
+    logger_system_init();
+}
+
+void tearDown(void) {
+    memory_dump_stats();
+    logger_system_cleanup();
+}
 
 static bool str_ends_with(const char* str, const char* substr) {
     u64 length = strlen(str);
@@ -31,7 +45,7 @@ int parse_json(const char* file) {
         log_errorf("JSON: Failed to open file '%s': %s.", file, strerror(errno));
         return 1;
     }
-    Arena arena = arena_create(1 << 18, BLK_TAG_UNKNOWN);
+    Arena arena = arena_create(1 << 18, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     JSON json;
     IOMux mux = iomux_wrap_stdfile(f);
@@ -59,7 +73,7 @@ static void test_dir(const char* path, bool error_test) {
     i32 error_count = 0;
 
     DIR* dir = opendir(path);
-    Arena arena = arena_create(1 << 15, BLK_TAG_UNKNOWN);
+    Arena arena = arena_create(1 << 15, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     struct dirent* element;
     while ((element = readdir(dir))) {
@@ -94,17 +108,20 @@ static void test_dir(const char* path, bool error_test) {
     }
 }
 
+void test_good_dir(void) {
+    test_dir("good", FALSE);
+}
+
+void test_bad_dir(void) {
+    test_dir("bad", TRUE);
+}
+
 int main(void) {
 
-    memory_stats_init();
+    UNITY_BEGIN();
 
-    logger_system_init();
+    RUN_TEST(test_good_dir);
+    RUN_TEST(test_bad_dir);
 
-    test_dir("good", FALSE);
-    test_dir("bad", TRUE);
-
-    memory_dump_stats();
-    logger_system_cleanup();
-
-    return 0;
+    return UNITY_END();
 }

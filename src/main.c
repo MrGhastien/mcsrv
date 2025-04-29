@@ -23,6 +23,7 @@ static i32 init(char* host, i32 port, u64 max_connections) {
     platform_init();
 
     event_system_init();
+    //memory_dump_stats();
     registry_system_init();
     code = network_init(host, port, max_connections);
 

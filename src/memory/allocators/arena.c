@@ -14,7 +14,7 @@ Arena arena_create(u64 size, enum MemoryChainTag tag, memory_chain parent) {
     memory_chain chain = create_chain(tag, parent);
     memory_block block = alloc_block(size, chain);
 
-    if (!block)
+    if (block < 0)
         return (Arena){0};
 
     log_tracef("Created arena %p of %zu bytes.", block, size);

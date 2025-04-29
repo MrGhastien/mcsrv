@@ -1,5 +1,5 @@
 #include "logger.h"
-#include "memory/arena.h"
+#include "memory/memory.h"
 #include "data/nbt.h"
 #include "utils/string.h"
 
@@ -23,7 +23,7 @@ static bool str_ends_with(const char* str, const char* substr) {
 
 static int test_write1(const char* file) {
     log_infof("writing %s", file);
-    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
+    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
@@ -39,8 +39,7 @@ static int test_write1(const char* file) {
 
 static int test_write2(const char* file) {
     log_infof("writing %s", file);
-    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
-
+    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN, INVALID_CHAIN);
     NBT nbt = nbt_create(&arena, 1024);
 
     string tmp = str_view("data");
@@ -59,7 +58,7 @@ static int test_write2(const char* file) {
 
 static int test_write3(const char* file) {
     log_infof("writing %s", file);
-    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN);
+    Arena arena = arena_create(1 << 24, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     NBT nbt = nbt_create(&arena, 1024);
 
@@ -83,7 +82,7 @@ static int test_write3(const char* file) {
 
 static int test_read3(const char* file) {
     log_infof("reading %s", file);
-    Arena arena = arena_create(1 << 30, BLK_TAG_UNKNOWN);
+    Arena arena = arena_create(1 << 30, BLK_TAG_UNKNOWN, INVALID_CHAIN);
     NBT nbt;
 
     string in_path = str_view(file);
