@@ -50,6 +50,8 @@ void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType ty
 
 void basic_pool_cleanup(struct basic_pool* pool) {
     platform_free(pool->blocks, pool->capacity * sizeof(struct node));
+
+    *pool = (struct basic_pool) {0};
 }
 
 static void grow(struct basic_pool* pool) {
@@ -63,13 +65,14 @@ static void grow(struct basic_pool* pool) {
 
     u32 new_cap = cap64 / stride;
     for (i64 i = pool->capacity; i < new_cap - 1; i++) {
-        struct node* n = &pool->blocks[i];
+        struct node* n = &new_array[i];
         n->data.next = i + 1;
         n->allocated = FALSE;
     }
-    pool->head = &new_array[pool->head - pool->blocks];
-    pool->tail = &new_array[pool->tail - pool->blocks];
-    pool->blocks[new_cap - 1].data.next = -1;
+    new_array[new_cap - 1].data.next = -1;
+
+    pool->head = &new_array[pool->capacity];
+    pool->tail = &new_array[new_cap - 1];
     pool->tail->data.next = pool->capacity;
     pool->capacity = new_cap;
     platform_free(pool->blocks, pool->capacity * stride);
@@ -100,13 +103,15 @@ void* basic_pool_alloc(struct basic_pool* pool, i32* out_idx) {
         mc_abort();
     }
     if(out_idx)
-        *out_idx = 0;
+        *out_idx = target - pool->blocks;
+
+    pool->size++;
 
     return &target->data.block;
 }
 
 void basic_pool_free(struct basic_pool* pool, void* ptr) {
-    struct node* node = offset(ptr, -sizeof(bool));
+    struct node* node = offset(ptr, sizeof(node->data) - sizeof(struct node));
     i64 index = (u64) node - (u64) pool->blocks;
 
     node->allocated = FALSE;
@@ -116,10 +121,17 @@ void basic_pool_free(struct basic_pool* pool, void* ptr) {
     else
         pool->head = node;
     pool->tail = node;
+
+    pool->size--;
 }
 
 void* basic_pool_query(struct basic_pool* pool, i32 idx) {
-    return &pool->blocks[idx].data.block;
+    if(idx < 0 || (u32)idx >= pool->capacity)
+        return NULL;
+    struct node* target = &pool->blocks[idx];
+    if(!target->allocated)
+        return NULL;
+    return &target->data.block;
 }
 
 void basic_pool_foreach(struct basic_pool* pool, action action, void* user_data) {

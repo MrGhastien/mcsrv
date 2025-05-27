@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 
+#define NODE_HEADER_SIZE (sizeof(struct obj_node) - sizeof(struct obj_node*))
+
 struct obj_node {
     bool allocated;
     struct obj_node* next;
@@ -13,9 +15,9 @@ struct obj_node {
 
 static struct obj_node* get_node_from_idx(PoolAllocator* pool, i64 index) {
     memory_block blk = chain_head(pool->mem);
-    i64 total_stride = pool->stride + 8;
+    i64 total_stride = pool->stride + NODE_HEADER_SIZE;
 
-    while(blk) {
+    while(blk != INVALID_BLOCK) {
         i64 blk_capacity = block_capacity(blk) / total_stride;
 
         if(index < blk_capacity) {
@@ -31,6 +33,8 @@ static struct obj_node* get_node_from_idx(PoolAllocator* pool, i64 index) {
 static void add_node_to_free_list(PoolAllocator* pool, struct obj_node* node) {
     node->next = NULL;
     node->allocated = FALSE;
+    if(!pool->head)
+        pool->head = node;
     if(pool->tail)
         pool->tail->next = node;
     pool->tail = node;
@@ -38,7 +42,7 @@ static void add_node_to_free_list(PoolAllocator* pool, struct obj_node* node) {
 }
 
 static void prepare_block(PoolAllocator* pool, const memory_block block) {
-    u64 total_stride = pool->stride + 8;
+    u64 total_stride = pool->stride + NODE_HEADER_SIZE;
     for(u64 i = 0; i < block_capacity(block); i+= total_stride) {
         struct obj_node* node = offset(block_memory(block), i);
         add_node_to_free_list(pool, node);
@@ -47,9 +51,9 @@ static void prepare_block(PoolAllocator* pool, const memory_block block) {
 
 static void init_free_list(PoolAllocator* pool) {
     memory_block blk = chain_head(pool->mem);
-    if(!blk)
+    if(blk == INVALID_BLOCK)
         return;
-    pool->head = block_memory(blk);
+    //pool->head = block_memory(blk);
     do {
         prepare_block(pool, blk);
         blk = block_next(blk);
@@ -60,9 +64,9 @@ static void init_free_list(PoolAllocator* pool) {
 static void pool_init_common(PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev) {
     pool->mem = create_chain(tag, prev);
     pool->capacity = capacity;
-    pool->stride = stride;
+    pool->stride = max_u64(stride, sizeof(struct obj_node*));
 
-    alloc_block(capacity * stride, pool->mem);
+    alloc_block(capacity * (stride + NODE_HEADER_SIZE), pool->mem);
     init_free_list(pool);
 }
 
@@ -87,6 +91,16 @@ void pool_init_static(PoolAllocator* pool, u32 capacity, u32 stride, memory_chai
     init_free_list(pool);
 }
 
+void pool_destroy(PoolAllocator* pool) {
+    destroy_chain(pool->mem);
+    *pool = (PoolAllocator){
+        .mem = INVALID_CHAIN,
+        .head = NULL,
+        .tail = NULL,
+        .dynamic = FALSE,
+    };
+}
+
 static bool ensure_capacity(PoolAllocator* pool, u64 size) {
     if (size <= pool->capacity)
         return TRUE;
@@ -96,7 +110,7 @@ static bool ensure_capacity(PoolAllocator* pool, u64 size) {
         return FALSE;
     }
 
-    memory_block blk = alloc_block((pool->capacity >> 1) * (pool->stride + 8), pool->mem);
+    memory_block blk = alloc_block((pool->capacity >> 1) * (pool->stride + NODE_HEADER_SIZE), pool->mem);
     if(!blk)
         abort();
 
@@ -108,7 +122,7 @@ static bool ensure_capacity(PoolAllocator* pool, u64 size) {
 
 void pool_clear(PoolAllocator* pool) {
     u64 size = pool_size(pool);
-    u64 total_stride = pool->stride + 8;
+    u64 total_stride = pool->stride + NODE_HEADER_SIZE;
     u64 count = 0;
     memory_block blk = chain_head(pool->mem);
     while(blk && count < size) {
@@ -128,7 +142,7 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
         abort();
 
     struct obj_node* node = pool->head;
-    void* ptr = offset(node, 8);
+    void* ptr = offset(node, NODE_HEADER_SIZE);
     pool->head = pool->head->next;
 
     if(out_index) {
@@ -142,9 +156,10 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
             total += block_capacity(blk);
             blk = block_next(blk);
         } while(blk);
-        *out_index = total / (pool->stride + 8);
+        *out_index = total / (pool->stride + NODE_HEADER_SIZE);
     }
     pool->size++;
+    node->allocated = TRUE;
     return ptr;
 }
 
@@ -159,7 +174,7 @@ static bool free_node(PoolAllocator* pool, struct obj_node* node) {
 bool pool_free(PoolAllocator* pool, void* ptr) {
     // TODO: Check if address is valid
 
-    return free_node(pool, offset(ptr, -8));
+    return free_node(pool, offset(ptr, -NODE_HEADER_SIZE));
 }
 
 bool pool_free_idx(PoolAllocator* pool, i64 idx) {
@@ -170,7 +185,7 @@ bool pool_free_idx(PoolAllocator* pool, i64 idx) {
     if(!node->allocated)
         return FALSE;
 
-    return pool_free(pool, offset(node, 8));
+    return pool_free(pool, offset(node, NODE_HEADER_SIZE));
 }
 
 void* pool_get(PoolAllocator* pool, i64 index) {
@@ -178,14 +193,14 @@ void* pool_get(PoolAllocator* pool, i64 index) {
         return NULL;
 
     struct obj_node* node = get_node_from_idx(pool, index);
-    if(node->allocated)
+    if(!node->allocated)
         return NULL;
-    return offset(node, 8);
+    return offset(node, NODE_HEADER_SIZE);
 }
 
 void pool_foreach(const PoolAllocator* pool, void (*action)(void*, i64, void*), void* user_data) {
     u64 size = pool_size(pool);
-    u64 total_stride = pool->stride + 8;
+    u64 total_stride = pool->stride + NODE_HEADER_SIZE;
 
     u64 idx = 0;
     u64 count = 0;
@@ -195,7 +210,7 @@ void pool_foreach(const PoolAllocator* pool, void (*action)(void*, i64, void*), 
         for(u64 i = 0; i < block_capacity(blk) && count < size; i += total_stride) {
             struct obj_node* node = offset(block_memory(blk), i);
             if(node->allocated) {
-                action(offset(node, 8), idx, user_data);
+                action(offset(node, NODE_HEADER_SIZE), idx, user_data);
                 count++;
             }
             idx++;
