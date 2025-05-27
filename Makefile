@@ -68,8 +68,8 @@ $(MAIN_TARGET): $(MAIN_OBJ) $(CORE_LIB)
 	@$(CC) $(LDFLAGS)  -o $@ $^ $(LDLIBS)
 
 $(TEST_TARGETS): $(CORE_LIB) $(LIBDIR)/libunity.a
-	@echo -e "\e[32m>>	MAKE	$(dir $@)\e[0m"
-	@$(MAKE) -C $(dir $@)
+	@echo -e "\e[32m>>	MAKE	$@\e[0m"
+	@$(MAKE) -C $@
 	@echo -e "\e[32m<<	. . .\e[0m"
 
 %.o: %.c $(HDRS)
