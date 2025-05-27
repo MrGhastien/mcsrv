@@ -8,7 +8,7 @@
 
 int main(void) {
 
-    memory_stats_init();
+    memory_init();
     logger_system_init();
     Arena arena = arena_create(1 << 20, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 

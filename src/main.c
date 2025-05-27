@@ -2,6 +2,7 @@
 #include "event/event.h"
 #include "logger.h"
 #include "memory/mem_tags.h"
+#include "memory/memory.h"
 #include "network/network.h"
 #include "platform/platform.h"
 #include "registry/registry.h"
@@ -19,7 +20,7 @@ static i32 init(char* host, i32 port, u64 max_connections) {
 
     logger_system_init();
 
-    memory_stats_init();
+    memory_init();
     platform_init();
 
     event_system_init();
@@ -50,6 +51,7 @@ static void cleanup(void) {
     event_system_cleanup();
 
     platform_cleanup();
+    memory_cleanup();
     logger_system_cleanup();
 }
 

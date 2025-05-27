@@ -40,8 +40,4 @@ enum MemoryChainTag {
 string get_alloc_tag_name(enum AllocTag tag);
 string get_blk_tag_name(enum MemoryChainTag tag);
 
-//void set_global_tags(i32 tags);
-void memory_stats_init(void);
-void memory_dump_stats(void);
-
 #endif /* ! MEM_TAGS_H */

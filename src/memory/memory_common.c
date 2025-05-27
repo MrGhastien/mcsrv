@@ -189,7 +189,7 @@ string get_blk_tag_name(enum MemoryChainTag tag) {
     return str_view(BLK_TAG_NAMES[tag]);
 }
 
-void memory_stats_init(void) {
+void memory_init(void) {
     if (tracker_initialized)
         return;
     tracker_initialized = TRUE;
@@ -198,6 +198,14 @@ void memory_stats_init(void) {
     basic_pool_init(&chain_pool, 8, POOL_CHAIN);
     basic_pool_init(&block_pool, 64, POOL_BLOCK);
     //pool_init_static(&allocation_pool, 512, sizeof(memory_block), &allocation_chain);
+}
+
+void memory_cleanup(void) {
+    tracker_initialized = FALSE;
+    basic_pool_cleanup(&chain_pool);
+    basic_pool_cleanup(&block_pool);
+
+    mcmutex_destroy(&stats_mutex);
 }
 
 /*

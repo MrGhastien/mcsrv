@@ -140,7 +140,7 @@ static void test_dir(const char* path, bool error_test) {
 
 int main(void) {
 
-    memory_stats_init();
+    memory_init();
     logger_system_init();
 
     test_write1("out1.nbt.gz");

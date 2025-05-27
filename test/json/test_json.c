@@ -15,7 +15,7 @@
 #include <string.h>
 
 void setUp(void) {
-    memory_stats_init();
+    memory_init();
 
     logger_system_init();
 }
