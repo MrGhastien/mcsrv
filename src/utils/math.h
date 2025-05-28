@@ -4,6 +4,7 @@
 #include "definitions.h"
 
 u64 min_u64(u64 a, u64 b);
+u64 max_u64(u64 a, u64 b);
 
 u64 ceil_u64(u64 a, u64 multiple);
 i64 ceil_i64(i64 a, i64 multiple);

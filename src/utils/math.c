@@ -4,6 +4,10 @@ u64 min_u64(u64 a, u64 b) {
     return b < a ? b : a;
 }
 
+u64 max_u64(u64 a, u64 b) {
+    return b < a ? a : b;
+}
+
 u64 ceil_u64(u64 a, u64 multiple) {
     if(multiple == 0)
         return a;

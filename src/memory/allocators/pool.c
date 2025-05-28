@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "memory/mem_tags.h"
 #include "utils/bitwise.h"
+#include "utils/math.h"
 
 #include <stdlib.h>
 
@@ -66,7 +67,7 @@ static void pool_init_common(PoolAllocator* pool, u32 capacity, u32 stride, enum
     pool->capacity = capacity;
     pool->stride = max_u64(stride, sizeof(struct obj_node*));
 
-    alloc_block(capacity * (stride + NODE_HEADER_SIZE), pool->mem);
+    alloc_block(capacity * (pool->stride + NODE_HEADER_SIZE), pool->mem);
     init_free_list(pool);
 }
 

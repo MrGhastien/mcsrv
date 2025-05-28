@@ -40,7 +40,7 @@ void test_init_static(void) {
 
     TEST_ASSERT_EQUAL_UINT32(0, pool.size);
     TEST_ASSERT_EQUAL_UINT32(64, pool.capacity);
-    TEST_ASSERT_EQUAL_UINT32(sizeof(i32), pool.stride);
+    TEST_ASSERT_GREATER_THAN_UINT32(sizeof(i32), pool.stride);
     TEST_ASSERT_EQUAL_UINT32(pool.capacity, block_capacity(chain_head(pool.mem)) / (pool.stride + sizeof(struct obj_node) - sizeof(struct obj_node*)));
     TEST_ASSERT_GREATER_OR_EQUAL(sizeof(struct obj_node*), pool.stride);
 
