@@ -58,7 +58,7 @@ static void init_free_list(PoolAllocator* pool) {
     do {
         prepare_block(pool, blk);
         blk = block_next(blk);
-    } while(blk);
+    } while(blk != INVALID_BLOCK);
     pool->size = 0;
 }
 
@@ -112,7 +112,7 @@ static bool ensure_capacity(PoolAllocator* pool, u64 size) {
     }
 
     memory_block blk = alloc_block((pool->capacity >> 1) * (pool->stride + NODE_HEADER_SIZE), pool->mem);
-    if(!blk)
+    if(blk == INVALID_BLOCK)
         abort();
 
     prepare_block(pool, blk);
@@ -126,7 +126,7 @@ void pool_clear(PoolAllocator* pool) {
     u64 total_stride = pool->stride + NODE_HEADER_SIZE;
     u64 count = 0;
     memory_block blk = chain_head(pool->mem);
-    while(blk && count < size) {
+    while(blk != INVALID_BLOCK && count < size) {
         for(u64 i = 0; i < block_capacity(blk) && count < size; i += total_stride) {
             struct obj_node* node = offset(block_memory(blk), i);
             if(node->allocated) {
@@ -156,7 +156,7 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
             }
             total += block_capacity(blk);
             blk = block_next(blk);
-        } while(blk);
+        } while(blk != INVALID_BLOCK);
         *out_index = total / (pool->stride + NODE_HEADER_SIZE);
     }
     pool->size++;
@@ -207,7 +207,7 @@ void pool_foreach(const PoolAllocator* pool, void (*action)(void*, i64, void*), 
     u64 count = 0;
 
     memory_block blk = chain_head(pool->mem);
-    while(blk && count < size) {
+    while(blk !=INVALID_BLOCK && count < size) {
         for(u64 i = 0; i < block_capacity(blk) && count < size; i += total_stride) {
             struct obj_node* node = offset(block_memory(blk), i);
             if(node->allocated) {
