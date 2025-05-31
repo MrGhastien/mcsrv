@@ -67,8 +67,8 @@ memory_chain create_chain(enum MemoryChainTag tag, memory_chain prev) {
     i32 idx;
     mcmutex_lock(&stats_mutex);
     struct memory_chain* new_chain = basic_pool_alloc(&chain_pool, &idx);
-
     mcmutex_unlock(&stats_mutex);
+
     *new_chain = (struct memory_chain) {.tag = tag, .prev_chain = prev};
     if(prev >= 0) {
         struct memory_chain* prev_ptr = basic_pool_query(&chain_pool, prev);
@@ -78,9 +78,9 @@ memory_chain create_chain(enum MemoryChainTag tag, memory_chain prev) {
 }
 void destroy_chain(memory_chain chain) {
 
-    mcmutex_lock(&stats_mutex);
     struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
 
+    mcmutex_lock(&stats_mutex);
     memory_block blk = chain_ptr->head;
     while(blk) {
         struct memory_block* block_ptr = basic_pool_query(&block_pool, -1);
@@ -101,7 +101,6 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
     mcmutex_lock(&stats_mutex);
     i32 index;
     struct memory_block* block = basic_pool_alloc(&block_pool, &index);
-    mcmutex_unlock(&stats_mutex);
 
     *block = (struct memory_block) {
         .capacity = capacity,
@@ -110,6 +109,8 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
         .start = memory,
         .type = ALLOC_TYPE_DYNAMIC,
     };
+
+    mcmutex_unlock(&stats_mutex);
 
     struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
 
@@ -129,7 +130,10 @@ void delete_block(memory_block blk) {
     struct memory_block* blk_ptr = basic_pool_query(&block_pool, blk);
     platform_free(blk_ptr->start, blk_ptr->capacity);
     // delete vector !
+    mcmutex_lock(&stats_mutex);
     basic_pool_free(&block_pool, blk_ptr);
+
+    mcmutex_unlock(&stats_mutex);
 }
 
 memory_block chain_head(memory_chain chain) {

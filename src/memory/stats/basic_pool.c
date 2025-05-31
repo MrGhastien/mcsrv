@@ -128,10 +128,9 @@ void basic_pool_free(struct basic_pool* pool, void* ptr) {
 void* basic_pool_query(struct basic_pool* pool, i32 idx) {
     if(idx < 0 || (u32)idx >= pool->capacity)
         return NULL;
-    struct node* target = &pool->blocks[idx];
-    if(!target->allocated)
+    if(!pool->blocks[idx].allocated)
         return NULL;
-    return &target->data.block;
+    return &pool->blocks[idx].data;
 }
 
 void basic_pool_foreach(struct basic_pool* pool, action action, void* user_data) {
