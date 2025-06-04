@@ -1,11 +1,11 @@
 #include "str_builder.h"
 #include "containers/vector.h"
 #include "logger.h"
-#include "memory/_memory_internal.h"
 #include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
-#include "utils/debug.h"
+#include "utils/math.h"
 #include "utils/string.h"
+#include "platform/platform.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -121,7 +121,9 @@ string strbuild_to_string(const StringBuilder* builder, Arena* arena) {
     u32 char_count = builder->chars.size;
 
     if (arena_is_mem_shared(builder->arena, arena)) {
-        mc_abort();
+        log_fatal("Cannot build string when arenas share the same memory !");
+        platform_abort();
+        /*
         Arena scratch = arena_create((char_count + 1) * sizeof(char), BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
         string str = str_alloc(char_count, &scratch);
@@ -131,11 +133,27 @@ string strbuild_to_string(const StringBuilder* builder, Arena* arena) {
         string res = str_create_copy(&str, arena);
         arena_destroy(&scratch);
         return res;
+        */
     }
 
     string str = str_alloc(char_count, arena);
     for (u32 i = 0; i < char_count; i++) {
         vect_get(&builder->chars, i, &str.base[i]);
     }
+    str.base[char_count] = 0;
     return str;
+}
+
+string strbuild_to_string_buffer(const StringBuilder* builder, char* buf, u64 buf_size) {
+    u32 char_count = min_u64(builder->chars.size, buf_size - 1);
+
+    for (u32 i = 0; i < char_count; i++) {
+        vect_get(&builder->chars, i, &buf[i]);
+    }
+    buf[char_count] = 0;
+
+    return (string) {
+        .base = buf,
+        .length = char_count,
+    };        
 }

@@ -151,6 +151,16 @@ i32 strbuild_get_range(const StringBuilder* builder, char* out_text, u64 begin, 
  */
 string strbuild_to_string(const StringBuilder* builder, Arena* arena);
 
+/**
+ * Fills a character buffer with the contents of a string builder, and create a string with it.
+ *
+ * @param[in] builder The builder containing the characters of the string to create.
+ * @param[in] buf The buffer used to write characters.
+ * @param[in] buf_size The maximum size of the buffer.
+ * @return A new string containing characters of the builder.
+ */
+string strbuild_to_string_buffer(const StringBuilder* builder, char* buf, u64 buf_size);
+
 #define strbuild_length(builder) vect_size(&(builder)->chars)
 
 #endif /* ! STR_BUILDER_H */
