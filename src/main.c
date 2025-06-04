@@ -20,8 +20,8 @@ static i32 init(char* host, i32 port, u64 max_connections) {
 
     logger_system_init();
 
-    memory_init();
     platform_init();
+    memory_init();
 
     event_system_init();
     //memory_dump_stats();
