@@ -261,7 +261,8 @@ static void print_property(void* obj, i64 idx, void* data) {
         break;
     }
 
-    string str = strbuild_to_string(&builder, &scratch);
+    char buf[512];
+    string str = strbuild_to_string_buffer(&builder, buf, 512);
     log_debug(cstr(&str));
 }
 
@@ -271,12 +272,13 @@ static void print_state_properties(void) {
 
 void register_blocks(void) {
 
-    arena = arena_create(1 << 25, BLK_TAG_REGISTRY, INVALID_CHAIN);
-    pool_init(&property_pool, 128, sizeof(StateProperty), BLK_TAG_REGISTRY, INVALID_CHAIN);
     if (!registry_create(BLOCK_KEY, sizeof(Block))) {
         log_fatal("Could not create blocks registry.");
         return;
     }
+
+    arena = arena_create(1 << 25, BLK_TAG_REGISTRY, INVALID_CHAIN);
+    pool_init(&property_pool, 128, sizeof(StateProperty), BLK_TAG_REGISTRY, INVALID_CHAIN);
 
     init_properties();
 

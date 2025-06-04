@@ -1,12 +1,13 @@
 #include "level.h"
 #include "chunk.h"
 #include "containers/dict.h"
+#include "memory/_memory_internal.h"
 #include "memory/allocators/pool.h"
-#include "data/json.h"
 #include "data/nbt.h"
 #include "logger.h"
 #include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
+#include "platform/platform.h"
 #include "resource/resource_id.h"
 #include "utils/bitwise.h"
 #include "utils/iomux.h"
@@ -16,6 +17,7 @@
 #include "world/data/block.h"
 
 #include <assert.h>
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -37,7 +39,7 @@ void level_init(Level* level, string path) {
 
     pool_init_dynamic(&level->regions, 8, sizeof(Region), BLK_TAG_LEVEL, level->arena.chain);
     pool_init_dynamic(&level->chunks, 64, sizeof(Chunk), BLK_TAG_LEVEL, level->regions.mem);
-    pool_init_dynamic(&level->chunk_sections, 512, sizeof(ChunkSection), BLK_TAG_LEVEL, level->chunk_sections.mem);
+    pool_init_dynamic(&level->chunk_sections, 512, sizeof(ChunkSection), BLK_TAG_LEVEL, INVALID_CHAIN);
 }
 
 static void
@@ -146,8 +148,9 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
     u32 sector_count = chunk_offset & 0xff;
     chunk_offset >>= 8;
 
-    log_fatal("TODO: Actually allocate the section array !");
-    abort();
+    log_error("TODO: Actually allocate the section array !");
+    return;
+    platform_abort();
     i64 chunk_index;
     Chunk* new_chunk = pool_alloc(&level->chunks, &chunk_index);
     read_chunk(region, new_chunk, chunk_offset, sector_count, level->arena);
@@ -166,12 +169,15 @@ void level_load_chunk(Level* level, ChunkPos pos) {
     Region* region;
     i64 region_idx;
     if(dict_get(&level->region_dict, &region_pos, &region_idx) == -1) {
+
+        char region_path_buf[PATH_MAX];
+
         Arena scratch = level->arena;
         StringBuilder builder = strbuild_create(&scratch);
         strbuild_append(&builder, &level->path);
         strbuild_appends(&builder, "/region/r.");
         strbuild_appendf(&builder, "%lli.%lli.mca", region_pos.x, region_pos.y);
-        string region_path = strbuild_to_string(&builder, &level->arena);
+        string region_path = strbuild_to_string_buffer(&builder, region_path_buf, PATH_MAX);
 
         log_tracef("Opening region file %s...", cstr(&region_path));
         Region* new_region = pool_alloc(&level->regions, &region_idx);
