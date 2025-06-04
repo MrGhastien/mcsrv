@@ -3,6 +3,8 @@
 #include "definitions.h"
 #include "json_internal.h"
 #include "logger.h"
+#include "memory/allocators/arena.h"
+#include "memory/mem_tags.h"
 #include "memory/memory.h"
 #include "platform/platform.h"
 #include "utils/iomux.h"
@@ -137,11 +139,14 @@ enum JSONStatus json_write(const JSON* json, IOMux multiplexer) {
 enum JSONStatus json_write_file(const JSON* json, const string* path);
 
 enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str) {
-    IOMux mux = iomux_new_string(arena);
+    Arena serializing_arena = arena_create(arena->capacity, BLK_TAG_DATA, arena->chain);
+    IOMux mux = iomux_new_string(&serializing_arena);
 
     json_write(json, mux);
 
     *out_str = iomux_string(mux, arena);
+
+    arena_destroy(&serializing_arena);
 
     iomux_close(mux);
     return JSONE_OK;
@@ -271,7 +276,8 @@ lex_number(IOMux multiplexer, char first, LexUnitValue* value, Arena scratch) {
         }
     }
 
-    string parse_res = strbuild_to_string(&builder, &scratch);
+    char buf[256];
+    string parse_res = strbuild_to_string_buffer(&builder, buf, 256);
 
     enum JSONLexUnit token;
     if (frac) {
