@@ -42,12 +42,14 @@ export CORE_LIB := $(CURDIR)/libsrv.a
 
 all: debug
 
+#debug: LDFLAGS += -rdynamic
 debug: CFLAGS += -O0 -g -DDEBUG 
-debug: LDFLAGS += -rdynamic 
+debug: LDLIBS += -lunwind -ldw
 debug: $(MAIN_TARGET)
 
 trace: CFLAGS += -O0 -g -DDEBUG -DTRACE
-debug: LDFLAGS += -rdynamic 
+#trace: LDFLAGS += -rdynamic
+trace: LDLIBS += -lunwind -ldw
 trace: $(MAIN_TARGET)
 
 release: CFLAGS += -O2
