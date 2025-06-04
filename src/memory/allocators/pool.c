@@ -66,6 +66,9 @@ static void pool_init_common(PoolAllocator* pool, u32 capacity, u32 stride, enum
     pool->mem = create_chain(tag, prev);
     pool->capacity = capacity;
     pool->stride = max_u64(stride, sizeof(struct obj_node*));
+    pool->head = NULL;
+    pool->tail = NULL;
+    pool->size = 0;
 
     alloc_block(capacity * (pool->stride + NODE_HEADER_SIZE), pool->mem);
     init_free_list(pool);
@@ -161,6 +164,7 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
     }
     pool->size++;
     node->allocated = TRUE;
+    node->next = NULL;
     return ptr;
 }
 

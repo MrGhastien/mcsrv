@@ -1,7 +1,6 @@
 #include "basic_pool.h"
 #include "platform/platform.h"
 #include "utils/bitwise.h"
-#include "utils/debug.h"
 #include <string.h>
 
 struct node {

@@ -18,7 +18,6 @@
 #include "utils/bitwise.h"
 
 #include "allocators/pool.h"
-#include "utils/debug.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -104,8 +103,8 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
 
     *block = (struct memory_block) {
         .capacity = capacity,
-        .next = -1,
-        .prev = -1,
+        .next = INVALID_BLOCK,
+        .prev = INVALID_BLOCK,
         .start = memory,
         .type = ALLOC_TYPE_DYNAMIC,
     };
@@ -337,7 +336,7 @@ static void dump_chain_stats(union basic_pool_elem elem, i32 idx, void* user_dat
 
     memory_block block = track->head;
     struct memory_block* block_ptr;
-    while (block) {
+    while (block != INVALID_BLOCK) {
         block_ptr = basic_pool_query(&block_pool, block);
         dump_block_stats(block_ptr, block, data);
         block = block_ptr->next;
