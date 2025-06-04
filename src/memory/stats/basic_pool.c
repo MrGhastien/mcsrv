@@ -25,7 +25,7 @@ static inline u64 total_stride(const struct basic_pool* pool) {
     case POOL_CHAIN:
         return sizeof(struct memory_chain) + sizeof(bool);
     default:
-        mc_abort();
+        platform_abort();
     }
 }
 
@@ -58,7 +58,7 @@ static void grow(struct basic_pool* pool) {
     u64 cap64 = (pool->capacity << 1ULL) * stride;
     struct node* new_array = platform_alloc(&cap64);
     if (!new_array)
-        mc_abort();
+        platform_abort();
 
     memcpy(new_array, pool->blocks, pool->capacity * stride);
 
@@ -99,7 +99,7 @@ void* basic_pool_alloc(struct basic_pool* pool, i32* out_idx) {
         target->data.chain = (struct memory_chain) {0};
         break;
     default:
-        mc_abort();
+        platform_abort();
     }
     if(out_idx)
         *out_idx = target - pool->blocks;

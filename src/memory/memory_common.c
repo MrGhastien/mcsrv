@@ -66,30 +66,61 @@ memory_chain create_chain(enum MemoryChainTag tag, memory_chain prev) {
     i32 idx;
     mcmutex_lock(&stats_mutex);
     struct memory_chain* new_chain = basic_pool_alloc(&chain_pool, &idx);
-    mcmutex_unlock(&stats_mutex);
 
-    *new_chain = (struct memory_chain) {.tag = tag, .prev_chain = prev};
-    if(prev >= 0) {
+    mcmutex_unlock(&stats_mutex);
+    *new_chain = (struct memory_chain) {
+        .tag = tag,
+        .prev_chain = prev,
+        .next_chain = INVALID_CHAIN,
+        .head = INVALID_BLOCK,
+        .tail = INVALID_BLOCK,
+    };
+    if (prev >= 0) {
         struct memory_chain* prev_ptr = basic_pool_query(&chain_pool, prev);
         prev_ptr->next_chain = idx;
     }
     return idx;
 }
+
+static void delete_block_internal(memory_block blk) {
+    struct memory_block* blk_ptr = basic_pool_query(&block_pool, blk);
+    platform_free(blk_ptr->start, blk_ptr->capacity);
+    basic_pool_free(&block_pool, blk_ptr);
+}
+
+static void destroy_single_chain(struct memory_chain* chain_ptr) {
+
+    memory_block blk = chain_ptr->head;
+    while (blk != INVALID_BLOCK) {
+        struct memory_block* block_ptr = basic_pool_query(&block_pool, blk);
+        i32 next = block_ptr->next;
+        delete_block_internal(blk);
+        blk = next;
+    }
+
+    basic_pool_free(&chain_pool, chain_ptr);
+}
+
 void destroy_chain(memory_chain chain) {
 
     struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
-
     mcmutex_lock(&stats_mutex);
-    memory_block blk = chain_ptr->head;
-    while(blk) {
-        struct memory_block* block_ptr = basic_pool_query(&block_pool, -1);
-        i32 next = block_ptr->next;
-        delete_block(blk);
-        blk = next;
+
+    if (chain_ptr->prev_chain != INVALID_CHAIN) {
+        struct memory_chain* prev_chain_ptr = basic_pool_query(&chain_pool, chain_ptr->prev_chain);
+        prev_chain_ptr->next_chain = INVALID_CHAIN;
     }
-    
-    basic_pool_free(&chain_pool, chain_ptr);
-    //mc_abort();
+
+    memory_chain next_chain = chain_ptr->next_chain;
+    while (next_chain != INVALID_CHAIN) {
+       struct memory_chain* next_chain_ptr = basic_pool_query(&chain_pool, chain_ptr->next_chain);
+        next_chain_ptr->prev_chain = INVALID_CHAIN;
+        next_chain = next_chain_ptr->next_chain;
+        destroy_single_chain(next_chain_ptr);
+    }
+
+    destroy_single_chain(chain_ptr);
+    // platform_abort();
     mcmutex_unlock(&stats_mutex);
 }
 
@@ -117,63 +148,59 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
     if (chain_ptr->tail >= 0) {
         struct memory_block* tail_ptr = basic_pool_query(&block_pool, chain_ptr->tail);
         tail_ptr->next = index;
-    }
-    else
+    } else
         chain_ptr->head = index;
     chain_ptr->tail = index;
     chain_ptr->block_count++;
 
     return index;
 }
-void delete_block(memory_block blk) {
-    struct memory_block* blk_ptr = basic_pool_query(&block_pool, blk);
-    platform_free(blk_ptr->start, blk_ptr->capacity);
-    // delete vector !
-    mcmutex_lock(&stats_mutex);
-    basic_pool_free(&block_pool, blk_ptr);
 
+void delete_block(memory_block blk) {
+    mcmutex_lock(&stats_mutex);
+    delete_block_internal(blk);
     mcmutex_unlock(&stats_mutex);
 }
 
 memory_block chain_head(memory_chain chain) {
-    if(chain < 0)
+    if (chain < 0)
         return INVALID_BLOCK;
 
     const struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
-    if(chain_ptr == NULL)
+    if (chain_ptr == NULL)
         return INVALID_BLOCK;
 
     return chain_ptr->head;
 }
 
 memory_block block_next(memory_block block) {
-    if(block < 0)
+    if (block < 0)
         return INVALID_BLOCK;
 
     const struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
-    if(block_ptr == NULL)
+    if (block_ptr == NULL)
         return INVALID_BLOCK;
 
     return block_ptr->next;
 }
 
 void* block_memory(memory_block block) {
-    if(block < 0)
+    if (block < 0)
         return NULL;
 
     const struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
-    if(block_ptr == NULL)
+    if (block_ptr == NULL)
         return NULL;
 
     return block_ptr->start;
 }
 
 u64 block_capacity(memory_block block) {
-    if(block < 0)
+    if (block < 0)
         return 0ull;
 
     const struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
-    if(block_ptr == NULL)
+    if (block_ptr == NULL)
         return 0ull;
 
     return block_ptr->capacity;
@@ -200,7 +227,7 @@ void memory_init(void) {
 
     basic_pool_init(&chain_pool, 8, POOL_CHAIN);
     basic_pool_init(&block_pool, 64, POOL_BLOCK);
-    //pool_init_static(&allocation_pool, 512, sizeof(memory_block), &allocation_chain);
+    // pool_init_static(&allocation_pool, 512, sizeof(memory_block), &allocation_chain);
 }
 
 void memory_cleanup(void) {
@@ -313,7 +340,8 @@ struct stat_dump_data {
     Vector alloc_buckets;
 };
 
-static void dump_block_stats(const struct memory_block* block, memory_block idx, struct stat_dump_data* data) {
+static void
+dump_block_stats(const struct memory_block* block, memory_block idx, struct stat_dump_data* data) {
     UNUSED(data);
     log_infof("- Block %li, " ANSI_MAGENTA "%zu" ANSI_RESET " bytes long, starting at " ANSI_CYAN
               "0x%p" ANSI_RESET ":",
