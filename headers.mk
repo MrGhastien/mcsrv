@@ -26,7 +26,6 @@ HDRS := $(SRC_DIR)/world/data/block.h \
 		$(SRC_DIR)/memory/allocators/pool.h \
 		$(SRC_DIR)/memory/memory.h \
 		$(SRC_DIR)/memory/stats/basic_pool.h \
-		$(SRC_DIR)/utils/debug.h \
 		$(SRC_DIR)/utils/ansi_codes.h \
 		$(SRC_DIR)/utils/bitwise.h \
 		$(SRC_DIR)/utils/hash.h \
