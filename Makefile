@@ -38,9 +38,12 @@ export TEST_OBJS := $(patsubst %.c,%.o,$(TESTS))
 
 export CORE_LIB := $(CURDIR)/libsrv.a
 
-.PHONY: all clean $(TEST_TARGETS)
+.PHONY: all clean $(TEST_TARGETS) docs
 
 all: debug
+
+docs: $(SRCS) $(HDRS)
+	doxygen $(CURDIR)/doxygen-config.conf
 
 #debug: LDFLAGS += -rdynamic
 debug: CFLAGS += -O0 -g -DDEBUG 
