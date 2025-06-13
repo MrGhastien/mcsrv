@@ -15,14 +15,13 @@ typedef struct chunk_section {
     const BlockState** palette;
     //u8* indices;
     u16* indices; // 0 <= index <= 4096
+    struct chunk_section* next;
+    i32 y_pos;
 } ChunkSection;
 
 typedef struct chunk {
     u32 section_count;
-    ChunkSection* sections;
-
-    Vector block_entities;
-    Vector entities;
+    ChunkSection* section_head;
 
     Dict entity_mappings;
     Dict block_entity_mappings;

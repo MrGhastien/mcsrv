@@ -1,11 +1,12 @@
 #include "level.h"
 #include "chunk.h"
 #include "containers/dict.h"
-#include "memory/_memory_internal.h"
-#include "memory/allocators/pool.h"
 #include "data/nbt.h"
 #include "logger.h"
+#include "memory/_memory_internal.h"
 #include "memory/allocators/arena.h"
+#include "memory/allocators/buddy.h"
+#include "memory/allocators/pool.h"
 #include "memory/mem_tags.h"
 #include "platform/platform.h"
 #include "resource/resource_id.h"
@@ -32,18 +33,52 @@ void level_init(Level* level, string path) {
     level->arena = arena_create(1 << 30, BLK_TAG_LEVEL, -1);
     level->path = str_create_copy(&path, &level->arena);
 
-    dict_init(
-        &level->region_dict, &CMP_VEC2I, sizeof(RegionPos), sizeof(i64));
-    dict_init(
-        &level->chunk_dict, &CMP_VEC2I, sizeof(ChunkPos), sizeof(i64));
+    dict_init(&level->region_dict, &CMP_VEC2I, sizeof(RegionPos), sizeof(i64));
+    dict_init(&level->chunk_dict, &CMP_VEC2I, sizeof(ChunkPos), sizeof(i64));
 
     pool_init_dynamic(&level->regions, 8, sizeof(Region), BLK_TAG_LEVEL, level->arena.chain);
     pool_init_dynamic(&level->chunks, 64, sizeof(Chunk), BLK_TAG_LEVEL, level->regions.mem);
-    pool_init_dynamic(&level->chunk_sections, 512, sizeof(ChunkSection), BLK_TAG_LEVEL, INVALID_CHAIN);
+    pool_init_dynamic(
+        &level->chunk_sections, 512, sizeof(ChunkSection), BLK_TAG_LEVEL, INVALID_CHAIN);
+
+    buddy_init(&level->buddy, 1 << 24, BLK_TAG_LEVEL);
 }
 
-static void
-read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena arena) {
+static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
+
+    i32 idx = 0;
+    do {
+        nbt_move_to_cstr(nbt, "Name");
+        string* name = nbt_get_string(nbt);
+        ResourceID id;
+        assert(resid_parse(name, &arena, &id));
+
+        StateSelectionContext selector;
+        assert(selector_init(&selector, &arena, id));
+
+        nbt_move_to_parent(nbt);
+        nbt_move_to_cstr(nbt, "Properties");
+        nbt_move_to_index(nbt, 0);
+
+        do {
+            const string* prop_name = nbt_get_name(nbt);
+            const string* prop_value = nbt_get_string(nbt);
+            const StateProperty* prop = get_state_property_by_name(*prop_name);
+            assert(prop != NULL);
+            selector_set(&selector, prop, parse_state_property_value(*prop_value, prop));
+        } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
+
+        const BlockState* state = selector_select(&selector);
+        assert(state != NULL);
+
+        out_section->palette[idx] = state;
+        idx++;
+
+    } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
+}
+
+static void read_chunk(
+    Level* level, Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena arena) {
     UNUSED(sector_count);
 
     iomux_seek(region->mux, offset * ANVIL_SECTOR_SIZE, SEEK_SET);
@@ -81,6 +116,8 @@ read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena
     out_chunk->section_count = nbt_get_size(&nbt);
     nbt_move_to_index(&nbt, 0);
 
+    ChunkSection* prev_section = NULL;
+
     do {
         i32 y;
         nbt_move_to_cstr(&nbt, "Y");
@@ -98,42 +135,23 @@ read_chunk(Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena
         nbt_move_to_parent(&nbt);
         nbt_move_to_cstr(&nbt, "block_states");
         nbt_move_to_cstr(&nbt, "palette");
-        ChunkSection* section = &out_chunk->sections[y];
+        i64 section_idx;
+        ChunkSection* section = pool_alloc(&level->chunk_sections, &section_idx);
         section->palette_size = nbt_get_size(&nbt);
 
-        section->palette =
-            arena_callocate(&arena, section->palette_size * sizeof(BlockState*)/* , ALLOC_TAG_WORLD */);
+        if (!section)
+            out_chunk->section_head = section;
+        else
+            prev_section->next = section;
+
+        section->y_pos = y;
+        section->palette = buddy_alloc(
+            &level->buddy, section->palette_size * sizeof(BlockState*) /* , ALLOC_TAG_WORLD */);
         nbt_move_to_index(&nbt, 0);
-        i32 idx = 0;
 
-        do {
-            nbt_move_to_cstr(&nbt, "Name");
-            string* name = nbt_get_string(&nbt);
-            ResourceID id;
-            assert(resid_parse(name, &arena, &id));
+        read_palette(&nbt, arena, section);
 
-            StateSelectionContext selector;
-            assert(selector_init(&selector, &arena, id));
-
-            nbt_move_to_parent(&nbt);
-            nbt_move_to_cstr(&nbt, "Properties");
-            nbt_move_to_index(&nbt, 0);
-
-            do {
-                const string* prop_name = nbt_get_name(&nbt);
-                const string* prop_value = nbt_get_string(&nbt);
-                const StateProperty* prop = get_state_property_by_name(*prop_name);
-                assert(prop != NULL);
-                selector_set(&selector, prop, parse_state_property_value(*prop_value, prop));
-            } while(nbt_move_to_next_sibling(&nbt) == NBTE_OK);
-            
-            const BlockState* state = selector_select(&selector);
-            assert(state != NULL);
-
-            section->palette[idx] = state;
-            idx++;
-
-        } while (nbt_move_to_next_sibling(&nbt) == NBTE_OK);
+        prev_section = section;
 
     } while (nbt_move_to_next_sibling(&nbt) == NBTE_OK);
 }
@@ -148,13 +166,14 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
     u32 sector_count = chunk_offset & 0xff;
     chunk_offset >>= 8;
 
-    log_error("TODO: Actually allocate the section array !");
-    return;
-    platform_abort();
+    Arena scratch = arena_create(1 << 24, BLK_TAG_LEVEL, level->arena.chain);
+
     i64 chunk_index;
     Chunk* new_chunk = pool_alloc(&level->chunks, &chunk_index);
-    read_chunk(region, new_chunk, chunk_offset, sector_count, level->arena);
+    read_chunk(level, region, new_chunk, chunk_offset, sector_count, scratch);
     dict_put(&level->chunk_dict, &pos, &chunk_index);
+
+    arena_destroy(&scratch);
 }
 
 void level_load_chunk(Level* level, ChunkPos pos) {
@@ -162,13 +181,13 @@ void level_load_chunk(Level* level, ChunkPos pos) {
     log_tracef("Loading chunk at position (%lli,%lli)...", pos.x, pos.y);
 
     i64 chunk_idx;
-    if(dict_get(&level->chunk_dict, &pos, &chunk_idx) != -1)
+    if (dict_get(&level->chunk_dict, &pos, &chunk_idx) != -1)
         return;
 
     RegionPos region_pos = pos_chunk_to_region(pos);
     Region* region;
     i64 region_idx;
-    if(dict_get(&level->region_dict, &region_pos, &region_idx) == -1) {
+    if (dict_get(&level->region_dict, &region_pos, &region_idx) == -1) {
 
         char region_path_buf[PATH_MAX];
 

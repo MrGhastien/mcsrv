@@ -2,6 +2,7 @@
 #define LEVEL_H
 
 #include "containers/dict.h"
+#include "memory/allocators/buddy.h"
 #include "memory/allocators/pool.h"
 #include "utils/position.h"
 
@@ -11,6 +12,7 @@ typedef struct chunk Chunk;
 
 typedef struct level {
     Arena arena;
+    BuddyAllocator buddy;
     Dict region_dict;
     // Chunks
     // Chunk tickets
@@ -20,6 +22,8 @@ typedef struct level {
     PoolAllocator chunks;
     PoolAllocator regions;
     PoolAllocator chunk_sections;
+    PoolAllocator block_entities;
+    PoolAllocator entities;
 
     string path;
 } Level;
