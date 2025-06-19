@@ -12,6 +12,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static const char* TYPE_NAMES[] = {
+    [NBT_END] = "NBT_END",
+    [NBT_BYTE] = "NBT_BYTE",
+    [NBT_SHORT] = "NBT_SHORT",
+    [NBT_INT] = "NBT_INT",
+    [NBT_LONG] = "NBT_LONG",
+    [NBT_FLOAT] = "NBT_FLOAT",
+    [NBT_DOUBLE] = "NBT_DOUBLE",
+    [NBT_BYTE_ARRAY] = "NBT_BYTE_ARRAY",
+    [NBT_STRING] = "NBT_STRING",
+    [NBT_LIST] = "NBT_LIST",
+    [NBT_COMPOUND] = "NBT_COMPOUND",
+    [NBT_INT_ARRAY] = "NBT_INT_ARRAY",
+    [NBT_LONG_ARRAY] = "NBT_LONG_ARRAY",
+};
+
 static NBTTag* get_current_tag(NBT* nbt) {
     i64 idx;
     if (!vect_peek(&nbt->stack, &idx))
@@ -32,7 +48,7 @@ static void increment_parent_total_lengths(NBT* nbt) {
             tag->data.composite.total_tag_length++;
             break;
         default:
-            log_fatalf("NBTag of type %i cannot be in the NBT stack !", tag->type);
+            log_fatalf("NBTag of type '%s' cannot be in the NBT stack !", TYPE_NAMES[tag->type]);
             abort();
             break;
         }
@@ -296,7 +312,7 @@ enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
         idx += get_total_length(child_tag);
     }
 
-    log_errorf("Could not find NBTag with name %s.", name->base);
+    //log_errorf("Could not find NBTag with name '%s'.", name->base);
     return NBTE_NOT_FOUND;
 }
 enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name) {
@@ -361,7 +377,7 @@ enum NBTTagType nbt_get_type(NBT* nbt) {
 i8 nbt_get_byte(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_BYTE) {
-        log_fatalf("Cannot get byte value of tag of type %i", tag->type);
+        log_fatalf("Cannot get byte value of tag of type '%s'", TYPE_NAMES[tag->type]);
         abort();
     }
 
@@ -370,7 +386,7 @@ i8 nbt_get_byte(NBT* nbt) {
 i16 nbt_get_short(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_SHORT) {
-        log_fatalf("Cannot get short integer value of tag of type %i", tag->type);
+        log_fatalf("Cannot get short integer value of tag of type '%s'", TYPE_NAMES[tag->type]);
         abort();
     }
 
@@ -380,7 +396,7 @@ i32 nbt_get_int(NBT* nbt) {
 
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_INT) {
-        log_fatalf("Cannot get integer value of tag of type %i", tag->type);
+        log_fatalf("Cannot get integer value of tag of type '%s'", TYPE_NAMES[tag->type]);
         abort();
     }
 
@@ -389,7 +405,7 @@ i32 nbt_get_int(NBT* nbt) {
 i64 nbt_get_long(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_LONG) {
-        log_fatalf("Cannot get integer value of tag of type %i", tag->type);
+        log_fatalf("Cannot get integer value of tag of type '%s'", TYPE_NAMES[tag->type]);
         abort();
     }
 
@@ -398,7 +414,7 @@ i64 nbt_get_long(NBT* nbt) {
 f32 nbt_get_float(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_FLOAT) {
-        log_fatalf("Cannot get float value of tag of type %i", tag->type);
+        log_fatalf("Cannot get float value of tag of type '%s'", TYPE_NAMES[tag->type]);
         abort();
     }
 
@@ -407,7 +423,7 @@ f32 nbt_get_float(NBT* nbt) {
 f64 nbt_get_double(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_DOUBLE) {
-        log_fatalf("Cannot get double-float value of tag of type %i", tag->type);
+        log_fatalf("Cannot get double-float value of tag of type '%s'", TYPE_NAMES[tag->type]);
         abort();
     }
 
@@ -427,21 +443,23 @@ u64 nbt_get_size(NBT* nbt) {
     case NBT_STRING:
         return tag->data.str.length;
     default:
-        log_errorf("Cannot get size of tag of type %i", tag->type);
+        log_errorf("Cannot get size of tag of type '%s'", TYPE_NAMES[tag->type]);
         return -1;
     }
 }
 string* nbt_get_name(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
-    NBTTag* parent = vect_ref(&nbt->stack, nbt->stack.size - 1);
-    if (!parent || !is_array(parent->type))
+    i64 parent_idx;
+    vect_get(&nbt->stack, nbt->stack.size - 2, &parent_idx);
+    NBTTag* parent = vect_ref(&nbt->tags, parent_idx);
+    if (!parent || parent->type != NBT_COMPOUND)
         return NULL;
     return &tag->name;
 }
 string* nbt_get_string(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_STRING) {
-        log_fatalf("Cannot get string value of tag of type %i", tag->type);
+        log_fatalf("Cannot get string value of tag of type '%s'", TYPE_NAMES[tag->type]);
         abort();
     }
 
