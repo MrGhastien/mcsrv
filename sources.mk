@@ -16,8 +16,9 @@ SRCS := $(SRC_DIR)/logger1.c \
 		$(SRC_DIR)/network/receiver.c \
 		$(SRC_DIR)/network/sender.c \
 		$(SRC_DIR)/memory/memory_common.c \
-		$(SRC_DIR)/memory/allocators/pool.c \
 		$(SRC_DIR)/memory/allocators/arena.c \
+		$(SRC_DIR)/memory/allocators/buddy.c \
+		$(SRC_DIR)/memory/allocators/pool.c \
 		$(SRC_DIR)/memory/stats/basic_pool.c \
 		$(SRC_DIR)/utils/string.c \
 		$(SRC_DIR)/utils/bitwise.c \
