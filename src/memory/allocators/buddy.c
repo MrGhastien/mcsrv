@@ -52,6 +52,8 @@ static void block_merge(BuddyAllocator* alloc, BuddyBlock* block) {
 
     while (block != alloc->tail) {
         BuddyBlock* next = buddy_block_next(block);
+        if (next >= alloc->tail)
+            return;
         if (next->power_size != block->power_size || !next->free)
             return;
         /*
@@ -68,7 +70,7 @@ void* buddy_alloc(BuddyAllocator* alloc, u64 size) {
 
     // Search for available block
     BuddyBlock* blk = alloc->head;
-    while (blk != alloc->tail &&
+    while (blk < alloc->tail &&
            ((1ULL << (blk->power_size + MIN_BLOCK_SIZE)) < actual_size || !blk->free)) {
         blk = buddy_block_next(blk);
     }
