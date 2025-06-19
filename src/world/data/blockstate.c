@@ -141,17 +141,21 @@ const BlockState* state_with_value(const BlockState* state,
                                    union StatePropertyValue value);
 
 bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID block_id) {
-    const Block* blk = registry_get(resid_default_cstr("block"), block_id);
-    if (!blk)
+    const Block* block = registry_get(resid_default_cstr("blocks"), block_id);
+    if (!block)
         return FALSE;
+    out_ctx->block = block;
+    if (block->state_definition.property_count == 0)
+        return TRUE;
+
     out_ctx->value_indices =
         arena_allocate(arena,
-                       sizeof *out_ctx->value_indices * blk->state_definition.property_count/* ,
+                       sizeof *out_ctx->value_indices * block->state_definition.property_count/* ,
                        ALLOC_TAG_WORLD */);
     if (!out_ctx->value_indices)
         return FALSE;
 
-    for (u32 i = 0; i < blk->state_definition.property_count; i++) {
+    for (u32 i = 0; i < block->state_definition.property_count; i++) {
         out_ctx->value_indices[i] = -1;
     }
 
@@ -162,7 +166,7 @@ void selector_set(StateSelectionContext* ctx,
                   union StatePropertyValue value) {
     const StateDefinition* def = &ctx->block->state_definition;
     u32 i = 0;
-    while (i < def->property_count || def->properties[i] == property) {
+    while (i < def->property_count && def->properties[i] != property) {
         i++;
     }
     if (i == def->property_count)
@@ -189,12 +193,15 @@ void selector_set(StateSelectionContext* ctx,
 const BlockState* selector_select(const StateSelectionContext* ctx) {
     i64 final_idx = 0;
 
-    for (i32 i = ctx->block->state_definition.property_count; i >= 0; i++) {
+    if (ctx->block->state_definition.property_count == 0)
+        return &ctx->block->state_definition.states[0];
+
+    for (i32 i = ctx->block->state_definition.property_count - 1; i >= 0; i--) {
         i64 val_idx = ctx->value_indices[i];
         if (val_idx < 0)
             return NULL;
 
-        final_idx += val_idx * i;
+        final_idx += val_idx * (i + 1);
     }
 
     return &ctx->block->state_definition.states[final_idx];

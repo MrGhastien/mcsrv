@@ -77,14 +77,14 @@ typedef struct block_properties {
     f32 slipperiness;
     f32 speed_multiplier;
     f32 jump_multiplier;
-    bool ticks_randomly;
-    bool requires_correct_tools;
-    bool has_collision;
-    bool opaque;
-    bool ignited_by_lava;
-    bool spawn_brushing_particles; // Used by the brush item logic to not draw brushing particles
-    bool replaceable;
-    bool has_dynamic_shape;
+    bool ticks_randomly : 1;
+    bool requires_correct_tools : 1;
+    bool has_collision : 1;
+    bool opaque : 1;
+    bool ignited_by_lava : 1;
+    bool spawn_brushing_particles : 1; // Used by the brush item logic to not draw brushing particles
+    bool replaceable : 1;
+    bool has_dynamic_shape : 1;
 
     light_function light_getter;
     map_color_function map_color_getter;
@@ -127,7 +127,7 @@ BlockProperties default_block_properties(void);
 const BlockState* state_any(const StateDefinition* definition);
 const BlockState* state_with_value(const BlockState* state, const StateProperty* property, union StatePropertyValue value);
 
-const StateProperty* get_state_property_by_name(string name);
+const StateProperty* get_state_property_by_name(const Block* block, string property_name);
 union StatePropertyValue parse_state_property_value(string value, const StateProperty* prop);
 
 bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID block_id);
