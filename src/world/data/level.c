@@ -46,27 +46,40 @@ void level_init(Level* level, string path) {
 
 static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
 
+    nbt_move_to_index(nbt, 0); // 1
     i32 idx = 0;
     do {
-        nbt_move_to_cstr(nbt, "Name");
+        if(nbt_move_to_cstr(nbt, "Name") != NBTE_OK) // 2
+            platform_abort();
         string* name = nbt_get_string(nbt);
+        log_debugf("    Palette: %s", cstr(name));
         ResourceID id;
         assert(resid_parse(name, &arena, &id));
 
         StateSelectionContext selector;
         assert(selector_init(&selector, &arena, id));
 
-        nbt_move_to_parent(nbt);
-        nbt_move_to_cstr(nbt, "Properties");
-        nbt_move_to_index(nbt, 0);
+        nbt_move_to_parent(nbt);                                     // 1
+        // If status is not ok, we do not select the 'Properties' tag
+        // Thus we don't need to select the parent afterwards
+        enum NBTStatus status = nbt_move_to_cstr(nbt, "Properties"); // 2
+        if (status == NBTE_OK) {
+            nbt_move_to_index(nbt, 0); // 3
 
-        do {
-            const string* prop_name = nbt_get_name(nbt);
-            const string* prop_value = nbt_get_string(nbt);
-            const StateProperty* prop = get_state_property_by_name(*prop_name);
-            assert(prop != NULL);
-            selector_set(&selector, prop, parse_state_property_value(*prop_value, prop));
-        } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
+            do {
+                const string* prop_name = nbt_get_name(nbt);
+                log_debugf("      Reading property '%s'", cstr(prop_name));
+                const string* prop_value = nbt_get_string(nbt);
+                const StateProperty* prop = get_state_property_by_name(selector.block, *prop_name);
+                assert(prop != NULL);
+                selector_set(&selector, prop, parse_state_property_value(*prop_value, prop));
+            } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
+
+            nbt_move_to_parent(nbt); // 2
+            nbt_move_to_parent(nbt); // 1
+        } else if (status != NBTE_NOT_FOUND) {
+            platform_abort();
+        }
 
         const BlockState* state = selector_select(&selector);
         assert(state != NULL);
@@ -75,6 +88,43 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
         idx++;
 
     } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
+
+    nbt_move_to_parent(nbt); // 0
+}
+
+static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
+    i32 y;
+    nbt_move_to_cstr(nbt, "Y"); // 1
+    enum NBTTagType type = nbt_get_type(nbt);
+    if (type == NBT_BYTE)
+        y = (i32) nbt_get_byte(nbt);
+    else if (type == NBT_INT)
+        y = nbt_get_int(nbt);
+    else {
+        log_fatal("Invalid chunk data: Y position of section is neither an INT nor a BYTE tag.");
+        abort();
+        return NULL;
+    }
+    nbt_move_to_parent(nbt);               // 0
+
+    log_debugf("  Reading section Y=%i", y);
+
+    nbt_move_to_cstr(nbt, "block_states"); // 1
+    nbt_move_to_cstr(nbt, "palette");      // 2
+    i64 section_idx;
+    ChunkSection* section = pool_alloc(&level->chunk_sections, &section_idx);
+    section->palette_size = nbt_get_size(nbt);
+
+    section->y_pos = y;
+    section->palette = buddy_alloc(
+        &level->buddy, section->palette_size * sizeof(BlockState*) /* , ALLOC_TAG_WORLD */);
+
+    read_palette(nbt, arena, section);
+
+    nbt_move_to_parent(nbt); // 1
+    nbt_move_to_parent(nbt); // 0
+
+    return section;
 }
 
 static void read_chunk(
@@ -112,47 +162,20 @@ static void read_chunk(
         return;
     }
 
-    nbt_move_to_cstr(&nbt, "sections");
+    nbt_move_to_cstr(&nbt, "sections"); // 1
     out_chunk->section_count = nbt_get_size(&nbt);
-    nbt_move_to_index(&nbt, 0);
+    nbt_move_to_index(&nbt, 0); // 2
 
     ChunkSection* prev_section = NULL;
 
     do {
-        i32 y;
-        nbt_move_to_cstr(&nbt, "Y");
-        enum NBTTagType type = nbt_get_type(&nbt);
-        if (type == NBT_BYTE)
-            y = (i32) nbt_get_byte(&nbt);
-        else if (type == NBT_INT)
-            y = nbt_get_int(&nbt);
-        else {
-            log_fatal(
-                "Invalid chunk data: Y position of section is neither an INT nor a BYTE tag.");
-            abort();
-            return;
-        }
-        nbt_move_to_parent(&nbt);
-        nbt_move_to_cstr(&nbt, "block_states");
-        nbt_move_to_cstr(&nbt, "palette");
-        i64 section_idx;
-        ChunkSection* section = pool_alloc(&level->chunk_sections, &section_idx);
-        section->palette_size = nbt_get_size(&nbt);
+        ChunkSection* section = read_section(&nbt, level, arena);
 
-        if (!section)
+        if (!prev_section)
             out_chunk->section_head = section;
         else
             prev_section->next = section;
-
-        section->y_pos = y;
-        section->palette = buddy_alloc(
-            &level->buddy, section->palette_size * sizeof(BlockState*) /* , ALLOC_TAG_WORLD */);
-        nbt_move_to_index(&nbt, 0);
-
-        read_palette(&nbt, arena, section);
-
         prev_section = section;
-
     } while (nbt_move_to_next_sibling(&nbt) == NBTE_OK);
 }
 
@@ -178,7 +201,7 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
 
 void level_load_chunk(Level* level, ChunkPos pos) {
 
-    log_tracef("Loading chunk at position (%lli,%lli)...", pos.x, pos.y);
+    log_debugf("Loading chunk at position (%lli,%lli)...", pos.x, pos.y);
 
     i64 chunk_idx;
     if (dict_get(&level->chunk_dict, &pos, &chunk_idx) != -1)
