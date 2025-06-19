@@ -3,6 +3,7 @@
 //
 
 #include "data/nbt.h"
+#include "containers/vector.h"
 #include "definitions.h"
 #include "nbt_internal.h"
 
@@ -322,11 +323,11 @@ enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name) {
 enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index) {
     NBTTag* tag = get_current_tag(nbt);
 
-    if (tag->type != NBT_LIST)
+    if (tag->type != NBT_LIST && tag->type != NBT_COMPOUND)
         return NBTE_INVALID_PARENT;
 
     if (index >= tag->data.composite.size || index < 0) {
-        log_errorf("NBT: Index %i is out of the list's bounds.", index);
+        log_errorf("NBT: Index %i is out of the composite's bounds.", index);
         return NBTE_NOT_FOUND;
     }
 
@@ -345,16 +346,19 @@ enum NBTStatus nbt_move_to_parent(NBT* nbt) {
 }
 enum NBTStatus nbt_move_to_next_sibling(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);
+    i64 parent_idx;
+    vect_get(&nbt->stack, nbt->stack.size - 2, &parent_idx);
+    NBTTag* parent = vect_ref(&nbt->tags, parent_idx);
+    if (tag->local_idx + 1 >= (i64)parent->data.array_size)
+        return NBTE_NOT_FOUND;
+
     i64 global_index;
     if (!vect_pop(&nbt->stack, &global_index))
         return NBTE_NOT_FOUND;
-    enum NBTStatus status = NBTE_OK;
-    if (tag->local_idx + 1 > (i64)nbt_get_size(nbt))
-        status = NBTE_NOT_FOUND;
-    else
-        global_index += get_total_length(tag);
+
+    global_index += get_total_length(tag);
     vect_add(&nbt->stack, &global_index);
-    return status;
+    return NBTE_OK;
 }
 enum NBTStatus nbt_move_to_prev_sibling(NBT* nbt) {
     NBTTag* tag = get_current_tag(nbt);

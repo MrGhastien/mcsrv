@@ -30,7 +30,7 @@ typedef struct NBTReadContext {
 
 typedef struct NBTTagMetadata {
     enum NBTTagType type;
-    i32 size;
+    i32 progress;
     i64 idx;
 } NBTTagMetadata;
 
@@ -135,16 +135,18 @@ static bool finish_tag(NBTReadContext* ctx, enum NBTTagType type) {
 
     bool finish_parent;
 
-    // Update the parent tag size (only for arrays, lists, and compounds)
-    // The size of compound tags starts at 0 because they are not known right away,
-    // The size in the metadata gets incremented when a direct child tag is parsed.
-    // when a NBT_END tag is parsed, the tag size is set to the size in the metadata,
-    // and the compound metadata is removed from the parsing stack.
+    /*
+     Update the parent tag size (only for arrays, lists, and compounds)
 
-    // The size of lists and arrays is known when parsing the tag, so we proceed
-    // in reverse.
-    // When the size in the metadata reaches 0, we know we parsed all the elements,
-    // and the metadata is removed from the parsing stack.
+     The progress struct member is used in two different ways:
+     - For only compound tags, it is used to count how many child tags they contain,
+       When a NBT_END tag is parsed, the tag size is set to the progress value.
+     - For compound, array and list tags, it is used to set the @ref local_index member of tags.
+
+     The compound / list / array metadata is then removed from the parsing stack when :
+     - a NBT_END tag is encountered (compound tags)
+     - The progress value reaches the list size (stored in the NBT tag).
+     */
     do {
         finish_parent = FALSE;
         NBTTagMetadata* parent_meta = vect_ref(&ctx->stack, i);
@@ -156,14 +158,15 @@ static bool finish_tag(NBTReadContext* ctx, enum NBTTagType type) {
                 vect_pop(&ctx->stack, NULL);
                 break;
             }
-            parent_meta->size++;
+            parent_meta->progress++;
             break;
         case NBT_LIST:
         case NBT_BYTE_ARRAY:
         case NBT_INT_ARRAY:
         case NBT_LONG_ARRAY:
-            parent_meta->size--;
-            if(parent_meta->size == 0) {
+            parent_meta->progress++;
+            NBTTag* parent = vect_ref(&ctx->nbt->tags, parent_meta->idx);
+            if(parent_meta->progress == parent->data.array_size) {
                 finish_parent = TRUE;
                 type = parent_meta->type;
                 vect_pop(&ctx->stack, NULL);
@@ -219,7 +222,6 @@ static i32 parse_array(IOMux fd, const NBTTag* new_tag, NBTReadContext* ctx) {
     if (num > 0) {
         NBTTagMetadata* new_tag_meta = vect_reserve(&ctx->stack);
         *new_tag_meta = (NBTTagMetadata) {
-            .size = num,
             .type = new_tag->type,
             .idx = ctx->nbt->tags.size,
         };
@@ -231,7 +233,7 @@ static void write_array(IOMux fd, const NBTTag* tag, NBTWriteContext* ctx) {
     i32 big_endian_size = hton32(tag->data.composite.size);
     iomux_write(fd, &big_endian_size, sizeof(i32));
     NBTTagMetadata new_parent = {
-        .size = tag->data.composite.size,
+        .progress = tag->data.composite.size,
         .type = tag->type,
     };
     vect_add(&ctx->stack, &new_parent);
@@ -248,7 +250,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd, bool network) {
             write_string(&tag->name, fd);
     }
     if (parent)
-        parent->size--;
+        parent->progress--;
     switch (tag->type) {
     case NBT_BYTE:
         iomux_write(fd, &tag->data.simple.byte, sizeof tag->data.simple.byte);
@@ -276,7 +278,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd, bool network) {
     }
     case NBT_COMPOUND: {
         NBTTagMetadata new_parent = {
-            .size = tag->data.composite.size,
+            .progress = tag->data.composite.size,
             .type = tag->type,
         };
         vect_add(&ctx->stack, &new_parent);
@@ -323,7 +325,7 @@ enum NBTStatus nbt_write(const NBT* nbt, IOMux multiplexer, bool network) {
         nbt_write_tag(&ctx, multiplexer, network);
 
         const NBTTagMetadata* parent = vect_ref(&ctx.stack, ctx.stack.size - 1);
-        while (parent && parent->size == 0) {
+        while (parent && parent->progress == 0) {
             vect_pop(&ctx.stack, NULL);
             if (parent->type == NBT_COMPOUND) {
                 const i8 end_tag = 0;
@@ -341,6 +343,7 @@ static enum NBTStatus nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagTy
     NBTTag new_tag = {
         .type = type,
         .parent_idx = parent_meta ? parent_meta->idx : -1,
+        .local_idx = parent_meta ? parent_meta->progress : -1,
     };
     if(type != NBT_END && (!parent_meta || !is_array(parent_meta->type))) {
         if (!read_string(ctx->arena, fd, &new_tag.name))
@@ -413,7 +416,6 @@ static enum NBTStatus nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagTy
     case NBT_COMPOUND: {
         NBTTagMetadata* new_tag_meta = vect_reserve(&ctx->stack);
         *new_tag_meta = (NBTTagMetadata) {
-            .size = 0,
             .type = type,
             .idx = ctx->nbt->tags.size,
         };
@@ -426,7 +428,7 @@ static enum NBTStatus nbt_parse_tag(IOMux fd, NBTReadContext* ctx, enum NBTTagTy
             return NBTE_UNEXPECTED;
         }
         NBTTag* parent_tag = nbt_mut_ref(ctx->nbt, parent_meta->idx);
-        parent_tag->data.composite.size = parent_meta->size;
+        parent_tag->data.composite.size = parent_meta->progress;
         return NBTE_OK;
     default:
         return NBTE_OK;
