@@ -6,10 +6,13 @@
 #define RESID_EXTRACT_STRING(resid) cstr(&(resid).namespace), cstr(&(resid).path)
 #define RESID "[%s:%s]"
 
+
 typedef struct resid {
     string namespace;
     string path;
 } ResourceID;
+
+extern const Comparator CMP_RESID;
 
 ResourceID resid_create(const string* namespace, const string* path, Arena* arena);
 bool resid_parse(const string* id, Arena* arena, ResourceID* out_parsed);

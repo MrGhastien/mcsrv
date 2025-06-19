@@ -3,17 +3,18 @@
 
 // Hash function used in sdbm
 // Adapted to work on arbitrary data
-u64 default_hash(const void* data, u64 size) {
+u64 default_hash_acc(u64 hash, const void* data, u64 size) {
     const u8* bytes = data;
-    u64 hash = 37;
     u8 b;
-
     for (u64 i = 0; i < size; i++) {
         b = bytes[i];
         hash = b + (hash << 6) + (hash << 16) - hash;
     }
-
     return hash;
+}
+
+u64 default_hash(const void* data, u64 size) {
+    return default_hash_acc(37, data, size);
 }
 
 i32 default_cmp(const void* lhs, const void* rhs, u64 size) {

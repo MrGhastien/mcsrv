@@ -1,5 +1,30 @@
 #include "resource_id.h"
+#include "utils/hash.h"
 #include "utils/string.h"
+
+i32 resid_compare_raw(const void* lhs, const void* rhs) {
+    const ResourceID* lhs_id = lhs;
+    const ResourceID* rhs_id = rhs;
+
+    i32 namespace_comparison = str_compare(&lhs_id->namespace, &rhs_id->namespace);
+    if (namespace_comparison != 0)
+        return namespace_comparison;
+    return str_compare(&lhs_id->path, &rhs_id->path);
+}
+
+u64 resid_hash(const void* ptr) {
+    const ResourceID* id = ptr;
+
+    u64 h = default_hash(id->namespace.base, id->namespace.length);
+    h = default_hash_acc(h, ":", 1);
+    h = default_hash_acc(h, id->path.base, id->path.length);
+    return h;
+}
+
+const Comparator CMP_RESID = {
+    .hfunc = &resid_hash,
+    .comp = &resid_compare_raw,
+};
 
 ResourceID resid_create(const string* namespace, const string* path, Arena* arena) {
     return (ResourceID){

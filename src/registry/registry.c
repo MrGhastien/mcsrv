@@ -26,7 +26,7 @@ static void register_game_elements(void) {
 void registry_system_init(void) {
     arena = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY, INVALID_CHAIN);
     root.name = resid_default_cstr("root");
-    dict_init_fixed(&root.entries, NULL, &arena, 100, sizeof(ResourceID), sizeof(Registry));
+    dict_init_fixed(&root.entries, &CMP_RESID, &arena, 64, sizeof(ResourceID), sizeof(Registry));
 
     log_debug("Registry subsystem initialized.");
 
@@ -40,7 +40,7 @@ void registry_system_cleanup(void) {
 bool registry_create(ResourceID name, u64 stride) {
     Registry reg = {.name = name};
     //dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
-    dict_init(&reg.entries, NULL, sizeof(ResourceID), stride);
+    dict_init(&reg.entries, &CMP_RESID, sizeof(ResourceID), stride);
 
     return dict_put(&root.entries, &name, &reg) >= 0;
 }
