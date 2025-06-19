@@ -303,27 +303,15 @@ void register_blocks(void) {
     UNUSED(register_simple_block);
 }
 
-struct property_search_data {
-    StateProperty* out;
-    const string* name;
-};
+const StateProperty* get_state_property_by_name(const Block* block, string name) {
+    const StateProperty** properties = block->state_definition.properties;
+    i32 property_count = block->state_definition.property_count;
 
-static void property_search_iterate(void* elem, i64 idx, void* user_data) {
-    UNUSED(idx);
-    struct property_search_data* data = user_data;
-    if (data->out)
-        return;
-    StateProperty* prop = elem;
-    if (str_compare(data->name, &prop->name) == 0)
-        data->out = prop;
-}
+    for (i32 i = 0; i < property_count; i++) {
+        const StateProperty* prop = properties[i];
+        if (str_compare(&prop->name, &name) == 0)
+            return prop;
+    }
 
-const StateProperty* get_state_property_by_name(string name) {
-    struct property_search_data data = {
-        .name = &name,
-        .out = NULL,
-    };
-    pool_foreach(&property_pool, &property_search_iterate, &data);
-
-    return data.out;
+    return NULL;
 }
