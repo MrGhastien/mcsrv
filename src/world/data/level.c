@@ -12,6 +12,7 @@
 #include "resource/resource_id.h"
 #include "utils/bitwise.h"
 #include "utils/iomux.h"
+#include "utils/math.h"
 #include "utils/position.h"
 #include "utils/str_builder.h"
 #include "utils/string.h"
@@ -49,7 +50,7 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
     nbt_move_to_index(nbt, 0); // 1
     i32 idx = 0;
     do {
-        if(nbt_move_to_cstr(nbt, "Name") != NBTE_OK) // 2
+        if (nbt_move_to_cstr(nbt, "Name") != NBTE_OK) // 2
             platform_abort();
         string* name = nbt_get_string(nbt);
         log_debugf("    Palette: %s", cstr(name));
@@ -59,7 +60,7 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
         StateSelectionContext selector;
         assert(selector_init(&selector, &arena, id));
 
-        nbt_move_to_parent(nbt);                                     // 1
+        nbt_move_to_parent(nbt); // 1
         // If status is not ok, we do not select the 'Properties' tag
         // Thus we don't need to select the parent afterwards
         enum NBTStatus status = nbt_move_to_cstr(nbt, "Properties"); // 2
@@ -90,6 +91,30 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
     } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
 
     nbt_move_to_parent(nbt); // 0
+    log_debug("Chunk block palette load OK");
+}
+
+static void read_block_indices(NBT* nbt, ChunkSection* section) {
+    u64 index_size = u64_log2(section->palette_size) + 1;
+    index_size = max_u64(4, index_size);
+
+    nbt_move_to_index(nbt, 0); // 1
+
+    u64 k = 0;
+
+    do {
+        i64 i = nbt_get_long(nbt);
+        i64 j = 0;
+
+        while (j < 64) {
+            section->indices[k] = (i >> j) & ((1 << index_size) - 1);
+            k++;
+            j += index_size;
+        }
+
+    } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
+    nbt_move_to_parent(nbt); // 0
+    log_debug("Chunk block indices load OK");
 }
 
 static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
@@ -105,7 +130,7 @@ static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
         abort();
         return NULL;
     }
-    nbt_move_to_parent(nbt);               // 0
+    nbt_move_to_parent(nbt); // 0
 
     log_debugf("  Reading section Y=%i", y);
 
@@ -120,9 +145,17 @@ static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
         &level->buddy, section->palette_size * sizeof(BlockState*) /* , ALLOC_TAG_WORLD */);
 
     read_palette(nbt, arena, section);
+    nbt_move_to_parent(nbt);                        // 1
+    if (nbt_move_to_cstr(nbt, "data") == NBTE_OK) { // 2
+        section->indices = buddy_alloc(&level->buddy, 4096 * sizeof(*section->indices));
+        section->index_size = 4096;
+        read_block_indices(nbt, section);
+        nbt_move_to_parent(nbt); // 1
+    }
 
-    nbt_move_to_parent(nbt); // 1
     nbt_move_to_parent(nbt); // 0
+
+    log_debug("Chunk section load OK");
 
     return section;
 }
@@ -177,6 +210,8 @@ static void read_chunk(
             prev_section->next = section;
         prev_section = section;
     } while (nbt_move_to_next_sibling(&nbt) == NBTE_OK);
+    nbt_move_to_parent(&nbt);
+    nbt_move_to_parent(&nbt);
 }
 
 static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
@@ -232,5 +267,7 @@ void level_load_chunk(Level* level, ChunkPos pos) {
     ChunkPos relative_pos = {.x = pos.x & 31, .y = pos.y & 31};
 
     locate_and_read_chunk(level, region, relative_pos);
+
+    log_debugf("Chunk at position (%lli,%lli) has been successfully loaded!", pos.x, pos.y);
 }
 void level_unload_chunk(ChunkPos pos);
