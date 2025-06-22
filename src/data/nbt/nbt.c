@@ -323,7 +323,7 @@ enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name) {
 enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index) {
     NBTTag* tag = get_current_tag(nbt);
 
-    if (tag->type != NBT_LIST && tag->type != NBT_COMPOUND)
+    if (tag->type != NBT_COMPOUND && !is_array(tag->type))
         return NBTE_INVALID_PARENT;
 
     if (index >= tag->data.composite.size || index < 0) {
