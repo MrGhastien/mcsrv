@@ -142,14 +142,14 @@ enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str) 
     Arena serializing_arena = arena_create(arena->capacity, BLK_TAG_DATA, arena->chain);
     IOMux mux = iomux_new_string(&serializing_arena);
 
-    json_write(json, mux);
-
-    *out_str = iomux_string(mux, arena);
+    enum JSONStatus status = json_write(json, mux);
+    if (status == JSONE_OK)
+        *out_str = iomux_string(mux, arena);
 
     arena_destroy(&serializing_arena);
 
     iomux_close(mux);
-    return JSONE_OK;
+    return status;
 }
 
 /* ===== PARSING ===== */

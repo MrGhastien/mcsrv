@@ -66,7 +66,7 @@ JSON json_create(Arena* arena, u64 max_token_count) {
 }
 
 enum JSONStatus json_set_root(JSON* json, enum JSONType type) {
-    if (vect_size(&json->stack) == 0)
+    if (vect_size(&json->stack) > 0)
         return JSONE_ROOT_ALREADY_PRESENT;
 
     JSONToken new_root = {

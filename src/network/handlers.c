@@ -57,7 +57,7 @@ DEF_PKT_HANDLER(status) {
     JSON json = json_create(&arena, 1024);
 
     string tmp;
-    json_push(&json, JSON_OBJECT);
+    json_set_root(&json, JSON_OBJECT);
     json_cstr_put(&json, "version", JSON_OBJECT);
     json_move_to_cstr(&json, "version");
 
@@ -82,9 +82,13 @@ DEF_PKT_HANDLER(status) {
     tmp = str_view("Hello gamerz!");
     json_cstr_put_str(&json, "text", &tmp);
 
-    json_to_string(&json, &arena, &response.data);
+    enum JSONStatus json_status = json_to_string(&json, &arena, &response.data);
+    if (json_status != JSONE_OK) {
+        log_errorf("JSON Error: %i", json_status);
+        return FALSE;
+    }
 
-    log_tracef("%s", response.data.base);
+    log_tracef("Status response: %s", response.data.base);
     Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
     send_packet(&out_pkt, conn);
     return TRUE;
