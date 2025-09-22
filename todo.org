@@ -1,5 +1,5 @@
 #+TODO: TODO OPT WIP | DONE
-#+TODO: BUG NOWORK CRASH | FIXED
+#+TODO: BUG BROKEN CRASH | FIXED
 
 feat > refactor > fix > repo > doc
 
@@ -11,9 +11,13 @@ CLOSED: [2024-06-15 sam. 00:20]
 *** FIXED All bytes of a packet are read correctly, but ~has_read_all_bytes()~ aborts the program.
 CLOSED: [2024-12-08 dim. 18:01]
 The functions is invalid because the byte buffer might contain multiple raw packets.
+*** BROKEN Client ping failure
+The client close the connection while pinging, probably due to an invalid response being sent by the server.
+
 ** FIXED Properly handle termination signals (SIGINT)
 CLOSED: [2024-06-24 lun. 00:05]
 Trying to interrupt with Ctrl-C does nothing.
+
 ** Data structures
 *** FIXED Memory leak when building a new JSON object.
 CLOSED: [2025-01-23 jeu. 22:17]
@@ -22,6 +26,7 @@ allocated memory is unused outside of parsing functions
 *** BUG Invalid placement of new NBT tags / JSON tokens when adding
  Adding a new token to a NBT complex tag / json complex token always adds it at the end of the tree,
  whether the parent is at the last of its siblings or not.
+
 
 * Features                                                            :mcsrv:
 ** Internals
@@ -101,19 +106,42 @@ CLOSED: [2024-09-21 sam. 22:04]
 *** TODO Data loading / saving
 - [ ] Anvil map saver & loader
   Try to come up with a better format?
-- [ ] NBT saver & loader
+- [-] NBT saver & loader
   - [X] NBT Parser
   - [X] NBT Writer
   - [ ] SNBT Parser
   - [X] SNBT Writer
   - [ ] Support for network NBTs
   - [ ] Proper error handling for the NBT parser and writer
-- [ ] JSON loader
+- [X] JSON loader
 
-** TODO Complex data structures
-*** TODO Refactor the JSON structure & parser
-- [ ] Make dynamic arenas for the json parser
+** DONE Complex data structures
+CLOSED: [2025-03-16 dim. 00:48]
+*** DONE Refactor the JSON structure & parser
+CLOSED: [2025-03-16 dim. 00:48]
+- [X] Make dynamic arenas for the json parser
 
+** Memory managment
+*** DONE Make object pools not rely on arenas
+CLOSED: [2025-09-16 mar. 20:18]
+All object pools are in statically allocated memory
+*** TODO Dynamic memory blocks for arenas
+Arenas should use a system of chained blocks similar to vectors and object pools (before the refactor)
+*** DONE Tracked memory blocks
+CLOSED: [2025-09-16 mar. 20:18]
+Memory blocks should be tracked and managed independently from  memory allocators (arenas, pools...)
+Which allocator uses which blocks can be tracked to enhance memory statistics.
+
+** World loading
+*** DONE Block loading
+CLOSED: [2025-09-16 mar. 20:21]
+- [X] Section palette
+- [X] Section palette indices
+
+*** TODO Biome loading
+*** TODO Block Entity loading
+*** TODO Proto-chunks
+*** TODO Structures
 
 * Ideas                                                               :mcsrv:
 ** Ease of use
