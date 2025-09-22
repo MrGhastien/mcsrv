@@ -28,4 +28,6 @@ void platform_free(void* ptr, u64 size);
 [[noreturn]]
 void platform_abort(void);
 
+#define platform_assert(cond, msg) if(!(cond)) { log_fatalf("Assertion '%s' failed: %s", #cond, msg); platform_abort(); }
+
 #endif /* ! PLATFORM_H */

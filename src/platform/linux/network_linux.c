@@ -416,6 +416,7 @@ void* network_handle(void* params) {
                 ctx->should_continue = FALSE;
             else {
                 Connection* conn = pool_get(&ctx->connections, e->data.u64);
+                platform_assert(conn != NULL, "Invalid connection index returned by epoll");
                 //memory_dump_stats();
                 handle_connection_io(ctx, conn, e->events);
             }
