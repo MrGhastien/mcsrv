@@ -160,6 +160,9 @@ static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
     return section;
 }
 
+/**
+ * Parses a chunk from a region file.
+ */
 static void read_chunk(
     Level* level, Region* region, Chunk* out_chunk, u32 offset, u32 sector_count, Arena arena) {
     UNUSED(sector_count);
@@ -214,6 +217,9 @@ static void read_chunk(
     nbt_move_to_parent(&nbt);
 }
 
+/**
+ * Locates a chunk inside a region file, and parse the chunk's data.
+ */
 static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
     i64 offset = (pos.x + (pos.y << 5)) << 2;
     iomux_seek(region->mux, offset, SEEK_SET);
@@ -234,6 +240,9 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
     arena_destroy(&scratch);
 }
 
+/**
+ * Loads the chunk at the given (chunk!) position.
+*/
 void level_load_chunk(Level* level, ChunkPos pos) {
 
     log_debugf("Loading chunk at position (%lli,%lli)...", pos.x, pos.y);
@@ -247,6 +256,7 @@ void level_load_chunk(Level* level, ChunkPos pos) {
     i64 region_idx;
     if (dict_get(&level->region_dict, &region_pos, &region_idx) == -1) {
 
+        // If the region file is not opened yet, open it.
         char region_path_buf[PATH_MAX];
 
         Arena scratch = level->arena;
