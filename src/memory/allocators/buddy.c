@@ -22,10 +22,9 @@ void buddy_init(BuddyAllocator* alloc, u64 size, enum MemoryChainTag tag) {
     alloc->chain = create_chain(tag, INVALID_CHAIN);
     memory_block blk = alloc_block(size, alloc->chain);
     alloc->head = block_memory(blk);
-    alloc->tail = buddy_block_next(alloc->head);
-
     alloc->head->power_size = u64_log2(size) - MIN_BLOCK_SIZE;
     alloc->head->free = TRUE;
+    alloc->tail = buddy_block_next(alloc->head);
 }
 void buddy_destroy(BuddyAllocator* alloc) {
     destroy_chain(alloc->chain);
@@ -35,7 +34,7 @@ static BuddyBlock* block_split(BuddyBlock* block, u64 requested_size) {
     if (!block || requested_size == 0 || !block->free)
         return NULL;
 
-    while ((1ULL << (block->power_size + MIN_BLOCK_SIZE)) > requested_size) {
+    while ((1ULL << (block->power_size + MIN_BLOCK_SIZE - 1)) > requested_size && block->power_size > 1) {
         u64 split_size = block->power_size - 1;
         block->power_size = split_size;
         BuddyBlock* next = buddy_block_next(block);
