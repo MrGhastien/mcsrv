@@ -35,16 +35,17 @@ void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType ty
 
     u64 cap64 = capacity * sizeof(struct node);
     pool->blocks = platform_alloc(&cap64);
-    pool->capacity = cap64 / sizeof(struct node);
+    cap64 /= sizeof(struct node);
 
-    for (i64 i = 0; i < pool->capacity; i++) {
+    for (u64 i = 0; i < cap64; i++) {
         struct node* n = &pool->blocks[i];
         n->data.next = i + 1;
         n->allocated = FALSE;
     }
     pool->head = pool->blocks;
-    pool->tail = pool->blocks + (pool->capacity - 1);
-    pool->blocks[pool->capacity - 1].data.next = -1;
+    pool->tail = pool->blocks + (cap64 - 1);
+    pool->blocks[cap64 - 1].data.next = -1;
+    pool->capacity = cap64;
 }
 
 void basic_pool_cleanup(struct basic_pool* pool) {

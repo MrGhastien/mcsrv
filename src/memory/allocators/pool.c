@@ -44,8 +44,9 @@ static void add_node_to_free_list(PoolAllocator* pool, struct obj_node* node) {
 
 static void prepare_block(PoolAllocator* pool, const memory_block block) {
     u64 total_stride = pool->stride + NODE_HEADER_SIZE;
-    for(u64 i = 0; i < block_capacity(block); i+= total_stride) {
-        struct obj_node* node = offset(block_memory(block), i);
+    u64 block_element_capacity = block_capacity(block) / total_stride;
+    for(u64 i = 0; i < block_element_capacity; i++) {
+        struct obj_node* node = offset(block_memory(block), i * total_stride);
         add_node_to_free_list(pool, node);
     }
 }
@@ -63,14 +64,17 @@ static void init_free_list(PoolAllocator* pool) {
 }
 
 static void pool_init_common(PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev) {
+    u64 actual_stride = max_u64(stride, sizeof(struct obj_node*));
     pool->mem = create_chain(tag, prev);
     pool->capacity = capacity;
-    pool->stride = max_u64(stride, sizeof(struct obj_node*));
+    pool->stride = actual_stride;
     pool->head = NULL;
     pool->tail = NULL;
     pool->size = 0;
 
-    alloc_block(capacity * (pool->stride + NODE_HEADER_SIZE), pool->mem);
+    u64 total_stride = actual_stride + NODE_HEADER_SIZE;
+    memory_block blk = alloc_block(capacity * total_stride, pool->mem);
+    pool->capacity = block_capacity(blk) / total_stride;
     init_free_list(pool);
 }
 
