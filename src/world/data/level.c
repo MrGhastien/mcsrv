@@ -53,7 +53,7 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
         if (nbt_move_to_cstr(nbt, "Name") != NBTE_OK) // 2
             platform_abort();
         string* name = nbt_get_string(nbt);
-        log_debugf("    Palette: %s", cstr(name));
+        log_tracef("    Palette: %s", cstr(name));
         ResourceID id;
         assert(resid_parse(name, &arena, &id));
 
@@ -69,10 +69,10 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
 
             do {
                 const string* prop_name = nbt_get_name(nbt);
-                log_debugf("      Reading property '%s'", cstr(prop_name));
+                log_tracef("      Reading property '%s'", cstr(prop_name));
                 const string* prop_value = nbt_get_string(nbt);
                 const StateProperty* prop = get_state_property_by_name(selector.block, *prop_name);
-                assert(prop != NULL);
+                platform_assert(prop != NULL, "");
                 selector_set(&selector, prop, parse_state_property_value(*prop_value, prop));
             } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
 
@@ -91,7 +91,7 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
     } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
 
     nbt_move_to_parent(nbt); // 0
-    log_debug("Chunk block palette load OK");
+    log_trace("Chunk block palette load OK");
 }
 
 static void read_block_indices(NBT* nbt, ChunkSection* section) {
@@ -114,7 +114,7 @@ static void read_block_indices(NBT* nbt, ChunkSection* section) {
 
     } while (nbt_move_to_next_sibling(nbt) == NBTE_OK);
     nbt_move_to_parent(nbt); // 0
-    log_debug("Chunk block indices load OK");
+    log_trace("Chunk block indices load OK");
 }
 
 static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
@@ -132,7 +132,7 @@ static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
     }
     nbt_move_to_parent(nbt); // 0
 
-    log_debugf("  Reading section Y=%i", y);
+    log_tracef("  Reading section Y=%i", y);
 
     nbt_move_to_cstr(nbt, "block_states"); // 1
     nbt_move_to_cstr(nbt, "palette");      // 2
@@ -155,7 +155,7 @@ static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
 
     nbt_move_to_parent(nbt); // 0
 
-    log_debug("Chunk section load OK");
+    log_trace("Chunk section load OK");
 
     return section;
 }
