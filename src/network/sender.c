@@ -6,7 +6,6 @@
 
 #include "containers/bytebuffer.h"
 #include "logger.h"
-#include "memory/memory.h"
 #include "platform/network.h"
 
 #define MAX_PACKET_SIZE 2097151
@@ -17,36 +16,36 @@ void send_packet(const Packet* pkt, Connection* conn) {
         return;
 
     mcmutex_lock(&conn->mutex);
-    arena_save(&conn->scratch_arena);
-    ByteBuffer scratch = bytebuf_create_fixed(MAX_PACKET_SIZE, &conn->scratch_arena);
+    Arena scratch_arena = conn->scratch_arena;
+    ByteBuffer scratch_buffer = bytebuf_create_fixed(MAX_PACKET_SIZE, &scratch_arena);
 
-    bytebuf_write_varint(&scratch, pkt->id);
-    encoder(pkt, &scratch);
+    bytebuf_write_varint(&scratch_buffer, pkt->id);
+    encoder(pkt, &scratch_buffer);
 
     log_debugf("Packet OUT: %s", get_pkt_name(pkt, conn, TRUE));
 
     if (conn->compression) {
-        if (scratch.size >= conn->cmprss_ctx.threshold) {
-            u64 uncompressed_size = scratch.size;
+        if (scratch_buffer.size >= conn->cmprss_ctx.threshold) {
+            u64 uncompressed_size = scratch_buffer.size;
             ByteBuffer compressed_scratch =
-                bytebuf_create_fixed(uncompressed_size, &conn->scratch_arena);
-            compression_compress(&conn->cmprss_ctx, &compressed_scratch, &scratch);
+                bytebuf_create_fixed(uncompressed_size, &scratch_arena);
+            compression_compress(&conn->cmprss_ctx, &compressed_scratch, &scratch_buffer);
 
             bytebuf_prepend_varint(&compressed_scratch, uncompressed_size);
-            scratch = compressed_scratch;
+            scratch_buffer = compressed_scratch;
         } else {
-            bytebuf_prepend_varint(&scratch, 0);
+            bytebuf_prepend_varint(&scratch_buffer, 0);
         }
     }
 
-    bytebuf_prepend_varint(&scratch, scratch.size);
+    bytebuf_prepend_varint(&scratch_buffer, scratch_buffer.size);
 
     if (conn->encryption) {
-        if (!encryption_cipher(&conn->peer_enc_ctx, &scratch, 0))
-            return;
+        if (!encryption_cipher(&conn->peer_enc_ctx, &scratch_buffer, 0))
+            goto cleanup;
     }
 
-    bytebuf_write_buffer(&conn->send_buffer, &scratch);
+    bytebuf_write_buffer(&conn->send_buffer, &scratch_buffer);
 
     if(!conn->pending_send) {
         enum IOCode code;
@@ -57,7 +56,7 @@ void send_packet(const Packet* pkt, Connection* conn) {
             conn->pending_send = TRUE;
     }
 
+cleanup:
 
-    arena_restore(&conn->scratch_arena);
     mcmutex_unlock(&conn->mutex);
 }
