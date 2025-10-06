@@ -18,7 +18,7 @@ void increment_parent_total_lengths(JSON* json) {
             token->data.compound.total_node_length++;
             break;
         default:
-            log_fatalf("JSON token of type %i cannot be a parent of other tokens !", token->type);
+            log_fatalf("[JSON] Token of type %i cannot be a parent of other tokens !", token->type);
             abort();
             break;
         }
@@ -284,7 +284,7 @@ enum JSONStatus json_move_to_name(JSON* json, const string* name) {
         idx += get_total_length(child_token);
     }
 
-    log_errorf("Could not find a JSON token with name %s.", name->base);
+    log_errorf("[JSON] Could not find a JSON token with name '%s'.", name->base);
     return JSONE_NOT_FOUND;
 }
 enum JSONStatus json_move_to_cstr(JSON* json, const char* name) {
@@ -300,7 +300,7 @@ enum JSONStatus json_move_to_index(JSON* json, i32 index) {
         return JSONE_INCOMPATIBLE_TYPE;
 
     if (index < 0 || index >= token->data.compound.size) {
-        log_errorf("JSON: Index %i is out of the compound element bounds.", index);
+        log_errorf("[JSON] Index %i is out of the compound element bounds.", index);
         return JSONE_NOT_FOUND;
     }
 
@@ -349,7 +349,7 @@ enum JSONStatus json_move_to_prev_sibling(JSON* json) {
 i8 json_get_bool(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_BOOL) {
-        log_fatalf("Cannot get boolean value of JSON token of type %i", token->type);
+        log_fatalf("[JSON] Cannot get boolean value of JSON token of type %i", token->type);
         abort();
     }
 
@@ -358,7 +358,7 @@ i8 json_get_bool(JSON* json) {
 i64 json_get_int(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_INT) {
-        log_fatalf("Cannot get integer value of JSON token of type %i", token->type);
+        log_fatalf("[JSON] Cannot get integer value of JSON token of type %i", token->type);
         abort();
     }
 
@@ -367,7 +367,7 @@ i64 json_get_int(JSON* json) {
 f64 json_get_float(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_FLOAT) {
-        log_fatalf("Cannot get float value of JSON token of type %i", token->type);
+        log_fatalf("[JSON] Cannot get float value of JSON token of type %i", token->type);
         abort();
     }
 
@@ -377,7 +377,7 @@ f64 json_get_float(JSON* json) {
 i64 json_get_length(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_OBJECT && token->type != JSON_ARRAY) {
-        log_fatalf("Cannot get length of JSON token of type %i", token->type);
+        log_fatalf("[JSON] Cannot get length of JSON token of type %i", token->type);
         abort();
     }
 
@@ -397,7 +397,7 @@ string* json_get_name(JSON* json) {
 string* json_get_string(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_STRING) {
-        log_fatalf("Cannot get string value of tag of type %i", token->type);
+        log_fatalf("[JSON] Cannot get string value of tag of type %i", token->type);
         abort();
     }
     return &token->data.str;

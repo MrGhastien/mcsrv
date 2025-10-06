@@ -98,7 +98,7 @@ static void json_write_token(JSONWriteContext* ctx, IOMux fd) {
         iomux_writec(fd, '"');
         break;
     default:
-        log_errorf("NBT: Unknown JSON token type %i.", token->type);
+        log_errorf("[JSON] Unknown token type %i.", token->type);
         break;
     }
 }
@@ -359,7 +359,7 @@ static enum JSONLexUnit lex_token(IOMux multiplexer, LexUnitValue* value, Arena*
     default:
         if ((c >= '0' && c <= '9') || c == '-')
             return lex_number(multiplexer, c, value, *scratch);
-        log_errorf("JSON: Lexical error: Unknown character '%c'.", c);
+        log_errorf("[JSON] Lexical error: Unknown character '%c'.", c);
         return TOK_ERROR;
     }
 }
@@ -381,7 +381,7 @@ static enum JSONLexUnit peek_token(ParsingInfo* info) {
     enum JSONLexUnit unit;
     vect_get(info->tok_list, info->idx, &unit);
     if (unit >= _TOK_COUNT || unit < TOK_LBRACE)
-        log_errorf("Tokenized invalid lexical unit %i", unit);
+        log_errorf("[JSON] Tokenized invalid lexical unit %i", unit);
     return unit;
 }
 
@@ -389,7 +389,7 @@ static enum JSONLexUnit pop_token(ParsingInfo* info) {
     enum JSONLexUnit unit;
     vect_get(info->tok_list, info->idx, &unit);
     if (unit >= _TOK_COUNT || unit < TOK_LBRACE)
-        log_errorf("Tokenized invalid lexical unit %i", unit);
+        log_errorf("[JSON] Tokenized invalid lexical unit %i", unit);
     info->idx++;
     return unit;
 }
@@ -431,13 +431,13 @@ static enum JSONStatus json_analyze_obj(ParsingInfo* info) {
     do {
         unit = pop_token(info);
         if (unit != TOK_STRING) {
-            log_errorf("Invalid property type: expected string, got '%s'.", names[unit]);
+            log_errorf("[JSON] Invalid property type: expected string, got '%s'.", names[unit]);
             return JSONE_INVALID_TYPE;
         }
         val = pop_value(info);
         unit = pop_token(info);
         if (unit != TOK_COLON) {
-            log_errorf("Invalid property delimiter: expected ':', got '%s'.", names[unit]);
+            log_errorf("[JSON] Invalid property delimiter: expected ':', got '%s'.", names[unit]);
             return JSONE_UNEXPECTED_TOKEN;
         }
 
@@ -450,8 +450,8 @@ static enum JSONStatus json_analyze_obj(ParsingInfo* info) {
         unit = pop_token(info);
     } while (unit == TOK_COMMA);
     if (unit != TOK_RBRACE) {
-        log_errorf("Unexpected token: expected '}', got '%s'.", names[unit]);
-        log_error("Perhaps a comma is missing ?");
+        log_errorf("[JSON] Unexpected token: expected '}', got '%s'.", names[unit]);
+        log_error("[JSON] Perhaps a comma is missing ?");
         return JSONE_UNEXPECTED_TOKEN;
     }
 
@@ -471,8 +471,8 @@ static enum JSONStatus json_analyze_array(ParsingInfo* info) {
         unit = pop_token(info);
     } while (unit == TOK_COMMA);
     if (unit != TOK_RBRACKET) {
-        log_errorf("Unexpected token: expected ']', got '%s'.", names[unit]);
-        log_error("Perhaps a comma is missing ?");
+        log_errorf("[JSON] Unexpected token: expected ']', got '%s'.", names[unit]);
+        log_error("[JSON] Perhaps a comma is missing ?");
         return JSONE_UNEXPECTED_TOKEN;
     }
     return JSONE_OK;
@@ -480,7 +480,7 @@ static enum JSONStatus json_analyze_array(ParsingInfo* info) {
 
 static enum JSONStatus json_analyze(ParsingInfo* info) {
     if(vect_size(&info->json->stack) > 512) {
-        log_error("Reached maximum nesting depth of 512");
+        log_error("[JSON] Reached maximum nesting depth of 512");
         return JSONE_MAX_NESTING;
     }
     enum JSONStatus status;
@@ -497,7 +497,7 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
         i64 new_index = vect_size(&info->json->tokens);
         append_token(info->json, &new_token);
         if(!vect_add(&info->json->stack, &new_index)) {
-            log_error("Reached maximum nesting depth of 512");
+            log_error("[JSON] Reached maximum nesting depth of 512");
             return JSONE_MAX_NESTING;
         }
         status = json_analyze_obj(info);
@@ -508,7 +508,7 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
         i64 new_index = vect_size(&info->json->tokens);
         append_token(info->json, &new_token);
         if(!vect_add(&info->json->stack, &new_index)) {
-            log_error("Reached maximum nesting depth of 512");
+            log_error("[JSON] Reached maximum nesting depth of 512");
             return JSONE_MAX_NESTING;
         }
         status = json_analyze_array(info);
@@ -527,7 +527,7 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
         append_token(info->json, &new_token);
         return JSONE_OK;
     default:
-        log_errorf("Unexpected token %s.", names[unit]);
+        log_errorf("[JSON] Unexpected token %s.", names[unit]);
         return JSONE_UNEXPECTED_TOKEN;
     }
 }
@@ -567,10 +567,10 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
     if (status == JSONE_OK) {
         enum JSONLexUnit unit = pop_token(&info);
         if (unit != TOK_EOF) {
-            log_error("Extra tokens detected after end of JSON tree");
+            log_error("[JSON] Extra tokens detected after end of JSON tree");
             status = JSONE_UNEXPECTED_TOKEN;
         } else if (vect_size(&info.json->stack) > 0) {
-            log_error("Missing delimiter for composite token.");
+            log_error("[JSON] Missing delimiter for composite token.");
             status = JSONE_MISSING_TOKEN;
         } else {
             assert(info.val_idx == vect_size(&unit_values));
@@ -584,7 +584,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
 enum JSONStatus json_from_file(string path, Arena* arena, JSON* out_json) {
     IOMux mux = iomux_open(&path, "r");
     if(mux == -1) {
-        log_errorf("Could not open file for JSON parsing: %s", get_last_error());
+        log_errorf("[JSON] Could not open file for JSON parsing: %s", get_last_error());
         return JSONE_IO;
     }
 
