@@ -1,4 +1,5 @@
 #include "basic_pool.h"
+#include "logger.h"
 #include "platform/platform.h"
 #include "utils/bitwise.h"
 #include <string.h>
@@ -42,8 +43,8 @@ void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType ty
         n->data.next = i + 1;
         n->allocated = FALSE;
     }
-    pool->head = pool->blocks;
-    pool->tail = pool->blocks + (cap64 - 1);
+    pool->head = &pool->blocks[0];
+    pool->tail = &pool->blocks[cap64 - 1];
     pool->blocks[cap64 - 1].data.next = -1;
     pool->capacity = cap64;
 }
@@ -91,6 +92,7 @@ void* basic_pool_alloc(struct basic_pool* pool, i32* out_idx) {
         pool->tail = NULL;
     } else
         pool->head = &pool->blocks[next];
+
     target->allocated = TRUE;
     switch (pool->type) {
     case POOL_BLOCK:
@@ -102,8 +104,11 @@ void* basic_pool_alloc(struct basic_pool* pool, i32* out_idx) {
     default:
         platform_abort();
     }
-    if(out_idx)
-        *out_idx = target - pool->blocks;
+    if(out_idx) {
+        i32 idx = target - pool->blocks;
+        platform_assert((u32)idx < pool->capacity && idx >= 0, "Index of newly allocated node is out of bounds !");
+        *out_idx = idx;
+    }
 
     pool->size++;
 
@@ -111,8 +116,10 @@ void* basic_pool_alloc(struct basic_pool* pool, i32* out_idx) {
 }
 
 void basic_pool_free(struct basic_pool* pool, void* ptr) {
-    struct node* node = offset(ptr, sizeof(node->data) - sizeof(struct node));
-    i64 index = (u64) node - (u64) pool->blocks;
+    struct node* node = offset(ptr, -offsetof(struct node, data));
+    i64 index = node - pool->blocks;
+
+    platform_assert(index < pool->capacity && index >= 0, "Index of node to free is out of bounds !");
 
     node->allocated = FALSE;
     node->data.next = -1;
