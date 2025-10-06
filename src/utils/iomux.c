@@ -193,7 +193,7 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
             mux->error = retrieve_gz_error(mux->backend.gzFile);
         break;
     case IO_BUFFER:
-        bytebuf_read(mux->backend.buffer, size, data);
+        res = bytebuf_read(mux->backend.buffer, size, data);
         break;
     case IO_STRING: {
         u64 cursor = mux->backend.string_backend.cursor;

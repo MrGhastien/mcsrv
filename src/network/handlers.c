@@ -263,8 +263,10 @@ DEF_PKT_HANDLER(crypt_response) {
 
     JSON json;
     bool res = encryption_authenticate_player(conn, &json);
-    if (!res)
+    if (!res) {
+        log_error("Failed to authenticate player against Mojang's servers!");
         return FALSE;
+    }
 
     res = enable_compression(conn);
     if (!res)
