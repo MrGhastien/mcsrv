@@ -2,10 +2,9 @@
 #define PLAYER_H
 
 #include "definitions.h"
-#include "utils/position.h"
 
-typedef struct player {
-    Vec3d test;
-} Player;
+typedef struct {
+    int x;
+} PlayerComponent;
 
 #endif /* ! PLAYER_H */

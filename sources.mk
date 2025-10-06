@@ -3,6 +3,7 @@ MAIN_SRC := $(SRC_DIR)/main.c
 SRCS := $(SRC_DIR)/logger1.c \
 		$(SRC_DIR)/world/data/blockstate.c \
 		$(SRC_DIR)/world/data/level.c \
+		$(SRC_DIR)/world/data/entity/entity.c \
 		$(SRC_DIR)/world/simulation/simulation.c \
 		$(SRC_DIR)/logger.c \
 		$(SRC_DIR)/network/network.c \

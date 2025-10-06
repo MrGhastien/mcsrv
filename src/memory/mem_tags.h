@@ -34,6 +34,7 @@ enum MemoryChainTag {
     BLK_TAG_MEMORY,
     BLK_TAG_DATA,
     BLK_TAG_LEVEL,
+    BLK_TAG_ENTITY,
 
     _BLK_TAG_COUNT,
 };

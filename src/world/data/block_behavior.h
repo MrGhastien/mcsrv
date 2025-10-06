@@ -71,8 +71,8 @@ typedef struct block_behavior {
     void (*new_state_change)(const BlockState* new_state, Level* level, Vec3i pos, const BlockState* old_state, bool notify);
     void (*old_state_change)(const BlockState* old_state, Level* level, Vec3i pos, const BlockState* new_state, bool moved);
     void (*on_exploded)(const BlockState* state, Level* level, Vec3i pos, const Explosion* explosion, void* stack_merger); // TODO stack merger type
-    enum UseResult (*on_use_no_item)(const BlockState* state, Level* level, Vec3i pos, Player* player, BlockHitResult* hit);
-    enum ItemUseResult (*on_use_with_item)(const BlockState* state, Level* level, Vec3i pos, Player* player, BlockHitResult* hit, void* item); // TODO: Item
+    enum UseResult (*on_use_no_item)(const BlockState* state, Level* level, Vec3i pos, long player_entity_id, BlockHitResult* hit);
+    enum ItemUseResult (*on_use_with_item)(const BlockState* state, Level* level, Vec3i pos, long player_entity_id, BlockHitResult* hit, void* item); // TODO: Item
     bool (*on_block_event)(const BlockState* state, Level* level, Vec3i pos, i32 type, i32 data);
 
     // Getter functions

@@ -2,6 +2,7 @@ HDRS := $(SRC_DIR)/world/data/block.h \
 		$(SRC_DIR)/world/data/block_behavior.h \
 		$(SRC_DIR)/world/data/chunk.h \
 		$(SRC_DIR)/world/data/entity/player.h \
+		$(SRC_DIR)/world/data/entity/entity.h \
 		$(SRC_DIR)/world/data/explosion.h \
 		$(SRC_DIR)/world/data/level.h \
 		$(SRC_DIR)/world/level.h \
