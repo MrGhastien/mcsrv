@@ -218,6 +218,7 @@ static void register_blocks_internal(JSON* json) {
     } while (json_move_to_next_sibling(json) == JSONE_OK);
 }
 
+#ifdef DEBUG
 static void print_property(void* obj, i64 idx, void* data) {
     UNUSED(data);
     Arena scratch = arena;
@@ -269,6 +270,7 @@ static void print_property(void* obj, i64 idx, void* data) {
 static void print_state_properties(void) {
     pool_foreach(&property_pool, &print_property, NULL);
 }
+#endif
 
 void register_blocks(void) {
 
