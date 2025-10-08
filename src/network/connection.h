@@ -89,6 +89,8 @@ typedef struct Connection {
     string peer_addr; /**< Address of the connected peer represented by this connection. */
     u32 peer_port;    /**< TCP port of the connected peer. */
 
+    long player_entity_id;
+
     string peer_brand;
     u32 ping;
 
