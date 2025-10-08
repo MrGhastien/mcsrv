@@ -1,5 +1,6 @@
 #include "decoders.h"
 #include "containers/bytebuffer.h"
+#include "containers/vector.h"
 #include "definitions.h"
 #include "logger.h"
 #include "memory/memory.h"
@@ -137,6 +138,8 @@ DEF_PKT_DECODER(cfg_known_datapacks) {
 
     i32 count;
     bytebuf_read_varint(bytes, &count);
+
+    vect_init(&payload->known_packs, arena, count, sizeof(KnownDatapack));
 
     for (i32 i = 0; i < count; ++i) {
         KnownDatapack pack;
