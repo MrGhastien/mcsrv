@@ -14,18 +14,18 @@
 #include <stdlib.h>
 
 static const char* TYPE_NAMES[] = {
-    [NBT_END] = "NBT_END",
-    [NBT_BYTE] = "NBT_BYTE",
-    [NBT_SHORT] = "NBT_SHORT",
-    [NBT_INT] = "NBT_INT",
-    [NBT_LONG] = "NBT_LONG",
-    [NBT_FLOAT] = "NBT_FLOAT",
-    [NBT_DOUBLE] = "NBT_DOUBLE",
+    [NBT_END]        = "NBT_END",
+    [NBT_BYTE]       = "NBT_BYTE",
+    [NBT_SHORT]      = "NBT_SHORT",
+    [NBT_INT]        = "NBT_INT",
+    [NBT_LONG]       = "NBT_LONG",
+    [NBT_FLOAT]      = "NBT_FLOAT",
+    [NBT_DOUBLE]     = "NBT_DOUBLE",
     [NBT_BYTE_ARRAY] = "NBT_BYTE_ARRAY",
-    [NBT_STRING] = "NBT_STRING",
-    [NBT_LIST] = "NBT_LIST",
-    [NBT_COMPOUND] = "NBT_COMPOUND",
-    [NBT_INT_ARRAY] = "NBT_INT_ARRAY",
+    [NBT_STRING]     = "NBT_STRING",
+    [NBT_LIST]       = "NBT_LIST",
+    [NBT_COMPOUND]   = "NBT_COMPOUND",
+    [NBT_INT_ARRAY]  = "NBT_INT_ARRAY",
     [NBT_LONG_ARRAY] = "NBT_LONG_ARRAY",
 };
 
@@ -71,7 +71,7 @@ static i32 get_total_length(const NBTTag* tag) {
 }
 
 static void append_tag(NBT* nbt, NBTTag* new_tag) {
-    NBTTag* parent = get_current_tag(nbt);
+    NBTTag* parent     = get_current_tag(nbt);
     new_tag->local_idx = nbt_get_size(nbt);
     vect_peek(&nbt->stack, &new_tag->parent_idx);
     new_tag->prev_sibling_idx = parent->data.composite.last_child;
@@ -82,7 +82,7 @@ static void append_tag(NBT* nbt, NBTTag* new_tag) {
 
 bool is_array(const enum NBTTagType type) {
     return type == NBT_LIST || type == NBT_BYTE_ARRAY || type == NBT_INT_ARRAY ||
-             type == NBT_LONG_ARRAY;
+           type == NBT_LONG_ARRAY;
 }
 
 // static bool is_composite(const NBTTag* tag) {
@@ -95,12 +95,13 @@ NBT nbt_create(Arena* arena, u64 max_token_count) {
     nbt_init_empty(arena, max_token_count, &nbt);
 
     NBTTag* root = vect_reserve(&nbt.tags);
-    *root = (NBTTag){
-        .type = NBT_COMPOUND,
-        .data.composite = {
-            .total_tag_length = 1,
-            .last_child = -1,
-        },
+    *root        = (NBTTag) {
+               .type = NBT_COMPOUND,
+               .data.composite =
+            {
+                             .total_tag_length = 1,
+                             .last_child       = -1,
+                             },
     };
 
     vect_add_imm(&nbt.stack, 0LL, i64);
@@ -152,7 +153,7 @@ enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleVa
     }
 
     NBTTag new_tag = {
-        .type = tag->data.list.elem_type,
+        .type        = tag->data.list.elem_type,
         .data.simple = value,
     };
     append_tag(nbt, &new_tag);
@@ -169,7 +170,7 @@ enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
         return NBTE_INCOMPATIBLE_TYPE;
 
     NBTTag new_tag = {
-        .type = tag->data.list.elem_type,
+        .type     = tag->data.list.elem_type,
         .data.str = str_create_copy(str, nbt->arena),
     };
     append_tag(nbt, &new_tag);
@@ -199,9 +200,9 @@ nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimp
         return NBTE_INVALID_PARENT;
 
     NBTTag new_tag = {
-        .type = type,
+        .type        = type,
         .data.simple = value,
-        .name = str_create_copy(name, nbt->arena),
+        .name        = str_create_copy(name, nbt->arena),
     };
     append_tag(nbt, &new_tag);
     return NBTE_OK;
@@ -212,9 +213,9 @@ enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str) {
         return NBTE_INVALID_PARENT;
 
     NBTTag new_tag = {
-        .type = tag->data.list.elem_type,
+        .type     = tag->data.list.elem_type,
         .data.str = str_create_copy(str, nbt->arena),
-        .name = str_create_copy(name, nbt->arena),
+        .name     = str_create_copy(name, nbt->arena),
     };
     append_tag(nbt, &new_tag);
     return NBTE_OK;
@@ -313,7 +314,7 @@ enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
         idx += get_total_length(child_tag);
     }
 
-    //log_errorf("Could not find NBTag with name '%s'.", name->base);
+    // log_errorf("Could not find NBTag with name '%s'.", name->base);
     return NBTE_NOT_FOUND;
 }
 enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name) {
@@ -349,7 +350,7 @@ enum NBTStatus nbt_move_to_next_sibling(NBT* nbt) {
     i64 parent_idx;
     vect_get(&nbt->stack, nbt->stack.size - 2, &parent_idx);
     NBTTag* parent = vect_ref(&nbt->tags, parent_idx);
-    if (tag->local_idx + 1 >= (i64)parent->data.array_size)
+    if (tag->local_idx + 1 >= (i64) parent->data.array_size)
         return NBTE_NOT_FOUND;
 
     i64 global_index;

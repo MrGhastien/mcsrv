@@ -1,49 +1,48 @@
 #include "arena.h"
 #include "logger.h"
+#include "memory/_memory_internal.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
-#include "memory/_memory_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-
 Arena arena_create(u64 size, enum MemoryChainTag tag, memory_chain parent) {
-    size = ceil_u64(size, sizeof(uintptr_t));
+    size               = ceil_u64(size, sizeof(uintptr_t));
     memory_chain chain = create_chain(tag, parent);
     memory_block block = alloc_block(size, chain);
 
     if (block < 0)
-        return (Arena){0};
+        return (Arena) {0};
 
     log_tracef("Created arena %p of %zu bytes.", block, size);
 
-    return (Arena){
-        .chain = chain,
-        .block = block_memory(block),
-        .capacity = size,
-        .length = 0,
+    return (Arena) {
+        .chain        = chain,
+        .block        = block_memory(block),
+        .capacity     = size,
+        .length       = 0,
         .saved_length = ~0,
-        .logging = TRUE,
+        .logging      = TRUE,
     };
 }
 
 Arena arena_create_silent(u64 size, enum MemoryChainTag tag, memory_chain parent) {
-    size = ceil_u64(size, sizeof(uintptr_t));
+    size               = ceil_u64(size, sizeof(uintptr_t));
     memory_chain chain = create_chain(tag, parent);
     memory_block block = alloc_block(size, chain);
 
     if (!block)
-        return (Arena){0};
+        return (Arena) {0};
 
-    return (Arena){
-        .chain = chain,
-        .block = block_memory(block),
-        .capacity = size,
-        .length = 0,
+    return (Arena) {
+        .chain        = chain,
+        .block        = block_memory(block),
+        .capacity     = size,
+        .length       = 0,
         .saved_length = ~0,
-        .logging = FALSE,
+        .logging      = FALSE,
     };
 }
 
@@ -73,7 +72,7 @@ void* arena_allocate(Arena* arena, u64 bytes /*, enum AllocTag tags */) {
     }
 
     void* ptr = offset(arena->block, arena->length);
-    //register_alloc(arena->chain->head, arena->length, arena->length + bytes, tags);
+    // register_alloc(arena->chain->head, arena->length, arena->length + bytes, tags);
     arena->length += bytes;
     if (arena->logging) {
         log_tracef("Allocated %zu bytes from %p (%zu/%zu).",
@@ -96,7 +95,7 @@ void arena_free(Arena* arena, u64 bytes) {
         bytes = arena->length;
 
     arena->length -= bytes;
-    //unregister_alloc(arena->chain->head, arena->length);
+    // unregister_alloc(arena->chain->head, arena->length);
     if (arena->logging) {
         log_tracef("Freed %zu bytes from %p (%zu/%zu).",
                    bytes,

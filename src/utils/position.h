@@ -106,7 +106,10 @@ i32 vec2i_compare(const Vec2i* lhs, const Vec2i* rhs);
 
 #define pos_chunk_to_region(cpos) ((RegionPos) {.x = cpos.x >> 5, .y = cpos.y >> 5})
 
-#define CHUNK_POS(px, py) (ChunkPos){ .x = (px), .y = (py)}
+#define CHUNK_POS(px, py)                                                                          \
+    (ChunkPos) {                                                                                   \
+        .x = (px), .y = (py)                                                                       \
+    }
 
 // TODO: Add utility functions
 

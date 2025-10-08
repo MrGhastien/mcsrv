@@ -4,7 +4,7 @@
  * Interface for creating, saving and loading Named Binary Tag (NBT) trees.
  *
  * ### Interface description
-*
+ *
  * In this interface, NBT trees always have one tag selected. Most operations on NBT tags operate
  * on the selected tag, and there are specific functions to change the selection.
  *
@@ -27,7 +27,8 @@
  * You can navigate between children/parents by calling @ref nbt_move_to_name (for compound tags),
  * @ref nbt_move_to_index (for list and array tags) and @ref nbt_move_to_parent.
  *
- * You can also navigate between siblings : @ref nbt_move_to_next_sibling, @ref nbt_move_to_prev_sibling.
+ * You can also navigate between siblings : @ref nbt_move_to_next_sibling, @ref
+ * nbt_move_to_prev_sibling.
  *
  * #### Querying tag values
  *
@@ -161,14 +162,14 @@
  *   These functions can set the value of a tag directly after creating it.
  * - You can add any type of tag with @ref nbt_push and @ref nbt_put, but their value
  *   will be initialized to zero / empty.
-*/
+ */
 
 #ifndef NBT_H
 #define NBT_H
 
 #include "containers/vector.h"
-#include "utils/string.h"
 #include "utils/iomux.h"
+#include "utils/string.h"
 
 enum NBTStatus {
     NBTE_OK = 0,
@@ -216,148 +217,152 @@ typedef struct NBT {
 /* === Building part === */
 
 /**
-* Creates a new NBT tree.
-*
-* @param[in] arena The arena used to allocate memory for the NBT tree.
-* @param[in] max_token_count Maximum amount of tags (nodes) in this NBT tree.
-* @return The newly initialized NBT tree.
-*/
+ * Creates a new NBT tree.
+ *
+ * @param[in] arena The arena used to allocate memory for the NBT tree.
+ * @param[in] max_token_count Maximum amount of tags (nodes) in this NBT tree.
+ * @return The newly initialized NBT tree.
+ */
 NBT nbt_create(Arena* arena, u64 max_token_count);
 
 /**
-* Adds a simple value tag to the current NBT list.
-*
-* If the current tag is not a list or an array, this function does nothing.
-*
-* @param[in] nbt The NBT tree containing the list or array to push into.
-* @param[in] type The type of tag to push.
-* @param[in] value An union containing the value to push. Ignored if @ref type is not an integer or floating point number.
-*/
+ * Adds a simple value tag to the current NBT list.
+ *
+ * If the current tag is not a list or an array, this function does nothing.
+ *
+ * @param[in] nbt The NBT tree containing the list or array to push into.
+ * @param[in] type The type of tag to push.
+ * @param[in] value An union containing the value to push. Ignored if @ref type is not an integer or
+ * floating point number.
+ */
 enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleValue value);
 /**
-* Adds a string tag to the current NBT list.
-*
-* If the current tag is not a list this function does nothing.
-*
-* @param[in] nbt The NBT tree containing the list to push into.
-* @param[in] str The string to push.
-*/
+ * Adds a string tag to the current NBT list.
+ *
+ * If the current tag is not a list this function does nothing.
+ *
+ * @param[in] nbt The NBT tree containing the list to push into.
+ * @param[in] str The string to push.
+ */
 enum NBTStatus nbt_push_str(NBT* nbt, const string* str);
 /**
-* Adds a tag to the current NBT list.
-*
-* The newly pushed tag is initialized to zero. It can be set using the `nbt_set_*` family of functions.
-* If the current tag is not a list this function does nothing.
-*
-* @param[in] nbt The NBT tree containing the list to push into.
-* @param[in] type The type of tag to push.
-*/
+ * Adds a tag to the current NBT list.
+ *
+ * The newly pushed tag is initialized to zero. It can be set using the `nbt_set_*` family of
+ * functions. If the current tag is not a list this function does nothing.
+ *
+ * @param[in] nbt The NBT tree containing the list to push into.
+ * @param[in] type The type of tag to push.
+ */
 enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type);
 
 /**
-* Adds a simple value tag to the current compound NBT.
-*
-* If the current tag is not a compound this function does nothing.
-*
-* @param[in] nbt The NBT tree containing the compound to put into.
-* @param[in] name The name of the tag to put into the current compound.
-* @param[in] type The type of the tag.
-* @param[in] value A union containing the value to put. Ignored if @ref type is not an integer or floating point number type.
-*/
-enum NBTStatus nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimpleValue value);
+ * Adds a simple value tag to the current compound NBT.
+ *
+ * If the current tag is not a compound this function does nothing.
+ *
+ * @param[in] nbt The NBT tree containing the compound to put into.
+ * @param[in] name The name of the tag to put into the current compound.
+ * @param[in] type The type of the tag.
+ * @param[in] value A union containing the value to put. Ignored if @ref type is not an integer or
+ * floating point number type.
+ */
+enum NBTStatus
+nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimpleValue value);
 /**
-* Adds a string tag to the current compound NBT.
-*
-* If the current tag is not a compound this function does nothing.
-*
-* @param[in] nbt The NBT tree containing the compound to put into.
-* @param[in] name The name of the tag to put into the current compound.
-* @param[in] str The string value of the tag.
-*/
+ * Adds a string tag to the current compound NBT.
+ *
+ * If the current tag is not a compound this function does nothing.
+ *
+ * @param[in] nbt The NBT tree containing the compound to put into.
+ * @param[in] name The name of the tag to put into the current compound.
+ * @param[in] str The string value of the tag.
+ */
 enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str);
 /**
-* Adds a tag to the current compound NBT.
-*
-* If the current tag is not a compound this function does nothing.
-*
-* @param[in] nbt The NBT tree containing the compound to put into.
-* @param[in] name The name of the tag to put into the current compound.
-* @param[in] type The type of the tag.
-*/
+ * Adds a tag to the current compound NBT.
+ *
+ * If the current tag is not a compound this function does nothing.
+ *
+ * @param[in] nbt The NBT tree containing the compound to put into.
+ * @param[in] name The name of the tag to put into the current compound.
+ * @param[in] type The type of the tag.
+ */
 enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type);
 
 /**
-* Sets the value of the current byte tag.
-*
-* @param[in] nbt The NBT tree containing the tag to set.
-* @param[in] value The value to set the tag to.
-*/
+ * Sets the value of the current byte tag.
+ *
+ * @param[in] nbt The NBT tree containing the tag to set.
+ * @param[in] value The value to set the tag to.
+ */
 enum NBTStatus nbt_set_byte(NBT* nbt, i32 value);
 
 /**
-* Convenience function to set the current byte tag to a boolean value.
-*
-* The byte tag is set to `1` if @p value is @ref TRUE, otherwise it is set to `0`.
-*
-* @param[in] nbt The NBT tree containing the tag to set.
-* @param[in] value The value to set the tag to.
-*/
+ * Convenience function to set the current byte tag to a boolean value.
+ *
+ * The byte tag is set to `1` if @p value is @ref TRUE, otherwise it is set to `0`.
+ *
+ * @param[in] nbt The NBT tree containing the tag to set.
+ * @param[in] value The value to set the tag to.
+ */
 enum NBTStatus nbt_set_bool(NBT* nbt, bool value);
 
 /**
-* Sets the value of the current short integer tag.
-*
-* @param[in] nbt The NBT tree containing the tag to set.
-* @param[in] value The value to set the tag to.
-*/
+ * Sets the value of the current short integer tag.
+ *
+ * @param[in] nbt The NBT tree containing the tag to set.
+ * @param[in] value The value to set the tag to.
+ */
 enum NBTStatus nbt_set_short(NBT* nbt, i32 value);
 
 /**
-* Sets the value of the current integer tag.
-*
-* @param[in] nbt The NBT tree containing the tag to set.
-* @param[in] value The value to set the tag to.
-*/
+ * Sets the value of the current integer tag.
+ *
+ * @param[in] nbt The NBT tree containing the tag to set.
+ * @param[in] value The value to set the tag to.
+ */
 enum NBTStatus nbt_set_int(NBT* nbt, i32 value);
 
 /**
-* Sets the value of the current long integer tag.
-*
-* @param[in] nbt The NBT tree containing the tag to set.
-* @param[in] value The value to set the tag to.
-*/
+ * Sets the value of the current long integer tag.
+ *
+ * @param[in] nbt The NBT tree containing the tag to set.
+ * @param[in] value The value to set the tag to.
+ */
 enum NBTStatus nbt_set_long(NBT* nbt, i64 value);
 
 /**
-* Sets the value of the current floating-point number tag.
-*
-* @param[in] nbt The NBT tree containing the tag to set.
-* @param[in] value The value to set the tag to.
-*/
+ * Sets the value of the current floating-point number tag.
+ *
+ * @param[in] nbt The NBT tree containing the tag to set.
+ * @param[in] value The value to set the tag to.
+ */
 enum NBTStatus nbt_set_float(NBT* nbt, f32 value);
 
 /**
-* Sets the value of the current double-precision floating-point number tag.
-*
-* @param[in] nbt The NBT tree containing the tag to set.
-* @param[in] value The value to set the tag to.
-*/
+ * Sets the value of the current double-precision floating-point number tag.
+ *
+ * @param[in] nbt The NBT tree containing the tag to set.
+ * @param[in] value The value to set the tag to.
+ */
 enum NBTStatus nbt_set_double(NBT* nbt, f64 value);
 
 /**
-* Writes a NBT tree to a file.
-*
-* @param[in] nbt The NBT tree to save.
-* @param[in] path The path of the output file.
-*/
+ * Writes a NBT tree to a file.
+ *
+ * @param[in] nbt The NBT tree to save.
+ * @param[in] path The path of the output file.
+ */
 enum NBTStatus nbt_write_file(const NBT* nbt, const string* path);
 /**
-* Writes a NBT tree to an output stream.
-*
-* @param[in] nbt The NBT tree to save.
-* @param[in] multiplexer An IO multiplexer used to write to the output stream.
-* @param[in] network @ref TRUE if the NBT shall be serialized to be sent through the network, @ref FALSE otherwise.
-*/
+ * Writes a NBT tree to an output stream.
+ *
+ * @param[in] nbt The NBT tree to save.
+ * @param[in] multiplexer An IO multiplexer used to write to the output stream.
+ * @param[in] network @ref TRUE if the NBT shall be serialized to be sent through the network, @ref
+ * FALSE otherwise.
+ */
 enum NBTStatus nbt_write(const NBT* nbt, IOMux multiplexer, bool network);
 
 enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path);
@@ -367,154 +372,155 @@ enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str);
 
 enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, IOMux input, NBT* out_nbt);
 /**
-* Restores a NBT tree from a file.
-*
-* This function initializes and populates a new NBT tree by reading a file.
-* The file can be compressed using gzip.
-*
-* @param[in] arena The arena used to allocate memory for the tree.
-* @param[in] max_token_count The maximum amount of tags to parse.
-* @param[in] path The path to the file to read.
-* @param[out] out_nbt A pointer to an uninitialized NBT tree.
-* @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
-*/
+ * Restores a NBT tree from a file.
+ *
+ * This function initializes and populates a new NBT tree by reading a file.
+ * The file can be compressed using gzip.
+ *
+ * @param[in] arena The arena used to allocate memory for the tree.
+ * @param[in] max_token_count The maximum amount of tags to parse.
+ * @param[in] path The path to the file to read.
+ * @param[out] out_nbt A pointer to an uninitialized NBT tree.
+ * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
+ */
 enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
 
 /**
-* Moves the current tag pointer to the child tag with the given name.
-*
-* If the current tag is not a `NBT_COMPOUND` tag, this function does nothing.
-*
-* @param[in] nbt The NBT tree.
-* @param[in] name The name of the child tag to find.
-*/
+ * Moves the current tag pointer to the child tag with the given name.
+ *
+ * If the current tag is not a `NBT_COMPOUND` tag, this function does nothing.
+ *
+ * @param[in] nbt The NBT tree.
+ * @param[in] name The name of the child tag to find.
+ */
 enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name);
 enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name);
 /**
-* Moves the current tag pointer to the child tag at the given index.
-*
-* If the current tag is not a `NBT_LIST`, `NBT_BYTE_ARRAY`, `NBT_INT_ARRAY` or `NBT_LONG_ARRAY` tag,
-* this function does nothing.
-*
-* @param[in] nbt The NBT tree.
-* @param[in] index The index of the child tag to find.
-*/
+ * Moves the current tag pointer to the child tag at the given index.
+ *
+ * If the current tag is not a `NBT_LIST`, `NBT_BYTE_ARRAY`, `NBT_INT_ARRAY` or `NBT_LONG_ARRAY`
+ * tag, this function does nothing.
+ *
+ * @param[in] nbt The NBT tree.
+ * @param[in] index The index of the child tag to find.
+ */
 enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index);
 /**
-* Moves the current tag pointer to the parent of the current tag.
-*
-* If the current tag is the root tag, this function does nothing.
-*
-* @param[in] nbt The NBT tree.
-*/
+ * Moves the current tag pointer to the parent of the current tag.
+ *
+ * If the current tag is the root tag, this function does nothing.
+ *
+ * @param[in] nbt The NBT tree.
+ */
 enum NBTStatus nbt_move_to_parent(NBT* nbt);
 /**
-* Moves the current tag pointer to the next sibling of the current tag.
-*
-* If the current tag has no sibling or is the last child of a list, array or compound tag,
-* this function does nothing.
-*
-* @param[in] nbt The NBT tree.
-*/
+ * Moves the current tag pointer to the next sibling of the current tag.
+ *
+ * If the current tag has no sibling or is the last child of a list, array or compound tag,
+ * this function does nothing.
+ *
+ * @param[in] nbt The NBT tree.
+ */
 enum NBTStatus nbt_move_to_next_sibling(NBT* nbt);
 /**
-* Moves the current tag pointer to the previous sibling of the current tag.
-*
-* If the current tag has no sibling or is the first child of a list, array or compound tag,
-* this function does nothing.
-*
-* @param[in] nbt The NBT tree.
-*/
+ * Moves the current tag pointer to the previous sibling of the current tag.
+ *
+ * If the current tag has no sibling or is the first child of a list, array or compound tag,
+ * this function does nothing.
+ *
+ * @param[in] nbt The NBT tree.
+ */
 enum NBTStatus nbt_move_to_prev_sibling(NBT* nbt);
 
 enum NBTTagType nbt_get_type(NBT* nbt);
 
 /**
-* Retrieves the byte value of the current tag.
-*
-* If the current tag is not a `NBT_BYTE` tag, this function aborts the server.
-*
-* @param[in] nbt The NBT tree.
-* @return The byte value.
-*/
+ * Retrieves the byte value of the current tag.
+ *
+ * If the current tag is not a `NBT_BYTE` tag, this function aborts the server.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return The byte value.
+ */
 i8 nbt_get_byte(NBT* nbt);
 /**
-* Retrieves the boolean value of the current tag.
-*
-* This is a convenience function to treat byte tags as booleans.
-*
-* @param[in] nbt The NBT tree.
-* @return The boolean value.
-* @see nbt_get_byte(NBT*)
-*/
+ * Retrieves the boolean value of the current tag.
+ *
+ * This is a convenience function to treat byte tags as booleans.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return The boolean value.
+ * @see nbt_get_byte(NBT*)
+ */
 inline bool nbt_get_bool(NBT* nbt) {
     return nbt_get_byte(nbt);
 }
 /**
-* Retrieves the short integer value of the current tag.
-*
-* If the current tag is not a `NBT_SHORT` tag, this function aborts the server.
-*
-* @param[in] nbt The NBT tree.
-* @return The short integer value.
-*/
+ * Retrieves the short integer value of the current tag.
+ *
+ * If the current tag is not a `NBT_SHORT` tag, this function aborts the server.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return The short integer value.
+ */
 i16 nbt_get_short(NBT* nbt);
 /**
-* Retrieves the integer value of the current tag.
-*
-* If the current tag is not a `NBT_INT` tag, this function aborts the server.
-*
-* @param[in] nbt The NBT tree.
-* @return The integer value.
-*/
+ * Retrieves the integer value of the current tag.
+ *
+ * If the current tag is not a `NBT_INT` tag, this function aborts the server.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return The integer value.
+ */
 i32 nbt_get_int(NBT* nbt);
 /**
-* Retrieves the long integer value of the current tag.
-*
-* If the current tag is not a `NBT_LONG` tag, this function aborts the server.
-*
-* @param[in] nbt The NBT tree.
-* @return The long integer value.
-*/
+ * Retrieves the long integer value of the current tag.
+ *
+ * If the current tag is not a `NBT_LONG` tag, this function aborts the server.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return The long integer value.
+ */
 i64 nbt_get_long(NBT* nbt);
 /**
-* Retrieves the floating-point value of the current tag.
-*
-* If the current tag is not a `NBT_FLOAT` tag, this function aborts the server.
-*
-* @param[in] nbt The NBT tree.
-* @return The floating-point value.
-*/
+ * Retrieves the floating-point value of the current tag.
+ *
+ * If the current tag is not a `NBT_FLOAT` tag, this function aborts the server.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return The floating-point value.
+ */
 f32 nbt_get_float(NBT* nbt);
 /**
-* Retrieves the double-precision floating-point value of the current tag.
-*
-* If the current tag is not a `NBT_DOUBLE` tag, this function aborts the server.
-*
-* @param[in] nbt The NBT tree.
-* @return The double-precision floating-point value.
-*/
+ * Retrieves the double-precision floating-point value of the current tag.
+ *
+ * If the current tag is not a `NBT_DOUBLE` tag, this function aborts the server.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return The double-precision floating-point value.
+ */
 f64 nbt_get_double(NBT* nbt);
 
 u64 nbt_get_size(NBT* nbt);
 
 /**
-* Retrieves the name of the current tag.
-*
-* If the parent of the current tag is a list or array tag, this functions return `NULL`.
-*
-* @param[in] nbt The NBT tree.
-* @return A pointer to the name of the tag, or NULL if the tag cannot have a name. The returned string can be modified.
-*/
+ * Retrieves the name of the current tag.
+ *
+ * If the parent of the current tag is a list or array tag, this functions return `NULL`.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return A pointer to the name of the tag, or NULL if the tag cannot have a name. The returned
+ * string can be modified.
+ */
 string* nbt_get_name(NBT* nbt);
 /**
-* Retrieves the string value of the current tag.
-*
-* If the current tag is not a `NBT_STRING` tag, this function aborts the server.
-*
-* @param[in] nbt The NBT tree.
-* @return A pointer to the underlying string value. The string can be modified.
-*/
+ * Retrieves the string value of the current tag.
+ *
+ * If the current tag is not a `NBT_STRING` tag, this function aborts the server.
+ *
+ * @param[in] nbt The NBT tree.
+ * @return A pointer to the underlying string value. The string can be modified.
+ */
 string* nbt_get_string(NBT* nbt);
 
 #endif /* ! NBT_H */

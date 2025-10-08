@@ -13,8 +13,8 @@
 #define OBJECT_POOL_H
 
 #include "definitions.h"
-#include "memory/mem_tags.h"
 #include "memory/_memory_internal.h"
+#include "memory/mem_tags.h"
 
 /**
  * Structure representing a pool of objects.
@@ -24,9 +24,9 @@ typedef struct PoolAllocator {
     struct obj_node* head;
     struct obj_node* tail;
     bool dynamic;
-    u32 capacity;             /**< The total capacity of this vector. */
-    u32 size;                 /**< The number of elements stored inside this vector. */
-    u32 stride;               /**< The size in bytes of elements. */
+    u32 capacity; /**< The total capacity of this vector. */
+    u32 size;     /**< The number of elements stored inside this vector. */
+    u32 stride;   /**< The size in bytes of elements. */
 } PoolAllocator;
 
 /**
@@ -37,7 +37,8 @@ typedef struct PoolAllocator {
  * @param[in] capacity The maximum number of elements the pool can hold.
  * @param[in] stride The size in bytes of the elements.
  */
-void pool_init(PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev);
+void pool_init(
+    PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev);
 /**
  * Initializes a new dynamic object pool.
  *
@@ -47,7 +48,11 @@ void pool_init(PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTa
  * will be made large enough to hold this many elements.
  * @param[in] stride The size in bytes of the elements.
  */
-void pool_init_dynamic(PoolAllocator* pool, u32 initial_capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev);
+void pool_init_dynamic(PoolAllocator* pool,
+                       u32 initial_capacity,
+                       u32 stride,
+                       enum MemoryChainTag tag,
+                       memory_chain prev);
 
 void pool_init_static(PoolAllocator* pool, u32 capacity, u32 stride, memory_chain chain);
 
@@ -81,7 +86,6 @@ bool pool_free(PoolAllocator* pool, void* ptr);
  * @return @ref TRUE if the element exists and has been removed, @ref FALSE otherwise.
  */
 bool pool_free_idx(PoolAllocator* pool, i64 idx);
-
 
 /**
  * Retrieves an element from an object pool.

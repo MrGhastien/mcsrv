@@ -45,16 +45,14 @@ static bool write_nbt(const NBT* nbt, ByteBuffer* buffer) {
     return TRUE;
 }
 
-    
+/*
+static void write_u16(u16 num, ByteBuffer* buffer) {
+    num = uhton16(num);
+    bytebuf_write(buffer, &num, sizeof num);
+}
+*/
 
-    /*
-    static void write_u16(u16 num, ByteBuffer* buffer) {
-        num = uhton16(num);
-        bytebuf_write(buffer, &num, sizeof num);
-    }
-    */
-
-    DEF_PKT_ENCODER(dummy) {
+DEF_PKT_ENCODER(dummy) {
     (void) pkt;
     (void) buffer;
 }

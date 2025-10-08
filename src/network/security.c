@@ -1,9 +1,9 @@
 #include "security.h"
-#include "data/json.h"
 #include "containers/bytebuffer.h"
+#include "data/json.h"
 #include "logger.h"
-#include "memory/memory.h"
 #include "memory/mem_tags.h"
+#include "memory/memory.h"
 #include "network/connection.h"
 #include "utils/iomux.h"
 #include "utils/string.h"
@@ -100,7 +100,7 @@ u8* encryption_decrypt(EncryptionContext* ctx, Arena* arena, u64* out_size, u8* 
         return NULL;
     }
 
-    out = arena_callocate(arena, *out_size/* , ALLOC_TAG_PACKET */);
+    out = arena_callocate(arena, *out_size /* , ALLOC_TAG_PACKET */);
 
     if (EVP_PKEY_decrypt(ctx->key_ctx, out, out_size, in, in_size) <= 0) {
         encryption_get_errors();
@@ -112,10 +112,10 @@ u8* encryption_decrypt(EncryptionContext* ctx, Arena* arena, u64* out_size, u8* 
 }
 
 bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_secret) {
-    ctx->cipher_ctx = EVP_CIPHER_CTX_new();
+    ctx->cipher_ctx   = EVP_CIPHER_CTX_new();
     ctx->decipher_ctx = EVP_CIPHER_CTX_new();
 
-    ctx->shared_secret = arena_allocate(arena, SHARED_SECRET_SIZE/* , ALLOC_TAG_UNKNOWN */);
+    ctx->shared_secret = arena_allocate(arena, SHARED_SECRET_SIZE /* , ALLOC_TAG_UNKNOWN */);
     memcpy(ctx->shared_secret, shared_secret, SHARED_SECRET_SIZE);
 
     if (EVP_EncryptInit_ex(
@@ -182,7 +182,8 @@ bool encryption_decipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 off
     for (u64 i = 0; i < region_count; i++) {
         BufferRegion* reg = &regions[i];
         i32 reg_new_size;
-        if (!EVP_DecryptUpdate(ctx->decipher_ctx, reg->start, &reg_new_size, reg->start, reg->size)) {
+        if (!EVP_DecryptUpdate(
+                ctx->decipher_ctx, reg->start, &reg_new_size, reg->start, reg->size)) {
             encryption_get_errors();
             log_error("Could not decrypt data.");
             return FALSE;
@@ -198,7 +199,7 @@ bool encryption_decipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 off
 
 static void hash_to_string(u8* hash, u32 hash_size, Arena* arena, string* out) {
     bool negative = hash[0] >> 7;
-    u32 offset = 0;
+    u32 offset    = 0;
     if (negative) {
         u16 carry = 1;
 
@@ -206,11 +207,11 @@ static void hash_to_string(u8* hash, u32 hash_size, Arena* arena, string* out) {
             u16 tmp = (u8) ~hash[i];
             tmp += carry;
             hash[i] = tmp & 0xff;
-            carry = tmp >> 8;
+            carry   = tmp >> 8;
         }
-        *out = str_alloc(hash_size * 2 + 2, arena);
+        *out         = str_alloc(hash_size * 2 + 2, arena);
         out->base[0] = '-';
-        offset = 1;
+        offset       = 1;
     } else {
         *out = str_alloc(hash_size * 2 + 1, arena);
     }
@@ -219,7 +220,7 @@ static void hash_to_string(u8* hash, u32 hash_size, Arena* arena, string* out) {
         char tmp[3];
         snprintf(tmp, 3, "%02hhx", hash[i]);
 
-        out->base[i * 2 + offset] = tmp[0];
+        out->base[i * 2 + offset]     = tmp[0];
         out->base[i * 2 + offset + 1] = tmp[1];
     }
 }
@@ -283,7 +284,8 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
     ByteBuffer buffer = bytebuf_create_fixed(8192, &conn->scratch_arena);
     char url[2048];
-    char* error_buffer = arena_callocate(&conn->scratch_arena, CURL_ERROR_SIZE/* , ALLOC_TAG_STRING */);
+    char* error_buffer =
+        arena_callocate(&conn->scratch_arena, CURL_ERROR_SIZE /* , ALLOC_TAG_STRING */);
     snprintf(url,
              2048,
              "https://sessionserver.mojang.com/session/minecraft/"
@@ -293,7 +295,7 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    //curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.8.0");
+    // curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.8.0");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_buffer);
@@ -316,7 +318,7 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
     bytebuf_write_varint(&buffer, 0);
 
     IOMux mux = iomux_wrap_buffer(&buffer);
-    if(json_parse(mux, &conn->scratch_arena, json) != JSONE_OK)
+    if (json_parse(mux, &conn->scratch_arena, json) != JSONE_OK)
         return FALSE;
 
 #ifdef TRACE
@@ -324,7 +326,6 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
     json_to_string(json, &conn->scratch_arena, &str);
     log_tracef("%s", str.base);
 #endif
-
 
     return res_code == 200;
 }

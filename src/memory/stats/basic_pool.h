@@ -1,8 +1,8 @@
 #ifndef BASIC_POOL_H
 #define BASIC_POOL_H
 
-#include "definitions.h"
 #include "../_memory_internal.h"
+#include "definitions.h"
 
 enum PoolNodeType {
     POOL_BLOCK,
@@ -23,7 +23,7 @@ union basic_pool_elem {
     struct memory_block* block;
     struct memory_chain* chain;
 };
-typedef void(*action)(union basic_pool_elem elem, i32 idx, void* user_data);
+typedef void (*action)(union basic_pool_elem elem, i32 idx, void* user_data);
 
 void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType type);
 void basic_pool_cleanup(struct basic_pool* pool);

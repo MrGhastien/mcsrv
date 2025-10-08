@@ -3,9 +3,9 @@
 #include "logger.h"
 #include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
+#include "platform/platform.h"
 #include "utils/math.h"
 #include "utils/string.h"
-#include "platform/platform.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -124,7 +124,8 @@ string strbuild_to_string(const StringBuilder* builder, Arena* arena) {
         log_fatal("Cannot build string when arenas share the same memory !");
         platform_abort();
         /*
-        Arena scratch = arena_create((char_count + 1) * sizeof(char), BLK_TAG_UNKNOWN, INVALID_CHAIN);
+        Arena scratch = arena_create((char_count + 1) * sizeof(char), BLK_TAG_UNKNOWN,
+        INVALID_CHAIN);
 
         string str = str_alloc(char_count, &scratch);
         for (u32 i = 0; i < char_count; i++) {
@@ -153,7 +154,7 @@ string strbuild_to_string_buffer(const StringBuilder* builder, char* buf, u64 bu
     buf[char_count] = 0;
 
     return (string) {
-        .base = buf,
+        .base   = buf,
         .length = char_count,
-    };        
+    };
 }

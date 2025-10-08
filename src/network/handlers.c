@@ -12,8 +12,8 @@
 #include "containers/vector.h"
 #include "data/json.h"
 #include "logger.h"
-#include "memory/memory.h"
 #include "memory/mem_tags.h"
+#include "memory/memory.h"
 #include "platform/platform.h"
 #include "platform/time.h"
 #include "utils/string.h"
@@ -54,7 +54,7 @@ DEF_PKT_HANDLER(status) {
     PacketStatusResponse response;
 
     Arena arena = conn->scratch_arena;
-    JSON json = json_create(&arena, 1024);
+    JSON json   = json_create(&arena, 1024);
 
     string tmp;
     json_set_root(&json, JSON_OBJECT);
@@ -63,19 +63,19 @@ DEF_PKT_HANDLER(status) {
 
     tmp = str_view("1.21");
     json_cstr_put_str(&json, "name", &tmp);
-    json_cstr_put_simple(&json, "protocol", JSON_INT, (union JSONSimpleValue){.number = 767});
+    json_cstr_put_simple(&json, "protocol", JSON_INT, (union JSONSimpleValue) {.number = 767});
     json_move_to_parent(&json);
     json_cstr_put(&json, "players", JSON_OBJECT);
     json_move_to_cstr(&json, "players");
 
-    json_cstr_put_simple(&json, "max", JSON_INT, (union JSONSimpleValue){.number = 69});
-    json_cstr_put_simple(&json, "online", JSON_INT, (union JSONSimpleValue){.number = 0});
+    json_cstr_put_simple(&json, "max", JSON_INT, (union JSONSimpleValue) {.number = 69});
+    json_cstr_put_simple(&json, "online", JSON_INT, (union JSONSimpleValue) {.number = 0});
 
     json_move_to_parent(&json);
     json_cstr_put_simple(
-        &json, "enforcesSecureChat", JSON_BOOL, (union JSONSimpleValue){.boolean = FALSE});
+        &json, "enforcesSecureChat", JSON_BOOL, (union JSONSimpleValue) {.boolean = FALSE});
     json_cstr_put_simple(
-        &json, "previewsChat", JSON_BOOL, (union JSONSimpleValue){.boolean = FALSE});
+        &json, "previewsChat", JSON_BOOL, (union JSONSimpleValue) {.boolean = FALSE});
 
     json_cstr_put(&json, "description", JSON_OBJECT);
     json_move_to_cstr(&json, "description");
@@ -95,8 +95,8 @@ DEF_PKT_HANDLER(status) {
 }
 DEF_PKT_HANDLER(ping) {
     PacketPing* ping = pkt->payload;
-    PacketPing pong = {.num = ping->num};
-    Packet response = {.id = PKT_STATUS_PING, .payload = &pong};
+    PacketPing pong  = {.num = ping->num};
+    Packet response  = {.id = PKT_STATUS_PING, .payload = &pong};
 
     send_packet(&response, conn);
     return TRUE;
@@ -110,23 +110,24 @@ DEF_PKT_HANDLER(login_start) {
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
 
-    PacketCryptRequest* req = arena_callocate(&conn->scratch_arena, sizeof *req/* , ALLOC_TAG_PACKET */);
-    *req = (PacketCryptRequest){
-        .server_id = str_view(""),
-        .pkey_length = conn->global_enc_ctx->encoded_key_size,
-        .pkey = conn->global_enc_ctx->encoded_key,
+    PacketCryptRequest* req =
+        arena_callocate(&conn->scratch_arena, sizeof *req /* , ALLOC_TAG_PACKET */);
+    *req = (PacketCryptRequest) {
+        .server_id         = str_view(""),
+        .pkey_length       = conn->global_enc_ctx->encoded_key_size,
+        .pkey              = conn->global_enc_ctx->encoded_key,
         .verify_tok_length = 4,
-        .verify_tok = arena_allocate(&conn->scratch_arena, 4/* , ALLOC_TAG_UNKNOWN */),
-        .authenticate = TRUE,
+        .verify_tok        = arena_allocate(&conn->scratch_arena, 4 /* , ALLOC_TAG_UNKNOWN */),
+        .authenticate      = TRUE,
     };
     memset(req->verify_tok, 78, req->verify_tok_length);
     conn->verify_token =
-        arena_allocate(&conn->persistent_arena, req->verify_tok_length/* , ALLOC_TAG_UNKNOWN */);
+        arena_allocate(&conn->persistent_arena, req->verify_tok_length /* , ALLOC_TAG_UNKNOWN */);
     memcpy(conn->verify_token, req->verify_tok, req->verify_tok_length);
     conn->verify_token_size = req->verify_tok_length;
 
     Packet response = {
-        .id = PKT_LOGIN_CRYPT_REQUEST,
+        .id      = PKT_LOGIN_CRYPT_REQUEST,
         .payload = req,
     };
 
@@ -141,7 +142,7 @@ static bool enable_compression(Connection* conn) {
     };
 
     Packet cmprss_pkt = {
-        .id = PKT_LOGIN_COMPRESS,
+        .id      = PKT_LOGIN_COMPRESS,
         .payload = &payload,
     };
 
@@ -166,12 +167,12 @@ static bool send_login_success(Connection* conn, JSON* json) {
 
 #endif
 
-    if(json_move_to_cstr(json, "name") != JSONE_OK)
+    if (json_move_to_cstr(json, "name") != JSONE_OK)
         return FALSE;
     string* name = json_get_string(json);
 
     PacketLoginSuccess login_success = {
-        .username = str_create_copy(name, &conn->scratch_arena),
+        .username      = str_create_copy(name, &conn->scratch_arena),
         .strict_errors = TRUE,
     };
     json_move_to_parent(json);
@@ -195,15 +196,14 @@ static bool send_login_success(Connection* conn, JSON* json) {
 
         json_move_to_cstr(json, "name");
         string* prop_name = json_get_string(json);
-        property->name = str_create_copy(prop_name, &conn->scratch_arena);
+        property->name    = str_create_copy(prop_name, &conn->scratch_arena);
 
         json_move_to_cstr(json, "value");
         string* prop_value = json_get_string(json);
-        property->value = str_create_copy(prop_value, &conn->scratch_arena);
+        property->value    = str_create_copy(prop_value, &conn->scratch_arena);
 
-        
         if (json_move_to_cstr(json, "signature") == JSONE_OK) {
-            string* prop_sig = json_get_string(json);
+            string* prop_sig    = json_get_string(json);
             property->signature = *prop_sig;
             property->is_signed = TRUE;
         } else
@@ -211,7 +211,7 @@ static bool send_login_success(Connection* conn, JSON* json) {
     }
 
     Packet pkt = {
-        .id = PKT_LOGIN_SUCCESS,
+        .id      = PKT_LOGIN_SUCCESS,
         .payload = &login_success,
     };
 
@@ -286,13 +286,13 @@ DEF_PKT_HANDLER(login_ack) {
 
     PacketCustom server_brand_payload = {
         .channel = resid_default_cstr("brand"),
-        .data = bytebuf_create_fixed(32767, &conn->scratch_arena),
+        .data    = bytebuf_create_fixed(32767, &conn->scratch_arena),
     };
     string srv_brand = str_view("mcsrv");
     bytebuf_write_varint(&server_brand_payload.data, srv_brand.length);
     bytebuf_write(&server_brand_payload.data, srv_brand.base, srv_brand.length);
     Packet pkt_to_send = {
-        .id = PKT_CFG_CUSTOM_CLIENT,
+        .id      = PKT_CFG_CUSTOM_CLIENT,
         .payload = &server_brand_payload,
     };
 
@@ -301,25 +301,24 @@ DEF_PKT_HANDLER(login_ack) {
     PacketSetFeatureFlags feature_flags_payload = {0};
     vect_init(&feature_flags_payload.features, &conn->scratch_arena, 1, sizeof(ResourceID));
     ResourceID* feature = vect_reserve(&feature_flags_payload.features);
-    *feature = resid_default_cstr("core");
-    pkt_to_send = (Packet){
-        .id = PKT_CFG_SET_FEATURE_FLAGS,
-        .payload = &feature_flags_payload,
+    *feature            = resid_default_cstr("core");
+    pkt_to_send         = (Packet) {
+                .id      = PKT_CFG_SET_FEATURE_FLAGS,
+                .payload = &feature_flags_payload,
     };
     send_packet(&pkt_to_send, conn);
 
     PacketKnownDatapacks known_datapacks = {};
     vect_init(&known_datapacks.known_packs, &conn->scratch_arena, 1, sizeof(KnownDatapack));
     KnownDatapack* pack = vect_reserve(&known_datapacks.known_packs);
-    *pack =
-        (KnownDatapack) {
-            .namespace = str_view("minecraft"),
-            .id = str_view("core"),
-            .version = str_view("1.21"),
+    *pack               = (KnownDatapack) {
+                      .namespace = str_view("minecraft"),
+                      .id        = str_view("core"),
+                      .version   = str_view("1.21"),
     };
 
     pkt_to_send = (Packet) {
-        .id = PKT_CFG_KNOWN_DATAPACKS_CLIENT,
+        .id      = PKT_CFG_KNOWN_DATAPACKS_CLIENT,
         .payload = &known_datapacks,
     };
     send_packet(&pkt_to_send, conn);
@@ -349,6 +348,7 @@ DEF_PKT_HANDLER(cfg_client_info) {
 
     UNUSED(payload);
     log_warn("Client settings are ignored for now TODO");
+
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_known_datapacks) {
@@ -359,7 +359,10 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
     log_debug("Datapacks to omit:");
     for (u64 i = 0; i < vect_size(&payload->known_packs); i++) {
         KnownDatapack* pack = vect_ref(&payload->known_packs, i);
-        log_debugf("- " RESID " version %s", cstr(&pack->namespace), cstr(&pack->id), cstr(&pack->version));
+        log_debugf("- " RESID " version %s",
+                   cstr(&pack->namespace),
+                   cstr(&pack->id),
+                   cstr(&pack->version));
     }
     if (vect_size(&payload->known_packs) == 0)
         log_debug("None.");

@@ -33,27 +33,27 @@ struct alloc_track {
 };
 
 static const char* ALLOC_TAG_NAMES[] = {
-    [ALLOC_TAG_UNKNOWN] = "Unknown",
-    [ALLOC_TAG_VECTOR] = "Vector",
-    [ALLOC_TAG_POOL] = "Object pool",
-    [ALLOC_TAG_STRING] = "String",
-    [ALLOC_TAG_DICT] = "Dictionary",
+    [ALLOC_TAG_UNKNOWN]    = "Unknown",
+    [ALLOC_TAG_VECTOR]     = "Vector",
+    [ALLOC_TAG_POOL]       = "Object pool",
+    [ALLOC_TAG_STRING]     = "String",
+    [ALLOC_TAG_DICT]       = "Dictionary",
     [ALLOC_TAG_BYTEBUFFER] = "ByteBuffer",
-    [ALLOC_TAG_PACKET] = "Packet",
-    [ALLOC_TAG_JSON] = "JSON",
-    [ALLOC_TAG_NBT] = "NBT",
-    [ALLOC_TAG_WORLD] = "World",
-    [ALLOC_TAG_EXTERNAL] = "External",
+    [ALLOC_TAG_PACKET]     = "Packet",
+    [ALLOC_TAG_JSON]       = "JSON",
+    [ALLOC_TAG_NBT]        = "NBT",
+    [ALLOC_TAG_WORLD]      = "World",
+    [ALLOC_TAG_EXTERNAL]   = "External",
 };
 
 static const char* BLK_TAG_NAMES[] = {
-    [BLK_TAG_UNKNOWN] = "Unknown",
-    [BLK_TAG_NETWORK] = "Network",
-    [BLK_TAG_EVENT] = "Event",
+    [BLK_TAG_UNKNOWN]  = "Unknown",
+    [BLK_TAG_NETWORK]  = "Network",
+    [BLK_TAG_EVENT]    = "Event",
     [BLK_TAG_REGISTRY] = "Registry",
     [BLK_TAG_PLATFORM] = "Platform",
-    [BLK_TAG_MEMORY] = "Memory",
-    [BLK_TAG_DATA] = "Data",
+    [BLK_TAG_MEMORY]   = "Memory",
+    [BLK_TAG_DATA]     = "Data",
 };
 
 static struct basic_pool block_pool;
@@ -69,15 +69,15 @@ memory_chain create_chain(enum MemoryChainTag tag, memory_chain prev) {
 
     mcmutex_unlock(&stats_mutex);
     *new_chain = (struct memory_chain) {
-        .tag = tag,
+        .tag        = tag,
         .prev_chain = prev,
         .next_chain = INVALID_CHAIN,
-        .head = INVALID_BLOCK,
-        .tail = INVALID_BLOCK,
+        .head       = INVALID_BLOCK,
+        .tail       = INVALID_BLOCK,
     };
     if (prev >= 0) {
         struct memory_chain* prev_ptr = basic_pool_query(&chain_pool, prev);
-        prev_ptr->next_chain = idx;
+        prev_ptr->next_chain          = idx;
     }
     return idx;
 }
@@ -93,7 +93,7 @@ static void destroy_single_chain(struct memory_chain* chain_ptr) {
     memory_block blk = chain_ptr->head;
     while (blk != INVALID_BLOCK) {
         struct memory_block* block_ptr = basic_pool_query(&block_pool, blk);
-        i32 next = block_ptr->next;
+        i32 next                       = block_ptr->next;
         delete_block_internal(blk);
         blk = next;
     }
@@ -108,14 +108,14 @@ void destroy_chain(memory_chain chain) {
 
     if (chain_ptr->prev_chain != INVALID_CHAIN) {
         struct memory_chain* prev_chain_ptr = basic_pool_query(&chain_pool, chain_ptr->prev_chain);
-        prev_chain_ptr->next_chain = INVALID_CHAIN;
+        prev_chain_ptr->next_chain          = INVALID_CHAIN;
     }
 
     memory_chain next_chain = chain_ptr->next_chain;
     while (next_chain != INVALID_CHAIN) {
-       struct memory_chain* next_chain_ptr = basic_pool_query(&chain_pool, chain_ptr->next_chain);
-        next_chain_ptr->prev_chain = INVALID_CHAIN;
-        next_chain = next_chain_ptr->next_chain;
+        struct memory_chain* next_chain_ptr = basic_pool_query(&chain_pool, chain_ptr->next_chain);
+        next_chain_ptr->prev_chain          = INVALID_CHAIN;
+        next_chain                          = next_chain_ptr->next_chain;
         destroy_single_chain(next_chain_ptr);
     }
 
@@ -134,10 +134,10 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
 
     *block = (struct memory_block) {
         .capacity = capacity,
-        .next = INVALID_BLOCK,
-        .prev = INVALID_BLOCK,
-        .start = memory,
-        .type = ALLOC_TYPE_DYNAMIC,
+        .next     = INVALID_BLOCK,
+        .prev     = INVALID_BLOCK,
+        .start    = memory,
+        .type     = ALLOC_TYPE_DYNAMIC,
     };
 
     mcmutex_unlock(&stats_mutex);
@@ -147,7 +147,7 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
     block->prev = chain_ptr->tail;
     if (chain_ptr->tail >= 0) {
         struct memory_block* tail_ptr = basic_pool_query(&block_pool, chain_ptr->tail);
-        tail_ptr->next = index;
+        tail_ptr->next                = index;
     } else
         chain_ptr->head = index;
     chain_ptr->tail = index;
@@ -352,7 +352,7 @@ dump_block_stats(const struct memory_block* block, memory_block idx, struct stat
 
 static void dump_chain_stats(union basic_pool_elem elem, i32 idx, void* user_data) {
     struct stat_dump_data* data = user_data;
-    struct memory_chain* track = elem.chain;
+    struct memory_chain* track  = elem.chain;
 
     string tag_name = get_blk_tag_name(track->tag);
 

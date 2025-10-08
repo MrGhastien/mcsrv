@@ -57,7 +57,7 @@ enum BuiltinEvents {
 };
 
 /**
- * Event handling function. 
+ * Event handling function.
  *
  * Event handlers are called when an event is handled.
  *

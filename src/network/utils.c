@@ -26,7 +26,7 @@ i64 varint_length(i32 n) {
         i++;
         n >>= 7;
     }
-    if(n != 0)
+    if (n != 0)
         return -1;
     return i + 1;
 }
@@ -45,15 +45,15 @@ static u8 parse_hex_digit(char c) {
 bool parse_uuid(const string* str, u64* out) {
     if (str->length != 32)
         return FALSE;
-    out[0] = 0;
-    out[1] = 0;
+    out[0]  = 0;
+    out[1]  = 0;
     u8* buf = (u8*) out;
     for (u64 i = 0; i < str->length; i++) {
-        char c = str->base[i];
+        char c   = str->base[i];
         u8 digit = parse_hex_digit(c);
-        if(digit == 16)
+        if (digit == 16)
             return FALSE;
-        if(i & 1)
+        if (i & 1)
             buf[i >> 1] |= digit;
         else
             buf[i >> 1] = digit << 4;

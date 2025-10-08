@@ -30,17 +30,17 @@
 #define STR_INVALID ((string) {.base = NULL, .length = -1})
 
 /**
-* The string structure.
-*/
+ * The string structure.
+ */
 typedef struct str {
     char* base; /**< The pointer to the character array. Always null-terminated. */
     u64 length; /**< The length of the character array, excluding the null-terminator. */
 } string;
 
 /**
-* The string comparator.
-* @see Comparator
-*/
+ * The string comparator.
+ * @see Comparator
+ */
 extern const Comparator CMP_STRING;
 
 /**
@@ -126,97 +126,99 @@ string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena);
 string str_substring(const string* str, u64 begin, u64 end);
 
 /**
-* Finds the first occurrence of any character inside the string.
-*
-* @param[in] str The string to search into.
-* @param[in] c The character to find.
-* @return The index of the character if it is found, `-1` otherwise.
-*/
+ * Finds the first occurrence of any character inside the string.
+ *
+ * @param[in] str The string to search into.
+ * @param[in] c The character to find.
+ * @return The index of the character if it is found, `-1` otherwise.
+ */
 i64 str_find_char(const string* str, char c);
 
 /**
-* Sets the contents of a string.
-*
-* This functions does not change the string's length nor does it reallocate the underlying buffer.
-*
-* If there are more characters in @p cstr than there is available in @p str,
-* excess characters are discarded. If there are fewer characters, the string @p str is padded with null
-* terminators.
-*
-* @param[inout] str The string to set.
-* @param[in] cstr The contents to set the string to.
-*/
+ * Sets the contents of a string.
+ *
+ * This functions does not change the string's length nor does it reallocate the underlying buffer.
+ *
+ * If there are more characters in @p cstr than there is available in @p str,
+ * excess characters are discarded. If there are fewer characters, the string @p str is padded with
+ * null terminators.
+ *
+ * @param[inout] str The string to set.
+ * @param[in] cstr The contents to set the string to.
+ */
 void str_set(string* str, const char* cstr);
 /**
-* Copies the contents of a string into another one.
-*
-* This function is similar to @ref str_set, except it works with strings.
-*
-* If there are more characters in @p src than there is available in @p dst,
-* excess characters are discarded. If there are fewer characters, the string @p dst is padded with null
-* terminators.
-*
-* @param[inout] dst The string to copy characters to.
-* @param[in] src The string to copy characters from.
-*/
+ * Copies the contents of a string into another one.
+ *
+ * This function is similar to @ref str_set, except it works with strings.
+ *
+ * If there are more characters in @p src than there is available in @p dst,
+ * excess characters are discarded. If there are fewer characters, the string @p dst is padded with
+ * null terminators.
+ *
+ * @param[inout] dst The string to copy characters to.
+ * @param[in] src The string to copy characters from.
+ */
 void str_copy(string* dst, const string* src);
 
 /**
-* Creates a new string by concatenating two other strings.
-*
-* This is a convenience function for a single concatenation of strings.
-* Use a @ref str_builder.h "string builder" if multiple concatenations are intended.
-*
-* @param[in] lhs The left string.
-* @param[in] rhs The right string.
-* @param[in] arena The arena to use to allocate the resulting string.
-* @return A new string containing the concatenation of the two given strings.
-*/
+ * Creates a new string by concatenating two other strings.
+ *
+ * This is a convenience function for a single concatenation of strings.
+ * Use a @ref str_builder.h "string builder" if multiple concatenations are intended.
+ *
+ * @param[in] lhs The left string.
+ * @param[in] rhs The right string.
+ * @param[in] arena The arena to use to allocate the resulting string.
+ * @return A new string containing the concatenation of the two given strings.
+ */
 string str_concat(string* lhs, const string* rhs, Arena* arena);
 /**
-* Retrieves a (null-terminated) printable C string  from the specified string.
-*
-* @param[in] str The string of which to get the contents in a printable C string.
-* @return The pointer to the start of the printable C string.
-*/
+ * Retrieves a (null-terminated) printable C string  from the specified string.
+ *
+ * @param[in] str The string of which to get the contents in a printable C string.
+ * @return The pointer to the start of the printable C string.
+ */
 const char* cstr(const string* str);
 
 /**
-* Computes the hash value of a string.
-*
-* This function should not be used directly. Instead, use the @ref CMP_STRING @ref Comparator "comparator".
-*
-* @note This function does not compute a cryptographic hash. It should be used to get a simple hash,
-* e.g. to be used with hash tables.
-*
-* @param[in] str A pointer to a string structure.
-* @return The hash as a unsigned 64-bit integer.
-* @see Comparator
-*/
+ * Computes the hash value of a string.
+ *
+ * This function should not be used directly. Instead, use the @ref CMP_STRING @ref Comparator
+ * "comparator".
+ *
+ * @note This function does not compute a cryptographic hash. It should be used to get a simple
+ * hash, e.g. to be used with hash tables.
+ *
+ * @param[in] str A pointer to a string structure.
+ * @return The hash as a unsigned 64-bit integer.
+ * @see Comparator
+ */
 u64 str_hash(const void* str);
 /**
-* Compares two strings.
-*
-* The strings are compared alphabetically.
-*
-* @param[in] lhs The left string operand.
-* @param[in] rhs The right string operand.
-* @return `0` if the strings are equal, a negative number if @p lhs is less than @p rhs, and a positive number otherwise.
-*/
+ * Compares two strings.
+ *
+ * The strings are compared alphabetically.
+ *
+ * @param[in] lhs The left string operand.
+ * @param[in] rhs The right string operand.
+ * @return `0` if the strings are equal, a negative number if @p lhs is less than @p rhs, and a
+ * positive number otherwise.
+ */
 i32 str_compare(const string* lhs, const string* rhs);
 i32 str_compare_cstr(const string* lhs, const char* rhs);
 
 /**
-* Small utility function to allocate a sufficiently sized buffer and to format a string.
-*
-* This function uses the specified arena to allocate the returned buffer.
-*
-* @param[in] scratch The arena used to allocate the buffer.
-* @param[in] format The format string.
-* @param[inout] args Arguments for the format.
-* @param[out] out_size Output for the size of the returned string.
-* @return A pointer to the formatted string, allocated with the arena.
-*/
+ * Small utility function to allocate a sufficiently sized buffer and to format a string.
+ *
+ * This function uses the specified arena to allocate the returned buffer.
+ *
+ * @param[in] scratch The arena used to allocate the buffer.
+ * @param[in] format The format string.
+ * @param[inout] args Arguments for the format.
+ * @param[out] out_size Output for the size of the returned string.
+ * @return A pointer to the formatted string, allocated with the arena.
+ */
 char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size);
 
 #endif /* ! STRING_H */

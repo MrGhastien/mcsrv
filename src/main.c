@@ -24,10 +24,9 @@ static i32 init(char* host, i32 port, u64 max_connections) {
     memory_init();
 
     event_system_init();
-    //memory_dump_stats();
+    // memory_dump_stats();
     registry_system_init();
     code = network_init(host, port, max_connections);
-
 
     if (code != 0) {
         log_fatal("Failed to initialize the server.");

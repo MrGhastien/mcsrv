@@ -30,8 +30,8 @@ struct memory_chain {
 typedef i32 memory_block;
 typedef i32 memory_chain;
 
-#define INVALID_CHAIN ((memory_chain)-1)
-#define INVALID_BLOCK ((memory_block)-1)
+#define INVALID_CHAIN ((memory_chain) - 1)
+#define INVALID_BLOCK ((memory_block) - 1)
 
 void register_alloc(const memory_block block, u64 start, u64 end, enum AllocTag tag);
 void unregister_alloc(const memory_block block, u64 start);

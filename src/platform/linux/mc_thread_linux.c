@@ -1,12 +1,12 @@
 #ifdef MC_PLATFORM_LINUX
 
-#include "platform/mc_thread.h"
 #include "logger.h"
+#include "platform/mc_thread.h"
 
+#include <errno.h>
 #include <pthread.h>
 #include <string.h>
 #include <sys/prctl.h>
-#include <errno.h>
 
 static MCThreadKey self_key;
 static pthread_once_t once_control;
@@ -63,7 +63,7 @@ void* mcthread_get_data(MCThreadKey key) {
     return pthread_getspecific(key);
 }
 
-//TODO: Fix this!
+// TODO: Fix this!
 MCThread* mcthread_self(void) {
     return mcthread_get_data(self_key);
 }

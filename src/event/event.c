@@ -5,9 +5,9 @@
 #include "logger.h"
 #include "memory/memory.h"
 
-#include "platform/mc_thread.h"
-#include "platform/mc_mutex.h"
 #include "platform/mc_cond_var.h"
+#include "platform/mc_mutex.h"
+#include "platform/mc_thread.h"
 
 #include <stdio.h>
 
@@ -48,7 +48,7 @@ void event_system_init(void) {
     ctx.arena = arena_create(1L << 20, BLK_TAG_EVENT, INVALID_CHAIN);
 
     dict_init_fixed(
-                    &ctx.event_registry, NULL, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
+        &ctx.event_registry, NULL, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
     ctx.queue = rqueue_create(MAX_TRIGGERED_EVENTS, sizeof(TriggeredEvent), &ctx.arena);
 
     mcmutex_create(&ctx.mutex);
@@ -102,7 +102,7 @@ void event_register_event(u32 code, string name) {
 }
 
 void event_register_listener(u32 code, event_listener handler, void* data) {
-    if(code == BEVENT_STOP) {
+    if (code == BEVENT_STOP) {
         log_error("The STOP event cannot be listened to.");
         return;
     }
@@ -157,7 +157,7 @@ static bool process_event_queue(void) {
             continue;
         }
 
-        if(e->code == BEVENT_STOP)
+        if (e->code == BEVENT_STOP)
             stop_event = TRUE;
 
         EventEntry* entry = dict_ref(&ctx.event_registry, idx);
@@ -166,7 +166,7 @@ static bool process_event_queue(void) {
         for (u32 i = 0; i < entry->listeners.size; i++) {
             EventListener* listener = vect_ref(&entry->listeners, i);
             listener->handler(e->code, listener->user_data, e->info);
-            //log_tracef("Notified %p of event %u.", listener->user_data, e->code);
+            // log_tracef("Notified %p of event %u.", listener->user_data, e->code);
         }
         rqueue_dequeue(&ctx.queue, NULL);
     }

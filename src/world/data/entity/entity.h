@@ -14,7 +14,7 @@ typedef struct {
 
 typedef struct {
     Vec3d pos;
-} TransformComponent;    
+} TransformComponent;
 
 void ecomponents_init(void);
 void ecomponents_cleanup(void);

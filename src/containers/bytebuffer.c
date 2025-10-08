@@ -36,7 +36,7 @@ static void ensure_capacity(ByteBuffer* buffer, u64 size) {
         log_fatal("Failed to resize dynamic byte buffer.");
         abort();
     }
-    buffer->buf = new_buf;
+    buffer->buf      = new_buf;
     buffer->capacity = new_cap;
 }
 
@@ -183,8 +183,8 @@ static u64 get_regions(const ByteBuffer* buffer,
                        bool writable,
                        i64 start_offset) {
     u64 max_size = writable ? bytebuf_available(buffer) : bytebuf_size(buffer);
-    u64 index = 0;
-    u64 total = 0;
+    u64 index    = 0;
+    u64 total    = 0;
     if (start_offset < 0)
         start_offset = 0;
     if ((u64) start_offset > max_size)
@@ -196,7 +196,7 @@ static u64 get_regions(const ByteBuffer* buffer,
                             : get_read_region_size(buffer, region_start);
 
         out_regions[index].start = offset(buffer->buf, region_start);
-        out_regions[index].size = size;
+        out_regions[index].size  = size;
 
         region_start = (region_start + size) % buffer->capacity;
         total += size;
@@ -212,31 +212,31 @@ static u64 get_regions(const ByteBuffer* buffer,
 
 ByteBuffer bytebuf_create(u64 size) {
     return (ByteBuffer) {
-        .buf = malloc(size),
-        .read_head = -1,
+        .buf        = malloc(size),
+        .read_head  = -1,
         .write_head = -1,
-        .size = 0,
-        .capacity = size,
+        .size       = 0,
+        .capacity   = size,
     };
 }
 
 ByteBuffer bytebuf_create_fixed(u64 size, Arena* arena) {
     return (ByteBuffer) {
-        .buf = arena_allocate(arena, size/* , ALLOC_TAG_BYTEBUFFER */),
-        .read_head = 0,
+        .buf        = arena_allocate(arena, size /* , ALLOC_TAG_BYTEBUFFER */),
+        .read_head  = 0,
         .write_head = 0,
-        .size = 0,
-        .capacity = size,
+        .size       = 0,
+        .capacity   = size,
     };
 }
 
 ByteBuffer bytebuf_wrap(u64 size, void* array) {
     return (ByteBuffer) {
-        .buf = array,
-        .read_head = 0,
+        .buf        = array,
+        .read_head  = 0,
         .write_head = 0,
-        .size = 0,
-        .capacity = size,
+        .size       = 0,
+        .capacity   = size,
     };
 }
 
@@ -284,7 +284,7 @@ void bytebuf_copy(ByteBuffer* dst, const ByteBuffer* src) {
     bytebuf_read_const(src, size, dst->buf);
     dst->size = size;
     if (is_fixed(dst)) {
-        dst->read_head = 0;
+        dst->read_head  = 0;
         dst->write_head = size;
     }
 }
@@ -368,9 +368,9 @@ i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data) {
 }
 
 i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
-    i32 res = 0;
+    i32 res      = 0;
     u64 position = 0;
-    i64 i = 0;
+    i64 i        = 0;
     u8 byte;
     while (TRUE) {
         if (!peek_byte(buffer, i, &byte)) {
@@ -391,7 +391,7 @@ i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
 }
 
 i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str) {
-    i32 length = 0;
+    i32 length         = 0;
     i64 len_byte_count = bytebuf_read_varint(buffer, &length);
     if (len_byte_count <= 0)
         return len_byte_count;
@@ -452,7 +452,7 @@ void bytebuf_unread(ByteBuffer* buffer, u64 size) {
 
     u64 available = buffer->capacity - buffer->size;
     if (size >= available) {
-        buffer->size = buffer->capacity;
+        buffer->size      = buffer->capacity;
         buffer->read_head = buffer->write_head;
         return;
     }

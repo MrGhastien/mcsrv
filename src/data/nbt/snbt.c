@@ -3,9 +3,9 @@
 #include "utils/iomux.h"
 #include "utils/string.h"
 
-#include <logger.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <logger.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -23,10 +23,10 @@ typedef struct SNBTMetadata {
 
 static void add_meta(SNBTContext* ctx, enum NBTTagType type, i32 size, const NBTTag* tag_ref) {
     SNBTMetadata* new_meta = vect_reserve(&ctx->stack);
-    *new_meta = (SNBTMetadata){
-        .type = type,
-        .size = size,
-        .tag = tag_ref,
+    *new_meta              = (SNBTMetadata) {
+                     .type = type,
+                     .size = size,
+                     .tag  = tag_ref,
     };
 }
 
@@ -128,7 +128,7 @@ enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
     Arena scratch = arena_create(1 << 18, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     SNBTContext ctx = {
-        .pretty_print = TRUE,
+        .pretty_print      = TRUE,
         .spaces_per_indent = 4,
     };
     vect_init(&ctx.stack, &scratch, 512, sizeof(SNBTMetadata));

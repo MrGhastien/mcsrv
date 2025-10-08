@@ -152,13 +152,14 @@ void bytebuf_prepend_varint(ByteBuffer* buffer, i32 num);
 /**
  * Reads arbitrary data from a byte buffer.
  *
- * This functions assumes the memory region pointed to by @p out_data is at least as large as the specified size.
+ * This functions assumes the memory region pointed to by @p out_data is at least as large as the
+ * specified size.
  *
  * @param buffer The buffer to read from.
  * @param size The number of bytes to read.
  * @param[out] out_data A pointer to the memory where data is written.
  * @return The number of bytes read.
-   */
+ */
 i64 bytebuf_read(ByteBuffer* buffer, u64 size, void* out_data);
 /**
  * Reads and decodes a MC VarInt from a byte buffer.
@@ -197,8 +198,14 @@ i64 bytebuf_read_mcstring(ByteBuffer* buffer, Arena* arena, string* out_str);
  */
 i64 bytebuf_peek(const ByteBuffer* buffer, u64 size, void* out_data);
 
-u64 bytebuf_get_read_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset);
-u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_regions, u64* out_count, i64 start_offset);
+u64 bytebuf_get_read_regions(const ByteBuffer* buffer,
+                             BufferRegion* out_regions,
+                             u64* out_count,
+                             i64 start_offset);
+u64 bytebuf_get_write_regions(const ByteBuffer* buffer,
+                              BufferRegion* out_regions,
+                              u64* out_count,
+                              i64 start_offset);
 
 /**
  * Get the size of the next contiguous readable region of the buffer,
@@ -208,7 +215,7 @@ u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_region
  * @param[out] out_region Where the region's pointer is copied at.
  * @return The size of the readable region
  */
-//u64 bytebuf_contiguous_read(ByteBuffer* buffer, void** out_region);
+// u64 bytebuf_contiguous_read(ByteBuffer* buffer, void** out_region);
 
 /**
  * Get the size of the next contiguous writable region of the buffer,
@@ -218,7 +225,7 @@ u64 bytebuf_get_write_regions(const ByteBuffer* buffer, BufferRegion* out_region
  * @param[in] out_region Where the region's pointer is copied at.
  * @return The size of the writable region
  */
-//u64 bytebuf_contiguous_write(ByteBuffer* buffer, void** out_region);
+// u64 bytebuf_contiguous_write(ByteBuffer* buffer, void** out_region);
 
 /**
  * Removes written data from the specified byte buffer.
@@ -248,7 +255,5 @@ u64 bytebuf_size(const ByteBuffer* buffer);
 u64 bytebuf_available(const ByteBuffer* buffer);
 u64 bytebuf_cap(const ByteBuffer* buffer);
 i64 bytebuf_current_pos(const ByteBuffer* buffer);
-
-
 
 #endif /* ! BYTEBUFFER_H */

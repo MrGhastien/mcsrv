@@ -9,20 +9,21 @@
 
 #define NS_PER_SECOND 1000000000l
 
-bool timestamp(struct timespec *out_timestamp) {
+bool timestamp(struct timespec* out_timestamp) {
     static LARGE_INTEGER frequency;
     LARGE_INTEGER ticks;
 
-    if(frequency.QuadPart == 0 && !QueryPerformanceFrequency(&frequency)) {
+    if (frequency.QuadPart == 0 && !QueryPerformanceFrequency(&frequency)) {
         return FALSE;
     }
 
-    if(!QueryPerformanceCounter(&ticks)) {
+    if (!QueryPerformanceCounter(&ticks)) {
         return FALSE;
     }
 
-    out_timestamp->tv_sec = (time_t)ticks.QuadPart / frequency.QuadPart;
-    out_timestamp->tv_nsec = (long)((ticks.QuadPart % frequency.QuadPart) * NS_PER_SECOND) / frequency.QuadPart;
+    out_timestamp->tv_sec = (time_t) ticks.QuadPart / frequency.QuadPart;
+    out_timestamp->tv_nsec =
+        (long) ((ticks.QuadPart % frequency.QuadPart) * NS_PER_SECOND) / frequency.QuadPart;
 
     return TRUE;
 }

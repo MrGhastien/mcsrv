@@ -32,7 +32,8 @@
  *
  * @param name The name of the decoder. Should be somewhat similar to the type of decoded packets.
  */
-#define DEF_PKT_DECODER(name) void PKT_DECODER(name)(Packet* packet, Arena* arena, ByteBuffer* bytes)
+#define DEF_PKT_DECODER(name)                                                                      \
+    void PKT_DECODER(name)(Packet * packet, Arena * arena, ByteBuffer * bytes)
 
 DEF_PKT_DECODER(dummy);
 

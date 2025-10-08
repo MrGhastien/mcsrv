@@ -13,7 +13,7 @@ typedef struct chunk_section {
     u32 palette_size;
     u32 index_size;
     const BlockState** palette;
-    //u8* indices;
+    // u8* indices;
     u16* indices; // 0 <= index <= 4096
     struct chunk_section* next;
     i32 y_pos;

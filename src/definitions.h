@@ -29,8 +29,8 @@
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #ifdef TRACE
@@ -56,11 +56,10 @@ typedef double f64;
 typedef u8 bool;
 
 /** Boolean `false` constant. */
-#define FALSE (bool)0
+#define FALSE (bool) 0
 /** Boolean `true` constant. */
-#define TRUE (bool)1
-#define FAIL (size_t)-1
-
+#define TRUE (bool) 1
+#define FAIL (size_t) -1
 
 #if defined __GNUC__ || defined __clang__
 #define STATIC_ASSERT _Static_assert
@@ -68,7 +67,8 @@ typedef u8 bool;
 #define STATIC_ASSERT static_assert
 #endif
 
-#define CHECK_TYPE_SIZE(type, bytes) STATIC_ASSERT(sizeof(type) == bytes, #type "is not " #bytes " byte(s) long !")
+#define CHECK_TYPE_SIZE(type, bytes)                                                               \
+    STATIC_ASSERT(sizeof(type) == bytes, #type "is not " #bytes " byte(s) long !")
 
 CHECK_TYPE_SIZE(u8, 1);
 CHECK_TYPE_SIZE(u16, 2);
@@ -93,8 +93,8 @@ STATIC_ASSERT(sizeof(i64) == sizeof(ssize_t), "size_t and u64 do not have the sa
 STATIC_ASSERT(sizeof(u64) >= sizeof(intptr_t), "Cannot convert pointers to long integers");
 STATIC_ASSERT(sizeof(i64) >= sizeof(void*), "Cannot convert pointers to long integers");
 
-#define UNUSED(x) ((void)(x))
-#define EXPLICIT_FALLTHROUGH __attribute__ ((fallthrough))
+#define UNUSED(x) ((void) (x))
+#define EXPLICIT_FALLTHROUGH __attribute__((fallthrough))
 
 #if defined(_WIN32)
 #define strtok_r strtok_s

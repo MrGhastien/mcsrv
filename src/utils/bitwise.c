@@ -27,7 +27,7 @@ u64 ceil_two_pow(u64 num) {
 
 u64 u64_log2(u64 x) {
     u64 res = 0;
-    while(x >>= 1) {
+    while (x >>= 1) {
         res++;
     }
     return res;
@@ -46,7 +46,7 @@ void* offsetu(const void* ptr, u64 offset) {
 }
 
 bool is_addr_aligned(void* addr, u64 alignment) {
-    u64 integer_addr = (u64)addr;
+    u64 integer_addr = (u64) addr;
 
     return integer_addr % alignment == 0;
 }
@@ -55,7 +55,7 @@ static void swap_bytes(void* x, u64 size) {
     u8* array = x;
 
     for (u64 lo = 0, hi = size - 1; lo < (size >> 1); lo++, hi--) {
-        u8 tmp = array[lo];
+        u8 tmp    = array[lo];
         array[lo] = array[hi];
         array[hi] = tmp;
     }
@@ -67,7 +67,6 @@ NTOH(64) {
 
 NTOH(32) {
     CONVERT_ENDIANNESS(x);
-
 }
 
 NTOH(16) {
@@ -85,7 +84,6 @@ UNTOH(32) {
 UNTOH(16) {
     CONVERT_ENDIANNESS(x);
 }
-
 
 HTON(64) {
     CONVERT_ENDIANNESS(x);

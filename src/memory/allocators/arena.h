@@ -7,8 +7,8 @@
 #define ARENA_H
 
 #include "definitions.h"
-#include "memory/mem_tags.h"
 #include "memory/_memory_internal.h"
+#include "memory/mem_tags.h"
 
 /**
    Simple linear allocator.

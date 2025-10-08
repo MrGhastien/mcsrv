@@ -12,7 +12,7 @@ enum IOType {
     IO_GZFILE,
     IO_ZLIB,
     IO_BUFFER,
-    IO_STRING
+    IO_STRING,
 };
 
 typedef i64 IOMux;

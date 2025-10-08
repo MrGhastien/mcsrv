@@ -1,8 +1,8 @@
 #include "connection.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
-#include "memory/memory.h"
 #include "memory/mem_tags.h"
+#include "memory/memory.h"
 #include "network/common_types.h"
 #include "network/compression.h"
 #include "packet.h"
@@ -35,7 +35,6 @@ static enum IOCode decode_common_data(RecvContext* ctx, Packet* out_pkt) {
         pkt_length = (i32) out_pkt->total_length;
     }
 
-
     if (bytebuf_size(ctx->pkt_buffer) < (u64) pkt_length)
         return IOC_AGAIN;
 
@@ -50,8 +49,8 @@ static enum IOCode decode_common_data(RecvContext* ctx, Packet* out_pkt) {
 
         if (uncompressed_length > 0) {
 
-            ByteBuffer* uncompressed = arena_callocate(
-                ctx->arena, sizeof *uncompressed/* , ALLOC_TAG_BYTEBUFFER */);
+            ByteBuffer* uncompressed =
+                arena_callocate(ctx->arena, sizeof *uncompressed /* , ALLOC_TAG_BYTEBUFFER */);
             *uncompressed = bytebuf_create_fixed(uncompressed_length, ctx->arena);
 
             i64 decompression_result =
@@ -80,9 +79,9 @@ static enum IOCode decode_common_data(RecvContext* ctx, Packet* out_pkt) {
 
 static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* out_pkt) {
     RecvContext recv_ctx = {
-        .pkt_buffer = bytes,
-        .arena = &conn->scratch_arena,
-        .compression_ctx = &conn->cmprss_ctx,
+        .pkt_buffer          = bytes,
+        .arena               = &conn->scratch_arena,
+        .compression_ctx     = &conn->cmprss_ctx,
         .compression_enabled = conn->compression,
     };
 
@@ -129,7 +128,8 @@ enum IOCode receive_packet(Connection* conn) {
     while (code == IOC_OK) {
         if (!conn_is_resuming_read(conn)) {
             arena_save(&conn->scratch_arena);
-            conn->packet_cache = arena_callocate(&conn->scratch_arena, sizeof *conn->packet_cache/* , ALLOC_TAG_PACKET */);
+            conn->packet_cache = arena_callocate(
+                &conn->scratch_arena, sizeof *conn->packet_cache /* , ALLOC_TAG_PACKET */);
             conn->packet_cache->id = PKT_INVALID;
         }
 

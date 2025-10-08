@@ -95,7 +95,7 @@ bool sock_listen(socketfd socket, i32 backlog) {
     return listen(socket, backlog) == 0;
 }
 enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, SocketAddress* out_address) {
-    socklen_t addr_len = sizeof(out_address->data.storage);
+    socklen_t addr_len   = sizeof(out_address->data.storage);
     socketfd peer_socket = accept(socket, &out_address->data.sa, &addr_len);
     if (!sock_is_valid(peer_socket)) {
         return IOC_ERROR;
@@ -124,16 +124,16 @@ enum IOCode sock_recv_buf(socketfd socket, ByteBuffer* output, u64* out_byte_cou
     struct iovec iov_regions[2];
 
     for (u64 i = 0; i < region_count; i++) {
-        iov_regions[i].iov_len = regions[i].size;
+        iov_regions[i].iov_len  = regions[i].size;
         iov_regions[i].iov_base = regions[i].start;
     }
 
     struct msghdr header = {
-        .msg_name = NULL,
-        .msg_namelen = 0,
-        .msg_iov = iov_regions,
-        .msg_iovlen = region_count,
-        .msg_control = NULL,
+        .msg_name       = NULL,
+        .msg_namelen    = 0,
+        .msg_iov        = iov_regions,
+        .msg_iovlen     = region_count,
+        .msg_control    = NULL,
         .msg_controllen = 0,
     };
 
@@ -161,16 +161,16 @@ enum IOCode sock_send_buf(socketfd socket, ByteBuffer* input, u64* out_byte_coun
     struct iovec iov_regions[2];
 
     for (u64 i = 0; i < region_count; i++) {
-        iov_regions[i].iov_len = regions[i].size;
+        iov_regions[i].iov_len  = regions[i].size;
         iov_regions[i].iov_base = regions[i].start;
     }
 
     struct msghdr header = {
-        .msg_name = NULL,
-        .msg_namelen = 0,
-        .msg_iov = iov_regions,
-        .msg_iovlen = region_count,
-        .msg_control = NULL,
+        .msg_name       = NULL,
+        .msg_namelen    = 0,
+        .msg_iov        = iov_regions,
+        .msg_iovlen     = region_count,
+        .msg_control    = NULL,
         .msg_controllen = 0,
     };
 
@@ -202,7 +202,7 @@ i32 network_platform_init_socket(socketfd server_socket) {
     return 0;
 }
 i32 network_platform_init(NetworkContext* ctx, u64 max_connections) {
-    int epollfd = epoll_create1(0);
+    int epollfd          = epoll_create1(0);
     platform_ctx.epollfd = epollfd;
     if (epollfd == -1) {
         log_fatalf("Failed to create the epoll instance: %s", get_last_error());
@@ -221,7 +221,8 @@ i32 network_platform_init(NetworkContext* ctx, u64 max_connections) {
         return 1;
     }
 
-    pool_init(&ctx->connections, max_connections, sizeof(Connection), BLK_TAG_NETWORK, ctx->arena.chain);
+    pool_init(
+        &ctx->connections, max_connections, sizeof(Connection), BLK_TAG_NETWORK, ctx->arena.chain);
     return 0;
 }
 void platform_network_finish(void) {
@@ -230,7 +231,7 @@ void platform_network_finish(void) {
 }
 void platform_network_stop(void) {
     i64 count = 1;
-    i64 res = 0;
+    i64 res   = 0;
     while (res <= 0) {
         res = write(platform_ctx.eventfd, &count, sizeof(count));
     }
@@ -270,7 +271,7 @@ static enum IOCode accept_connection(NetworkContext* ctx) {
     u32 peer_port;
     string peer_host = sockaddr_to_string(&peer_address, &arena, &peer_port);
 
-    *conn = conn_create(peer_socket, index, &ctx->enc_ctx, peer_host, peer_port);
+    *conn              = conn_create(peer_socket, index, &ctx->enc_ctx, peer_host, peer_port);
     conn->pending_recv = TRUE;
     conn->pending_send = TRUE;
 
@@ -278,14 +279,14 @@ static enum IOCode accept_connection(NetworkContext* ctx) {
     return IOC_OK;
 }
 enum IOCode fill_buffer(Connection* conn) {
-    enum IOCode res = IOC_AGAIN;
+    enum IOCode res  = IOC_AGAIN;
     enum IOCode code = IOC_OK;
 
     i64 starting_pos = bytebuf_current_pos(&conn->recv_buffer);
 
     while (conn->recv_buffer.size < conn->recv_buffer.capacity && code == IOC_OK) {
         u64 size = 0;
-        code = sock_recv_buf(conn->peer_socket, &conn->recv_buffer, &size);
+        code     = sock_recv_buf(conn->peer_socket, &conn->recv_buffer, &size);
         if (code < res)
             res = code;
         if (code == IOC_AGAIN)
@@ -328,7 +329,7 @@ static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i
     enum IOCode io_code = IOC_OK;
     if (events & EPOLLIN && conn->pending_recv) {
         conn->pending_recv = FALSE;
-        io_code = fill_buffer(conn);
+        io_code            = fill_buffer(conn);
         while (io_code == IOC_OK) {
             io_code = receive_packet(conn);
             if (io_code == IOC_AGAIN && !conn->pending_recv)
@@ -350,7 +351,7 @@ static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i
 
     if (events & EPOLLOUT && conn->pending_send) {
         conn->pending_send = FALSE;
-        io_code = empty_buffer(conn);
+        io_code            = empty_buffer(conn);
         switch (io_code) {
         case IOC_CLOSED:
         case IOC_ERROR:
@@ -397,7 +398,7 @@ void* network_handle(void* params) {
     while (ctx->should_continue) {
         log_trace("Waiting for EPoll notifications...");
         u32 timeout = pool_size(&ctx->connections) > 0 ? MAX_TIMEOUT : -1;
-        eventCount = epoll_wait(platform_ctx.epollfd, events, 10, timeout);
+        eventCount  = epoll_wait(platform_ctx.epollfd, events, 10, timeout);
         if (eventCount == 0) {
             log_debug("Closing unresponsive connections.");
             struct timespec now;
@@ -417,7 +418,7 @@ void* network_handle(void* params) {
             else {
                 Connection* conn = pool_get(&ctx->connections, e->data.u64);
                 platform_assert(conn != NULL, "Invalid connection index returned by epoll");
-                //memory_dump_stats();
+                // memory_dump_stats();
                 handle_connection_io(ctx, conn, e->events);
             }
         }

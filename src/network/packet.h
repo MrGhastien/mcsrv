@@ -68,20 +68,20 @@ enum PacketType {
     /**@{*/
     // Client-bound
     /** @ref State#STATE_LOGIN "Log-in" phase (Client-bound) */
-    PKT_LOGIN_DISCONNECT = 0x0,
-    PKT_LOGIN_CRYPT_REQUEST = 0x1,
-    PKT_LOGIN_SUCCESS = 0x2,
-    PKT_LOGIN_COMPRESS = 0x3,
+    PKT_LOGIN_DISCONNECT     = 0x0,
+    PKT_LOGIN_CRYPT_REQUEST  = 0x1,
+    PKT_LOGIN_SUCCESS        = 0x2,
+    PKT_LOGIN_COMPRESS       = 0x3,
     PKT_LOGIN_CUSTOM_REQUEST = 0x4,
     PKT_LOGIN_COOKIE_REQUEST = 0x5,
     /**@}*/
     // Server-bound
     /**@{*/
     /** @ref State#STATE_LOGIN "Log-in" phase (Server-bound) */
-    PKT_LOGIN_START = 0x0,
-    PKT_LOGIN_CRYPT_RESPONSE = 0x1,
+    PKT_LOGIN_START           = 0x0,
+    PKT_LOGIN_CRYPT_RESPONSE  = 0x1,
     PKT_LOGIN_CUSTOM_RESPONSE = 0x2,
-    PKT_LOGIN_ACK = 0x3,
+    PKT_LOGIN_ACK             = 0x3,
     PKT_LOGIN_COOKIE_RESPONSE = 0x4,
     /**@}*/
 
@@ -89,31 +89,31 @@ enum PacketType {
     /** @name Configuration */
     /**@{*/
     /** @ref State#STATE_CONFIG "Configuration" phase (Client-Bound) */
-    PKT_CFG_COOKIE_REQUEST = 0x0,
-    PKT_CFG_CUSTOM_CLIENT = 0x1,
-    PKT_CFG_DISCONNECT = 0x2,
-    PKT_CFG_FINISH = 0x3,
-    PKT_CFG_CLIENT_KEEP_ALIVE = 0x4,
-    PKT_CFG_PING = 0x5,
-    PKT_CFG_RESET_CHAT = 0x6,
-    PKT_CFG_REGISTRY_DATA = 0x7,
-    PKT_CFG_REMOVE_RESPACK = 0x8,
-    PKT_CFG_ADD_RESPACK = 0x9,
-    PKT_CFG_STORE_COOKIE = 0xa,
-    PKT_CFG_TRANSFER = 0xb,
-    PKT_CFG_SET_FEATURE_FLAGS = 0xc,
-    PKT_CFG_UPDATE_TAGS = 0xd,
+    PKT_CFG_COOKIE_REQUEST         = 0x0,
+    PKT_CFG_CUSTOM_CLIENT          = 0x1,
+    PKT_CFG_DISCONNECT             = 0x2,
+    PKT_CFG_FINISH                 = 0x3,
+    PKT_CFG_CLIENT_KEEP_ALIVE      = 0x4,
+    PKT_CFG_PING                   = 0x5,
+    PKT_CFG_RESET_CHAT             = 0x6,
+    PKT_CFG_REGISTRY_DATA          = 0x7,
+    PKT_CFG_REMOVE_RESPACK         = 0x8,
+    PKT_CFG_ADD_RESPACK            = 0x9,
+    PKT_CFG_STORE_COOKIE           = 0xa,
+    PKT_CFG_TRANSFER               = 0xb,
+    PKT_CFG_SET_FEATURE_FLAGS      = 0xc,
+    PKT_CFG_UPDATE_TAGS            = 0xd,
     PKT_CFG_KNOWN_DATAPACKS_CLIENT = 0xe,
-    PKT_CFG_CUSTOM_REPORT = 0xf,
-    PKT_CFG_SERVER_LINKS = 0x10,
+    PKT_CFG_CUSTOM_REPORT          = 0xf,
+    PKT_CFG_SERVER_LINKS           = 0x10,
     /** @ref State#STATE_CONFIG "Configuration" phase (Server-Bound) */
-    PKT_CFG_CLIENT_INFO = 0x0,
-    PKT_CFG_COOKIE_RESPONSE = 0x1,
-    PKT_CFG_CUSTOM_SERVER = 0x2,
-    PKT_CFG_FINISH_ACK = 0x3,
-    PKT_CFG_SERVER_KEEP_ALIVE = 0x4,
-    PKT_CFG_PONG = 0x5,
-    PKT_CFG_RESPACK_RESPONSE = 0x6,
+    PKT_CFG_CLIENT_INFO            = 0x0,
+    PKT_CFG_COOKIE_RESPONSE        = 0x1,
+    PKT_CFG_CUSTOM_SERVER          = 0x2,
+    PKT_CFG_FINISH_ACK             = 0x3,
+    PKT_CFG_SERVER_KEEP_ALIVE      = 0x4,
+    PKT_CFG_PONG                   = 0x5,
+    PKT_CFG_RESPACK_RESPONSE       = 0x6,
     PKT_CFG_KNOWN_DATAPACKS_SERVER = 0x7,
     /**@}*/
 
@@ -265,20 +265,20 @@ typedef struct {
 } PacketCustom;
 
 enum ChatMode {
-    CHAT_ENABLED = 0,
+    CHAT_ENABLED  = 0,
     CHAT_COMMANDS = 1,
-    CHAT_HIDDEN = 2,
+    CHAT_HIDDEN   = 2,
 };
 
 enum MainHand {
-    HAND_LEFT = 0,
+    HAND_LEFT  = 0,
     HAND_RIGHT = 1,
 };
 
 enum ParticleStatus {
-    PARTICLE_ALL = 0,
+    PARTICLE_ALL       = 0,
     PARTICLE_DECREASED = 1,
-    PARTICLE_MINIMAL = 2,
+    PARTICLE_MINIMAL   = 2,
 };
 
 typedef struct {
@@ -367,15 +367,15 @@ typedef struct {
 } PacketCustomReport;
 
 enum ServerBuiltinLinkType {
-    SRV_LINK_BUG_REPORT = 0,
-    SRV_LINK_GUIDELINES = 1,
-    SRV_LINK_SUPPORT = 2,
-    SRV_LINK_STATUS = 3,
-    SRV_LINK_FEEDBACK = 4,
-    SRV_LINK_COMMUNITY = 5,
-    SRV_LINK_WEBSITE = 6,
-    SRV_LINK_FORUMS = 7,
-    SRV_LINK_NEWS = 8,
+    SRV_LINK_BUG_REPORT    = 0,
+    SRV_LINK_GUIDELINES    = 1,
+    SRV_LINK_SUPPORT       = 2,
+    SRV_LINK_STATUS        = 3,
+    SRV_LINK_FEEDBACK      = 4,
+    SRV_LINK_COMMUNITY     = 5,
+    SRV_LINK_WEBSITE       = 6,
+    SRV_LINK_FORUMS        = 7,
+    SRV_LINK_NEWS          = 8,
     SRV_LINK_ANNOUNCEMENTS = 9,
 };
 
@@ -393,14 +393,14 @@ typedef struct {
 } PacketServerLinks;
 
 enum ResourcePackResult {
-    RPRES_DL_SUCCESS = 0,
-    RPRES_DECLINED = 1,
-    RPRES_DL_FAIL = 2,
-    RPRES_ACCEPTED = 3,
-    RPRES_DOWNLOADED = 4,
+    RPRES_DL_SUCCESS  = 0,
+    RPRES_DECLINED    = 1,
+    RPRES_DL_FAIL     = 2,
+    RPRES_ACCEPTED    = 3,
+    RPRES_DOWNLOADED  = 4,
     RPRES_INVALID_URL = 5,
     RPRES_RELOAD_FAIL = 6,
-    RPRES_DISCARDED = 7,
+    RPRES_DISCARDED   = 7,
 };
 
 typedef struct {

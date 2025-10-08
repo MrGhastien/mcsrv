@@ -58,10 +58,10 @@ i32 create_server_socket(NetworkContext* ctx, char* host, i32 port) {
 i32 network_init(char* host, i32 port, u64 max_connections) {
 
     ctx.arena = arena_create(40960, BLK_TAG_NETWORK, -1);
-    ctx.host = str_view(host);
-    ctx.port = port;
-    ctx.code = 0;
-    if(!timestamp(&ctx.last_connection_clean))
+    ctx.host  = str_view(host);
+    ctx.port  = port;
+    ctx.code  = 0;
+    if (!timestamp(&ctx.last_connection_clean))
         log_warnf("Failed to set last keep-alive cleaning timestamp to now: %s", get_last_error());
 
     i32 res = network_platform_init(&ctx, max_connections);
@@ -88,10 +88,10 @@ struct check_keep_alive_data {
 };
 static void check_keep_alive(void* ptr, i64 idx, void* user_data) {
     UNUSED(idx);
-    Connection* conn = ptr;
+    Connection* conn                   = ptr;
     struct check_keep_alive_data* data = user_data;
 
-    if(data->now.tv_sec - conn->last_keep_alive.tv_sec >= 15)
+    if (data->now.tv_sec - conn->last_keep_alive.tv_sec >= 15)
         close_connection(data->ctx, conn);
 }
 void network_clean_connections(NetworkContext* ctx) {

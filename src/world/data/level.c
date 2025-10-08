@@ -32,7 +32,7 @@ typedef struct region {
 
 void level_init(Level* level, string path) {
     level->arena = arena_create(1 << 30, BLK_TAG_LEVEL, -1);
-    level->path = str_create_copy(&path, &level->arena);
+    level->path  = str_create_copy(&path, &level->arena);
 
     dict_init(&level->region_dict, &CMP_VEC2I, sizeof(RegionPos), sizeof(i64));
     dict_init(&level->chunk_dict, &CMP_VEC2I, sizeof(ChunkPos), sizeof(i64));
@@ -70,7 +70,7 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
             do {
                 const string* prop_name = nbt_get_name(nbt);
                 log_tracef("      Reading property '%s'", cstr(prop_name));
-                const string* prop_value = nbt_get_string(nbt);
+                const string* prop_value  = nbt_get_string(nbt);
                 const StateProperty* prop = get_state_property_by_name(selector.block, *prop_name);
                 platform_assert(prop != NULL, "");
                 selector_set(&selector, prop, parse_state_property_value(*prop_value, prop));
@@ -96,7 +96,7 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
 
 static void read_block_indices(NBT* nbt, ChunkSection* section) {
     u64 index_size = u64_log2(section->palette_size) + 1;
-    index_size = max_u64(4, index_size);
+    index_size     = max_u64(4, index_size);
 
     nbt_move_to_index(nbt, 0); // 1
 
@@ -140,14 +140,14 @@ static ChunkSection* read_section(NBT* nbt, Level* level, Arena arena) {
     ChunkSection* section = pool_alloc(&level->chunk_sections, &section_idx);
     section->palette_size = nbt_get_size(nbt);
 
-    section->y_pos = y;
+    section->y_pos   = y;
     section->palette = buddy_alloc(
         &level->buddy, section->palette_size * sizeof(BlockState*) /* , ALLOC_TAG_WORLD */);
 
     read_palette(nbt, arena, section);
     nbt_move_to_parent(nbt);                        // 1
     if (nbt_move_to_cstr(nbt, "data") == NBTE_OK) { // 2
-        section->indices = buddy_alloc(&level->buddy, 4096 * sizeof(*section->indices));
+        section->indices    = buddy_alloc(&level->buddy, 4096 * sizeof(*section->indices));
         section->index_size = 4096;
         read_block_indices(nbt, section);
         nbt_move_to_parent(nbt); // 1
@@ -182,7 +182,7 @@ static void read_chunk(
     switch (compression) {
     case 2: {
         IOMux compressed_stream = iomux_wrap_zlib(region->mux, length, &arena);
-        enum NBTStatus status = nbt_parse(&arena, 8192, compressed_stream, &nbt);
+        enum NBTStatus status   = nbt_parse(&arena, 8192, compressed_stream, &nbt);
         iomux_close(compressed_stream);
         if (status != NBTE_OK) {
             log_fatalf("An error occurred when reading a chunk's data: %i", status);
@@ -226,7 +226,7 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
 
     u32 chunk_offset = 0;
     iomux_read(region->mux, &chunk_offset, 4);
-    chunk_offset = untoh32(chunk_offset);
+    chunk_offset     = untoh32(chunk_offset);
     u32 sector_count = chunk_offset & 0xff;
     chunk_offset >>= 8;
 
@@ -242,7 +242,7 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
 
 /**
  * Loads the chunk at the given (chunk!) position.
-*/
+ */
 void level_load_chunk(Level* level, ChunkPos pos) {
 
     log_debugf("Loading chunk at position (%lli,%lli)...", pos.x, pos.y);
@@ -259,7 +259,7 @@ void level_load_chunk(Level* level, ChunkPos pos) {
         // If the region file is not opened yet, open it.
         char region_path_buf[PATH_MAX];
 
-        Arena scratch = level->arena;
+        Arena scratch         = level->arena;
         StringBuilder builder = strbuild_create(&scratch);
         strbuild_append(&builder, &level->path);
         strbuild_appends(&builder, "/region/r.");
@@ -268,12 +268,12 @@ void level_load_chunk(Level* level, ChunkPos pos) {
 
         log_tracef("Opening region file %s...", cstr(&region_path));
         Region* new_region = pool_alloc(&level->regions, &region_idx);
-        new_region->mux = iomux_open(&region_path, "r+b");
-        new_region->pos = region_pos;
+        new_region->mux    = iomux_open(&region_path, "r+b");
+        new_region->pos    = region_pos;
         dict_put(&level->region_dict, &region_pos, &region_idx);
     }
 
-    region = pool_get(&level->regions, region_idx);
+    region                = pool_get(&level->regions, region_idx);
     ChunkPos relative_pos = {.x = pos.x & 31, .y = pos.y & 31};
 
     locate_and_read_chunk(level, region, relative_pos);

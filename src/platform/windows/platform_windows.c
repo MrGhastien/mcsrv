@@ -1,7 +1,7 @@
 #ifdef MC_PLATFORM_WINDOWS
 
-#include "platform/platform.h"
 #include "definitions.h"
+#include "platform/platform.h"
 
 #include <windows.h>
 
@@ -30,8 +30,6 @@ const char* get_error_from_code(i64 code) {
                   2048,
                   NULL);
     return error_msg;
-
 }
-
 
 #endif

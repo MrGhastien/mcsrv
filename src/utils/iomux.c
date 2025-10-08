@@ -4,9 +4,9 @@
 #include "containers/bytebuffer.h"
 #include "memory/_memory_internal.h"
 #include "memory/memory.h"
+#include "network/compression.h"
 #include "str_builder.h"
 #include "utils/string.h"
-#include "network/compression.h"
 
 #include <errno.h>
 #include <logger.h>
@@ -54,14 +54,15 @@ static PoolAllocator multiplexers = {.mem = INVALID_CHAIN};
 static IOMux iomux_create(enum IOType type, union IOBackend backend) {
 
     if (multiplexers.mem == INVALID_CHAIN) {
-        pool_init_dynamic(&multiplexers, MAX_MULTIPLEXERS, sizeof(IOMux_t), BLK_TAG_PLATFORM, INVALID_CHAIN);
+        pool_init_dynamic(
+            &multiplexers, MAX_MULTIPLEXERS, sizeof(IOMux_t), BLK_TAG_PLATFORM, INVALID_CHAIN);
     }
 
     i64 index;
-    IOMux_t* mux = pool_alloc(&multiplexers, &index);
+    IOMux_t* mux    = pool_alloc(&multiplexers, &index);
     mux->total_read = 0;
-    mux->backend = backend;
-    mux->type = type;
+    mux->backend    = backend;
+    mux->type       = type;
     return index;
 }
 
@@ -93,12 +94,16 @@ IOMux iomux_wrap_zlib(IOMux compressed_stream, i64 size, Arena* arena) {
 
     // WARNING: Do not use the `in_block` from this backend: The address will become invalid after
     // we exit the function ! During testing, this causes SIGSEGV later when reading data from a
-    // region file and returning from the function (the stack is rewritten, including the return address !)
+    // region file and returning from the function (the stack is rewritten, including the return
+    // address !)
 
-    union IOBackend backend = {.zlib = {.source = compressed_stream, .max_in = size}};
-    IOMux new_mux = iomux_create(IO_ZLIB, backend);
+    union IOBackend backend = {
+        .zlib = {.source = compressed_stream, .max_in = size}
+    };
+    IOMux new_mux        = iomux_create(IO_ZLIB, backend);
     IOMux_t* new_mux_obj = iomux_get(new_mux);
-    new_mux_obj->backend.zlib.inflate_buffer = bytebuf_wrap(INFLATE_BUFFER_SIZE, new_mux_obj->backend.zlib.in_block);
+    new_mux_obj->backend.zlib.inflate_buffer =
+        bytebuf_wrap(INFLATE_BUFFER_SIZE, new_mux_obj->backend.zlib.in_block);
     compression_init(&new_mux_obj->backend.zlib.ctx, arena);
     return new_mux;
 }
@@ -121,9 +126,9 @@ IOMux iomux_new_string(Arena* arena) {
     union IOBackend backend = {
         .string_backend =
             {
-                             .arena = arena,
+                             .arena   = arena,
                              .builder = strbuild_create(arena),
-                             .cursor = 0,
+                             .cursor  = 0,
                              },
     };
     return iomux_create(IO_STRING, backend);
@@ -168,7 +173,7 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
     if (!mux)
         return -1;
 
-    if(mux->error != 0)
+    if (mux->error != 0)
         return -1;
 
     i32 res = 0;
@@ -205,7 +210,12 @@ i32 iomux_read(IOMux multiplexer, void* data, u64 size) {
         break;
     }
     case IO_ZLIB:
-        res = compression_decompress_from(&mux->backend.zlib.ctx, mux->backend.zlib.source, &mux->backend.zlib.inflate_buffer, data, &mux->backend.zlib.max_in, size);
+        res = compression_decompress_from(&mux->backend.zlib.ctx,
+                                          mux->backend.zlib.source,
+                                          &mux->backend.zlib.inflate_buffer,
+                                          data,
+                                          &mux->backend.zlib.max_in,
+                                          size);
         if (res < 0)
             mux->error = res;
         break;

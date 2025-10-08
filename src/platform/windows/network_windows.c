@@ -125,7 +125,7 @@ bool sock_listen(socketfd socket, i32 backlog) {
 enum IOCode sock_accept(socketfd socket, socketfd* out_accepted, void* out_buffer) {
     unsigned long received;
     socketfd accepted = WSASocketA(AF_INET, SOCK_STREAM, 0, 0, 0, WSA_FLAG_OVERLAPPED);
-    bool success = AcceptEx(socket,
+    bool success      = AcceptEx(socket,
                             accepted,
                             out_buffer,
                             0,
@@ -183,7 +183,7 @@ enum IOCode sock_send_buf(socketfd socket, WSAOVERLAPPED* overlapped, ByteBuffer
     }
 
     unsigned long bytes = 0;
-    i32 res = WSASend(socket, wsa_regions, region_count, &bytes, 0, overlapped, NULL);
+    i32 res             = WSASend(socket, wsa_regions, region_count, &bytes, 0, overlapped, NULL);
     if (res != 0) {
         i32 error = WSAGetLastError();
         if (error == WSA_IO_PENDING)
@@ -278,8 +278,8 @@ static enum IOCode accept_connection(NetworkContext* ctx, Connection** out_conn)
     }
 
     *conn = conn_create(peer_socket_cache, index, &ctx->enc_ctx, peer_host, peer_port);
-    conn->platform_data = offset(conn, sizeof(Connection));
-    *conn->platform_data = (PlatformConnectionData){0};
+    conn->platform_data  = offset(conn, sizeof(Connection));
+    *conn->platform_data = (PlatformConnectionData) {0};
 
     if (CreateIoCompletionPort(
             (HANDLE) peer_socket_cache, platform_ctx.completion_port, (uintptr_t) conn, 0) !=
@@ -318,7 +318,7 @@ enum IOCode fill_buffer(Connection* conn) {
         return IOC_OK;
     PlatformConnectionData* pconn = conn->platform_data;
 
-    enum IOCode res = IOC_PENDING;
+    enum IOCode res  = IOC_PENDING;
     enum IOCode code = IOC_OK;
     while (conn->recv_buffer.size < conn->recv_buffer.capacity && code == IOC_OK) {
         code = sock_recv_buf(conn->peer_socket, &pconn->read_overlapped, &conn->recv_buffer);
@@ -336,7 +336,7 @@ enum IOCode empty_buffer(Connection* conn) {
 
     PlatformConnectionData* pconn = conn->platform_data;
 
-    enum IOCode res = IOC_PENDING;
+    enum IOCode res  = IOC_PENDING;
     enum IOCode code = IOC_OK;
     while (conn->send_buffer.size > 0 && code == IOC_OK) {
         code = sock_send_buf(conn->peer_socket, &pconn->write_overlapped, &conn->send_buffer);
@@ -357,8 +357,9 @@ static enum IOCode initiate_read(Connection* conn) {
     }
     return code;
 }
-static enum IOCode handle_connection_io(Connection* conn, WSAOVERLAPPED* overlapped, u64 transferred) {
-    enum IOCode code = IOC_CLOSED;
+static enum IOCode
+handle_connection_io(Connection* conn, WSAOVERLAPPED* overlapped, u64 transferred) {
+    enum IOCode code              = IOC_CLOSED;
     PlatformConnectionData* pconn = conn->platform_data;
 
     if (transferred == 0)
@@ -414,8 +415,7 @@ static void handle_completion(NetworkContext* ctx, CompletionInfo* info, bool su
         break;
     default:
         Connection* conn = (Connection*) info->key;
-        if (!success ||
-            handle_connection_io(conn, info->overlapped, info->transfer_size) < IOC_OK)
+        if (!success || handle_connection_io(conn, info->overlapped, info->transfer_size) < IOC_OK)
             close_connection(ctx, conn);
         break;
     }
@@ -431,7 +431,7 @@ void* network_handle(void* params) {
         CompletionInfo info;
         log_trace("Waiting for IOCP notifications...");
         u32 timeout = objpool_size(&ctx->connections) > 0 ? MAX_TIMEOUT : INFINITE;
-        bool res = GetQueuedCompletionStatus(platform_ctx.completion_port,
+        bool res    = GetQueuedCompletionStatus(platform_ctx.completion_port,
                                              &info.transfer_size,
                                              &info.key,
                                              &info.overlapped,
@@ -447,12 +447,12 @@ void* network_handle(void* params) {
                 struct timespec now;
                 timestamp(&now);
 
-                if(now.tv_sec - ctx->last_connection_clean.tv_sec >= 15)
+                if (now.tv_sec - ctx->last_connection_clean.tv_sec >= 15)
                     network_clean_connections(ctx);
             } else {
                 log_fatalf("Error in network event loop: %s", get_error_from_code(code));
                 ctx->should_continue = FALSE;
-                event_trigger(BEVENT_STOP, (EventInfo){.sender = NULL});
+                event_trigger(BEVENT_STOP, (EventInfo) {.sender = NULL});
             }
         }
     }

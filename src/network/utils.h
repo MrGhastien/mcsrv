@@ -1,8 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "utils/string.h"
 #include "definitions.h"
+#include "utils/string.h"
 
 /**
  * Encodes an integer into a 32-bit Minecraft VarInt.
@@ -19,7 +19,7 @@ i64 varint_length(i32 n);
  * Extracts an UUID from a given string.
  *
  * An UUID is *always* 16 bytes long.
- * 
+ *
  * @param[in] str The string to parse.
  * @param[out] out The output buffer that will contain the parsed UUID.
  * Should be at least 16 bytes long.

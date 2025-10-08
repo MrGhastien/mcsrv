@@ -40,7 +40,7 @@ static void add_new_parent(JSONWriteContext* ctx, JSONToken* token) {
     JSONTokenMetadata new_parent = {
         .size = token->data.compound.size,
         .type = token->type,
-        .idx = ctx->current_index,
+        .idx  = ctx->current_index,
     };
     vect_add(&ctx->stack, &new_parent);
 }
@@ -140,7 +140,7 @@ enum JSONStatus json_write_file(const JSON* json, const string* path);
 
 enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str) {
     Arena serializing_arena = arena_create(arena->capacity, BLK_TAG_DATA, arena->chain);
-    IOMux mux = iomux_new_string(&serializing_arena);
+    IOMux mux               = iomux_new_string(&serializing_arena);
 
     enum JSONStatus status = json_write(json, mux);
     if (status == JSONE_OK)
@@ -188,36 +188,36 @@ typedef struct parse_info {
 } ParsingInfo;
 
 static char* names[_TOK_COUNT] = {
-    [TOK_LBRACE] = "{",
-    [TOK_RBRACE] = "}",
+    [TOK_LBRACE]   = "{",
+    [TOK_RBRACE]   = "}",
     [TOK_LBRACKET] = "[",
     [TOK_RBRACKET] = "]",
-    [TOK_COMMA] = ",",
-    [TOK_COLON] = ":",
-    [TOK_NULL] = "null",
-    [TOK_ERROR] = "<ERROR>",
-    [TOK_EOF] = "<EOF>",
-    [TOK_STRING] = "<string>",
-    [TOK_INT] = "<integer>",
-    [TOK_FLOAT] = "<float>",
-    [TOK_BOOL] = "<bool>",
+    [TOK_COMMA]    = ",",
+    [TOK_COLON]    = ":",
+    [TOK_NULL]     = "null",
+    [TOK_ERROR]    = "<ERROR>",
+    [TOK_EOF]      = "<EOF>",
+    [TOK_STRING]   = "<string>",
+    [TOK_INT]      = "<integer>",
+    [TOK_FLOAT]    = "<float>",
+    [TOK_BOOL]     = "<bool>",
 };
 
 static enum JSONType types[_TOK_COUNT] = {
-    [TOK_RBRACE] = _JSON_COUNT,
+    [TOK_RBRACE]   = _JSON_COUNT,
     [TOK_RBRACKET] = _JSON_COUNT,
-    [TOK_COMMA] = _JSON_COUNT,
-    [TOK_COLON] = _JSON_COUNT,
-    [TOK_ERROR] = _JSON_COUNT,
-    [TOK_EOF] = _JSON_COUNT,
+    [TOK_COMMA]    = _JSON_COUNT,
+    [TOK_COLON]    = _JSON_COUNT,
+    [TOK_ERROR]    = _JSON_COUNT,
+    [TOK_EOF]      = _JSON_COUNT,
 
-    [TOK_LBRACE] = JSON_OBJECT,
+    [TOK_LBRACE]   = JSON_OBJECT,
     [TOK_LBRACKET] = JSON_ARRAY,
-    [TOK_NULL] = JSON_NULL,
-    [TOK_STRING] = JSON_STRING,
-    [TOK_INT] = JSON_INT,
-    [TOK_FLOAT] = JSON_FLOAT,
-    [TOK_BOOL] = JSON_BOOL,
+    [TOK_NULL]     = JSON_NULL,
+    [TOK_STRING]   = JSON_STRING,
+    [TOK_INT]      = JSON_INT,
+    [TOK_FLOAT]    = JSON_FLOAT,
+    [TOK_BOOL]     = JSON_BOOL,
 };
 
 static bool token_has_value(enum JSONLexUnit token) {
@@ -244,7 +244,7 @@ static bool lex_string(IOMux multiplexer, LexUnitValue* value, Arena scratch, Ar
 
 static enum JSONLexUnit
 lex_number(IOMux multiplexer, char first, LexUnitValue* value, Arena scratch) {
-    bool frac = FALSE;
+    bool frac     = FALSE;
     bool exponent = FALSE;
 
     StringBuilder builder = strbuild_create(&scratch);
@@ -282,10 +282,10 @@ lex_number(IOMux multiplexer, char first, LexUnitValue* value, Arena scratch) {
     enum JSONLexUnit token;
     if (frac) {
         value->floating = strtod(cstr(&parse_res), NULL);
-        token = TOK_FLOAT;
+        token           = TOK_FLOAT;
     } else {
         value->integer = strtol(cstr(&parse_res), NULL, 10);
-        token = TOK_INT;
+        token          = TOK_INT;
     }
 
     iomux_ungetc(multiplexer, c);
@@ -317,7 +317,8 @@ static bool lex_null(IOMux multiplexer) {
     return memcmp(tmp, "ull", 3) == 0;
 }
 
-static enum JSONLexUnit lex_token(IOMux multiplexer, LexUnitValue* value, Arena* scratch, Arena* arena) {
+static enum JSONLexUnit
+lex_token(IOMux multiplexer, LexUnitValue* value, Arena* scratch, Arena* arena) {
     char c;
     do {
         if (iomux_read(multiplexer, &c, 1) < 1)
@@ -364,7 +365,8 @@ static enum JSONLexUnit lex_token(IOMux multiplexer, LexUnitValue* value, Arena*
     }
 }
 
-static bool json_lex(IOMux multiplexer, Vector* tok_list, Vector* tok_values, Arena* scratch, Arena* arena) {
+static bool
+json_lex(IOMux multiplexer, Vector* tok_list, Vector* tok_values, Arena* scratch, Arena* arena) {
     enum JSONLexUnit token;
     LexUnitValue value;
     do {
@@ -434,7 +436,7 @@ static enum JSONStatus json_analyze_obj(ParsingInfo* info) {
             log_errorf("[JSON] Invalid property type: expected string, got '%s'.", names[unit]);
             return JSONE_INVALID_TYPE;
         }
-        val = pop_value(info);
+        val  = pop_value(info);
         unit = pop_token(info);
         if (unit != TOK_COLON) {
             log_errorf("[JSON] Invalid property delimiter: expected ':', got '%s'.", names[unit]);
@@ -443,7 +445,7 @@ static enum JSONStatus json_analyze_obj(ParsingInfo* info) {
 
         // NOTE : This works only because the block containing characters is not part of
         // the string structure !
-        info->name = val->str;
+        info->name             = val->str;
         enum JSONStatus status = json_analyze(info);
         if (status != JSONE_OK)
             return status;
@@ -479,13 +481,13 @@ static enum JSONStatus json_analyze_array(ParsingInfo* info) {
 }
 
 static enum JSONStatus json_analyze(ParsingInfo* info) {
-    if(vect_size(&info->json->stack) > 512) {
+    if (vect_size(&info->json->stack) > 512) {
         log_error("[JSON] Reached maximum nesting depth of 512");
         return JSONE_MAX_NESTING;
     }
     enum JSONStatus status;
     enum JSONLexUnit unit = pop_token(info);
-    LexUnitValue* val = NULL;
+    LexUnitValue* val     = NULL;
 
     JSONToken new_token = {
         .name = info->name,
@@ -496,7 +498,7 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
     case TOK_LBRACE: {
         i64 new_index = vect_size(&info->json->tokens);
         append_token(info->json, &new_token);
-        if(!vect_add(&info->json->stack, &new_index)) {
+        if (!vect_add(&info->json->stack, &new_index)) {
             log_error("[JSON] Reached maximum nesting depth of 512");
             return JSONE_MAX_NESTING;
         }
@@ -507,7 +509,7 @@ static enum JSONStatus json_analyze(ParsingInfo* info) {
     case TOK_LBRACKET: {
         i64 new_index = vect_size(&info->json->tokens);
         append_token(info->json, &new_token);
-        if(!vect_add(&info->json->stack, &new_index)) {
+        if (!vect_add(&info->json->stack, &new_index)) {
             log_error("[JSON] Reached maximum nesting depth of 512");
             return JSONE_MAX_NESTING;
         }
@@ -553,12 +555,12 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
     }
 
     ParsingInfo info = {
-        .json = out_json,
-        .idx = 0,
-        .val_idx = 0,
-        .tok_list = &units,
+        .json       = out_json,
+        .idx        = 0,
+        .val_idx    = 0,
+        .tok_list   = &units,
         .tok_values = &unit_values,
-        .name = STR_EMPTY,
+        .name       = STR_EMPTY,
     };
 
     *out_json = json_create(arena, 64);
@@ -583,7 +585,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
 
 enum JSONStatus json_from_file(string path, Arena* arena, JSON* out_json) {
     IOMux mux = iomux_open(&path, "r");
-    if(mux == -1) {
+    if (mux == -1) {
         log_errorf("[JSON] Could not open file for JSON parsing: %s", get_last_error());
         return JSONE_IO;
     }

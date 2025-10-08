@@ -55,12 +55,12 @@ bool create_state_definition(const Block* block,
     u32 property_count = properties ? vect_size(properties) : 0;
     if (property_count == 0) {
         out_definition->property_count = 0;
-        out_definition->properties = NULL;
-        out_definition->state_count = 1;
-        out_definition->states = arena_callocate(arena, sizeof(BlockState) /*, ALLOC_TAG_WORLD */);
+        out_definition->properties     = NULL;
+        out_definition->state_count    = 1;
+        out_definition->states  = arena_callocate(arena, sizeof(BlockState) /*, ALLOC_TAG_WORLD */);
         *out_definition->states = (BlockState) {
             .definition = out_definition,
-            .values = NULL,
+            .values     = NULL,
         };
         return TRUE;
     }
@@ -91,31 +91,32 @@ bool create_state_definition(const Block* block,
         state_count *= get_value_count(prop);
     }
 
-    BlockState* states = arena_callocate(arena, sizeof *states * state_count /*, ALLOC_TAG_WORLD */);
+    BlockState* states =
+        arena_callocate(arena, sizeof *states * state_count /*, ALLOC_TAG_WORLD */);
 
     for (u32 i = 0; i < state_count; i++) {
         union StatePropertyValue* values =
-            arena_callocate(arena, sizeof *values * property_count/* , ALLOC_TAG_WORLD */);
+            arena_callocate(arena, sizeof *values * property_count /* , ALLOC_TAG_WORLD */);
 
         u32 val_index = 1;
         for (i32 j = property_count - 1; j >= 0; j--) {
             const StateProperty* prop = property_array[j];
-            u32 local_value_count = get_value_count(prop);
-            values[j] = get_value(prop, (i / val_index) % local_value_count);
+            u32 local_value_count     = get_value_count(prop);
+            values[j]                 = get_value(prop, (i / val_index) % local_value_count);
             val_index *= local_value_count;
         }
 
         states[i] = (BlockState) {
             .definition = out_definition,
-            .values = values,
+            .values     = values,
         };
     }
 
     *out_definition = (StateDefinition) {
         .property_count = property_count,
-        .properties = property_array,
-        .state_count = state_count,
-        .states = states,
+        .properties     = property_array,
+        .state_count    = state_count,
+        .states         = states,
     };
 
     return TRUE;
@@ -123,15 +124,15 @@ bool create_state_definition(const Block* block,
 
 BlockProperties default_block_properties(void) {
     return (BlockProperties) {
-        .slipperiness = 0.6f,
-        .speed_multiplier = 1.0f,
-        .jump_multiplier = 1.0f,
-        .opaque = TRUE,
+        .slipperiness             = 0.6f,
+        .speed_multiplier         = 1.0f,
+        .jump_multiplier          = 1.0f,
+        .opaque                   = TRUE,
         .spawn_brushing_particles = TRUE,
-        .piston_behavior = PISTON_BEHAVIOR_NORMAL,
-        .requires_correct_tools = TRUE,
-        .destroy_time = 1.5f,
-        .explosion_resistance = 6.0f,
+        .piston_behavior          = PISTON_BEHAVIOR_NORMAL,
+        .requires_correct_tools   = TRUE,
+        .destroy_time             = 1.5f,
+        .explosion_resistance     = 6.0f,
     };
 }
 
@@ -165,7 +166,7 @@ void selector_set(StateSelectionContext* ctx,
                   const StateProperty* property,
                   union StatePropertyValue value) {
     const StateDefinition* def = &ctx->block->state_definition;
-    u32 i = 0;
+    u32 i                      = 0;
     while (i < def->property_count && def->properties[i] != property) {
         i++;
     }
@@ -219,7 +220,7 @@ union StatePropertyValue parse_state_property_value(string value, const StatePro
             abort();
         break;
     case BLOCK_PROP_INTEGER:
-        i64 num = strtol(cstr(&value), NULL, 10);
+        i64 num     = strtol(cstr(&value), NULL, 10);
         res.integer = num;
         break;
     case BLOCK_PROP_ENUM:

@@ -4,7 +4,6 @@
 #include "definitions.h"
 #include "utils/string.h"
 
-
 #ifdef MC_PLATFORM_LINUX
 #include "linux/mc_thread_linux.h"
 #elif defined MC_PLATFORM_WINDOWS

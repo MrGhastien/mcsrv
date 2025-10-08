@@ -83,7 +83,12 @@ i64 compression_compress(CompressionContext* ctx, ByteBuffer* out_buffer, ByteBu
  */
 i64 compression_decompress(CompressionContext* ctx, ByteBuffer* out_buffer, ByteBuffer* in_buffer);
 
-i64 compression_decompress_from(CompressionContext* ctx, IOMux mux, ByteBuffer* in_buffer, void* out_buffer, i64* remaining_in_length, u64 out_length);
+i64 compression_decompress_from(CompressionContext* ctx,
+                                IOMux mux,
+                                ByteBuffer* in_buffer,
+                                void* out_buffer,
+                                i64* remaining_in_length,
+                                u64 out_length);
 i64 compression_compress_to(CompressionContext* ctx, IOMux mux, const void* in_buffer, u64 length);
 i64 compression_compress_buffer_to(CompressionContext* ctx, IOMux mux, ByteBuffer* in_buffer);
 

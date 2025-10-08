@@ -2,8 +2,8 @@
 #define EXPLOSION_H
 
 #include "definitions.h"
-#include "world/level.h"
 #include "utils/position.h"
+#include "world/level.h"
 
 typedef struct explosion {
     Level* level;

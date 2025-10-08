@@ -8,13 +8,11 @@
 #include "security.h"
 
 #include "memory/memory.h"
-#include "platform/socket.h"
 #include "platform/mc_thread.h"
-#include "platform/time.h"
+#include "platform/socket.h"
 
 #define IOEVENT_IN 1
 #define IOEVENT_OUT 2
-
 
 /**
  * Enumeration used internally to keep track of the state of connections.
@@ -22,10 +20,11 @@
  * gracefully.
  */
 enum IOCode {
-    IOC_ERROR = 0, /**< An error occurred, the connection must be closed. */
+    IOC_ERROR  = 0, /**< An error occurred, the connection must be closed. */
     IOC_CLOSED = 1, /**< The connection has been closed by the peer, stop handling it. */
-    IOC_OK = 2,    /**< No errors occurred, connection can stay open. */
-    IOC_AGAIN = 3, /**< Data could not be read all at once, we should try reading more when possible. */
+    IOC_OK     = 2, /**< No errors occurred, connection can stay open. */
+    IOC_AGAIN =
+        3, /**< Data could not be read all at once, we should try reading more when possible. */
     IOC_PENDING = 4, /**< Read operations are pending. */
 };
 
@@ -46,7 +45,7 @@ typedef struct NetworkContext {
     i32 code;
     bool should_continue;
 
-  struct timespec last_connection_clean;
+    struct timespec last_connection_clean;
 
 } NetworkContext;
 

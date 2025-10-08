@@ -1,15 +1,15 @@
 /**
  * @file
  *
- * @brief Functions related to encryption, ciphers and Mojang auth. 
+ * @brief Functions related to encryption, ciphers and Mojang auth.
  */
 
 #ifndef ENCRYPTION_H
 #define ENCRYPTION_H
 
+#include "data/json.h"
 #include "definitions.h"
 #include "memory/allocators/arena.h"
-#include "data/json.h"
 
 #include <openssl/encoder.h>
 #include <openssl/evp.h>
@@ -59,12 +59,14 @@ void encryption_cleanup(EncryptionContext* ctx);
  *
  * @param ctx The encryption context, containing the RSA key pair.
  * @param arena The arena used to allocate the output buffer.
- * @param[out] out_size A pointer to a @ref u64. The size of the output buffer is written in that memory.
+ * @param[out] out_size A pointer to a @ref u64. The size of the output buffer is written in that
+ * memory.
  * @param[in] in The input buffer.
  * @param in_size The size of the input buffer.
  * @return The output buffer, or NULL if decryption failed.
  *
- * @note The value at @p out_size should not be used when the decryption has failed, as it is undefined whether the value is reset or not.
+ * @note The value at @p out_size should not be used when the decryption has failed, as it is
+ * undefined whether the value is reset or not.
  */
 u8* encryption_decrypt(EncryptionContext* ctx, Arena* arena, u64* out_size, u8* in, u64 in_size);
 
@@ -72,7 +74,8 @@ u8* encryption_decrypt(EncryptionContext* ctx, Arena* arena, u64* out_size, u8* 
  * Initializes a peer-specific encryption context.
  *
  * This function initializes two AES ciphers, one for encryption and one for decryption.
- * The AES ciphers are continuously updated, and are closed only when cleaning up the peer-specific * encryption context.
+ * The AES ciphers are continuously updated, and are closed only when cleaning up the peer-specific
+ * * encryption context.
  *
  * @param ctx The encryption context to initialize. Must be non-null.
  * @param arena The arena used to allocate the shared secret buffer.
@@ -91,7 +94,7 @@ void encryption_cleanup_peer(PeerEncryptionContext* ctx);
 
 /**
  * Encrypts data using the peer-specific AES cipher.
- * 
+ *
  * @param ctx The peer-specific encryption context containing the AES cipher to use.
  * @param[in] in The buffer containing the data do encrypt.
  * @param in_size The size of the input buffer.

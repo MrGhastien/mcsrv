@@ -1,5 +1,5 @@
-#include "utils/bitwise.h"
 #include "dict.h"
+#include "utils/bitwise.h"
 #include "utils/hash.h"
 
 #include <stdlib.h>
@@ -11,9 +11,9 @@
 
 static struct node get_node_base(const Dict* dict, u64 idx, void* base, u64 capacity) {
     struct node node = {
-        .hash = 0,
+        .hash  = 0,
         .hashp = NULL,
-        .key = NULL,
+        .key   = NULL,
         .value = NULL,
     };
     if (idx >= capacity) {
@@ -21,11 +21,11 @@ static struct node get_node_base(const Dict* dict, u64 idx, void* base, u64 capa
     }
 
     u64 total_stride = sizeof(u64) + dict->key_stride + dict->value_stride;
-    void* ptr = offset(base, idx * total_stride);
-    node.hashp = ptr;
-    node.hash = *node.hashp;
-    node.key = offset(ptr, sizeof(u64));
-    node.value = offset(ptr, sizeof(u64) + dict->key_stride);
+    void* ptr        = offset(base, idx * total_stride);
+    node.hashp       = ptr;
+    node.hash        = *node.hashp;
+    node.key         = offset(ptr, sizeof(u64));
+    node.value       = offset(ptr, sizeof(u64) + dict->key_stride);
     return node;
 }
 
@@ -38,18 +38,19 @@ static u64 idx_iter(u64 cap, u64 idx) {
 }
 
 static i64 get_elem(const Dict* map, const void* key, struct node* out_node) {
-    u64 h = cmp_hash(map->comparator, key, map->key_stride);
-    u64 idx = h % map->capacity;
+    u64 h         = cmp_hash(map->comparator, key, map->key_stride);
+    u64 idx       = h % map->capacity;
     struct node n = get_node(map, idx);
-    u64 count = 0;
+    u64 count     = 0;
 
-    while (n.hash == 0 || n.hash != h || cmp_compare(map->comparator, n.key, key, map->key_stride)) {
+    while (n.hash == 0 || n.hash != h ||
+           cmp_compare(map->comparator, n.key, key, map->key_stride)) {
         if (n.hash != 0)
             count++;
         if (count == map->size)
             return FALSE;
         idx = idx_iter(map->capacity, idx);
-        n = get_node(map, idx);
+        n   = get_node(map, idx);
     }
     *out_node = n;
     return idx;
@@ -76,14 +77,14 @@ static void rehash_nodes(Dict* map, void* old_base, void* new_base, u64 new_capa
 
 static void resize(Dict* map, u64 new_capacity) {
     u64 total_stride = sizeof(u64) + map->key_stride + map->value_stride;
-    void* new_base = calloc(new_capacity, total_stride);
-    void* old_base = map->base;
+    void* new_base   = calloc(new_capacity, total_stride);
+    void* old_base   = map->base;
 
     rehash_nodes(map, old_base, new_base, new_capacity);
 
     free(old_base);
     map->capacity = new_capacity;
-    map->base = new_base;
+    map->base     = new_base;
 }
 
 static void grow(Dict* map) {
@@ -99,14 +100,14 @@ i64 dict_put(Dict* map, const void* key, const void* value) {
     if (key == NULL || map->size == map->capacity)
         return -1;
 
-    u64 h = cmp_hash(map->comparator, key, map->key_stride);
-    u64 idx = h % map->capacity;
+    u64 h         = cmp_hash(map->comparator, key, map->key_stride);
+    u64 idx       = h % map->capacity;
     struct node n = get_node(map, idx);
 
     bool same_key = cmp_compare(map->comparator, n.key, key, map->key_stride) == 0;
     while (n.hash != 0 && (n.hash != h || !same_key)) {
-        idx = idx_iter(map->capacity, idx);
-        n = get_node(map, idx);
+        idx      = idx_iter(map->capacity, idx);
+        n        = get_node(map, idx);
         same_key = cmp_compare(map->comparator, n.key, key, map->key_stride) == 0;
     }
 

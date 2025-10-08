@@ -18,13 +18,12 @@ typedef struct registry {
 static Registry root;
 static Arena arena;
 
-
 static void register_game_elements(void) {
     register_blocks();
 }
 
 void registry_system_init(void) {
-    arena = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY, INVALID_CHAIN);
+    arena     = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY, INVALID_CHAIN);
     root.name = resid_default_cstr("root");
     dict_init_fixed(&root.entries, &CMP_RESID, &arena, 64, sizeof(ResourceID), sizeof(Registry));
 
@@ -39,7 +38,7 @@ void registry_system_cleanup(void) {
 
 bool registry_create(ResourceID name, u64 stride) {
     Registry reg = {.name = name};
-    //dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
+    // dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
     dict_init(&reg.entries, &CMP_RESID, sizeof(ResourceID), stride);
 
     return dict_put(&root.entries, &name, &reg) >= 0;
@@ -53,9 +52,13 @@ void registry_register(ResourceID registry_name, ResourceID id, void* instance) 
 
     reg = dict_ref(&root.entries, reg_idx);
 
-    log_debugf("Registering " RESID " into registry " RESID ".", RESID_EXTRACT_STRING(id), RESID_EXTRACT_STRING(registry_name));
-    if(dict_put(&reg->entries, &id, instance) < 0)
-        log_errorf("Registration of " RESID " into registry " RESID " failed.", RESID_EXTRACT_STRING(id), RESID_EXTRACT_STRING(registry_name));
+    log_debugf("Registering " RESID " into registry " RESID ".",
+               RESID_EXTRACT_STRING(id),
+               RESID_EXTRACT_STRING(registry_name));
+    if (dict_put(&reg->entries, &id, instance) < 0)
+        log_errorf("Registration of " RESID " into registry " RESID " failed.",
+                   RESID_EXTRACT_STRING(id),
+                   RESID_EXTRACT_STRING(registry_name));
 }
 
 const void* registry_get(ResourceID registry_name, ResourceID element_id) {
@@ -67,8 +70,10 @@ const void* registry_get(ResourceID registry_name, ResourceID element_id) {
     reg = dict_ref(&root.entries, reg_idx);
 
     i64 idx = dict_get(&reg->entries, &element_id, NULL);
-    if(idx == -1) {
-        log_errorf("Failed to get element " RESID " of registry " RESID ".", RESID_EXTRACT_STRING(element_id), RESID_EXTRACT_STRING(registry_name));
+    if (idx == -1) {
+        log_errorf("Failed to get element " RESID " of registry " RESID ".",
+                   RESID_EXTRACT_STRING(element_id),
+                   RESID_EXTRACT_STRING(registry_name));
         return NULL;
     }
 

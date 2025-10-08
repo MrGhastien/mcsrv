@@ -20,11 +20,11 @@ static PoolAllocator property_pool;
 static const ResourceID BLOCK_KEY = {
     .namespace =
         {
-                    .base = "minecraft",
+                    .base   = "minecraft",
                     .length = 9,
                     },
     .path = {
-                    .base = "blocks",
+                    .base   = "blocks",
                     .length = 6,
                     }
 };
@@ -54,9 +54,9 @@ i64 register_bool_state_property(string name) {
     }
 
     StateProperty* property = pool_alloc(&property_pool, &index);
-    *property = (StateProperty) {
-        .type = BLOCK_PROP_BOOL,
-        .name = name,
+    *property               = (StateProperty) {
+                      .type = BLOCK_PROP_BOOL,
+                      .name = name,
     };
     return index;
 }
@@ -69,10 +69,10 @@ i64 register_integer_state_property(string name, i32 minimum, i32 maximum) {
     }
 
     StateProperty* property = pool_alloc(&property_pool, &index);
-    *property = (StateProperty) {
-        .type = BLOCK_PROP_INTEGER,
-        .name = name,
-        .info.integer =
+    *property               = (StateProperty) {
+                      .type = BLOCK_PROP_INTEGER,
+                      .name = name,
+                      .info.integer =
             {
                            .min = minimum,
                            .max = maximum,
@@ -89,19 +89,19 @@ i64 register_enum_state_property(string name, string* values, u64 value_count) {
     }
 
     StateProperty* property = pool_alloc(&property_pool, &index);
-    *property = (StateProperty) {
-        .name = name,
-        .type = BLOCK_PROP_ENUM,
-        .info.enumeration =
+    *property               = (StateProperty) {
+                      .name = name,
+                      .type = BLOCK_PROP_ENUM,
+                      .info.enumeration =
             {
                                .value_count = value_count,
-                               .values = values,
+                               .values      = values,
                                },
     };
 
     for (u32 i = 0; i < value_count; i++) {
         string* ptr = &property->info.enumeration.values[i];
-        *ptr = values[i];
+        *ptr        = values[i];
         if (!validate_property_name(ptr)) {
             log_errorf("Possible value of enumeration state property has an invalid name '%s'",
                        cstr(ptr));
@@ -127,7 +127,7 @@ static void init_properties(void) {
 
 static void register_simple_block(const char* name, Arena* arena, const BlockProperties* props) {
     Block blk = {
-        .id = resid_default_cstr(name),
+        .id         = resid_default_cstr(name),
         .properties = *props,
     };
 
@@ -156,7 +156,7 @@ static void register_state_properties(JSON* json) {
             json_move_cstr(json, "../values");
             i64 len = json_get_length(json);
 
-            string* values = arena_callocate(&arena, sizeof *values * len/* , ALLOC_TAG_WORLD */);
+            string* values = arena_callocate(&arena, sizeof *values * len /* , ALLOC_TAG_WORLD */);
 
             i64 idx = 0;
             json_move_to_index(json, 0);
@@ -202,7 +202,7 @@ static void register_blocks_internal(JSON* json) {
             vect_init(&state_properties, &arena, len, sizeof(StateProperty*));
             json_move_to_index(json, 0);
             do {
-                i64 idx = json_get_int(json);
+                i64 idx             = json_get_int(json);
                 StateProperty* prop = pool_get(&property_pool, idx);
                 vect_add(&state_properties, &prop);
             } while (json_move_to_next_sibling(json) == JSONE_OK);
@@ -221,9 +221,9 @@ static void register_blocks_internal(JSON* json) {
 #ifdef DEBUG
 static void print_property(void* obj, i64 idx, void* data) {
     UNUSED(data);
-    Arena scratch = arena;
+    Arena scratch         = arena;
     StringBuilder builder = strbuild_create(&scratch);
-    StateProperty* prop = obj;
+    StateProperty* prop   = obj;
     strbuild_appendf(&builder, "%lli: ", idx);
     switch (prop->type) {
     case BLOCK_PROP_BOOL:
@@ -307,7 +307,7 @@ void register_blocks(void) {
 
 const StateProperty* get_state_property_by_name(const Block* block, string name) {
     const StateProperty** properties = block->state_definition.properties;
-    i32 property_count = block->state_definition.property_count;
+    i32 property_count               = block->state_definition.property_count;
 
     for (i32 i = 0; i < property_count; i++) {
         const StateProperty* prop = properties[i];

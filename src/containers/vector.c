@@ -9,11 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct data_block* alloc_data_block(Arena* arena, u64 capacity, u64 stride/* , i32 mem_tag */) {
-    struct data_block* blk = arena_callocate(arena, sizeof *blk/* , mem_tag */);
-    *blk = (struct data_block){
-        .capacity = capacity,
-        .data = arena_callocate(arena, stride * capacity/* , mem_tag */),
+struct data_block* alloc_data_block(Arena* arena, u64 capacity, u64 stride /* , i32 mem_tag */) {
+    struct data_block* blk = arena_callocate(arena, sizeof *blk /* , mem_tag */);
+    *blk                   = (struct data_block) {
+                          .capacity = capacity,
+                          .data     = arena_callocate(arena, stride * capacity /* , mem_tag */),
     };
     return blk;
 }
@@ -40,11 +40,11 @@ static bool ensure_capacity(Vector* vector, u64 size) {
         return FALSE;
     }
 
-    struct data_block* blk =
-        alloc_data_block(vector->arena, vector->capacity >> 1, vector->stride/* , ALLOC_TAG_VECTOR */);
-    blk->prev = vector->end;
+    struct data_block* blk = alloc_data_block(
+        vector->arena, vector->capacity >> 1, vector->stride /* , ALLOC_TAG_VECTOR */);
+    blk->prev         = vector->end;
     vector->end->next = blk;
-    vector->end = blk;
+    vector->end       = blk;
     vector->capacity += blk->capacity;
 
     return TRUE;
@@ -53,8 +53,8 @@ static bool ensure_capacity(Vector* vector, u64 size) {
 static void register_addition(Vector* vector) {
     vector->size++;
     vector->next_insert_index++;
-    if(vector->next_insert_index >= vector->current->capacity) {
-        if(vect_is_dynamic(vector))
+    if (vector->next_insert_index >= vector->current->capacity) {
+        if (vect_is_dynamic(vector))
             ensure_capacity(vector, vector->size + 1);
         vector->next_insert_index -= vector->current->capacity;
         vector->current = vector->current->next;
@@ -65,7 +65,7 @@ static void register_removal(Vector* vector) {
     vector->size--;
 
     if (vector->next_insert_index == 0) {
-        vector->current = vector->current->prev;
+        vector->current           = vector->current->prev;
         vector->next_insert_index = vector->current->capacity;
     }
 
@@ -78,13 +78,13 @@ shift_elements_backwards(Vector* vector, struct data_block* blk, u64 start, u64 
     global_index += 1;
     start += 1;
     if (start == blk->capacity) {
-        blk = blk->next;
+        blk   = blk->next;
         start = 0;
     }
 
     u64 total_to_shift = vector->size - global_index;
     while (total_to_shift > 0) {
-        u64 end = clamp(start + total_to_shift, start, blk->capacity);
+        u64 end   = clamp(start + total_to_shift, start, blk->capacity);
         void* src = offset(blk->data, start * stride);
 
         // Copy the first element of the block to the end of the previous block
@@ -104,7 +104,7 @@ shift_elements_backwards(Vector* vector, struct data_block* blk, u64 start, u64 
         memmove(dst, src, to_shift * stride);
         total_to_shift -= to_shift;
         start = 0;
-        blk = blk->next;
+        blk   = blk->next;
     }
 }
 
@@ -112,8 +112,8 @@ static void shift_elements_forwards(Vector* vector, u64 global_index) {
     u64 stride = vector->stride;
 
     struct data_block* blk = vector->current;
-    i64 total_to_shift = vector->size - global_index;
-    u64 end = vector->next_insert_index;
+    i64 total_to_shift     = vector->size - global_index;
+    u64 end                = vector->next_insert_index;
     while (total_to_shift > 0 && blk) {
         u64 start = sub_no_underflow(end, total_to_shift);
         void* src = offset(blk->data, start * stride);
@@ -141,29 +141,29 @@ static void shift_elements_forwards(Vector* vector, u64 global_index) {
 }
 
 void vect_init_dynamic(Vector* vector, Arena* arena, u64 initial_capacity, u64 stride) {
-    vector->start = alloc_data_block(arena, initial_capacity, stride/* , ALLOC_TAG_VECTOR */);
-    vector->end = vector->start;
+    vector->start   = alloc_data_block(arena, initial_capacity, stride /* , ALLOC_TAG_VECTOR */);
+    vector->end     = vector->start;
     vector->current = vector->start;
     vector->next_insert_index = 0;
-    vector->capacity = initial_capacity;
-    vector->size = 0;
-    vector->stride = stride;
-    vector->arena = arena;
+    vector->capacity          = initial_capacity;
+    vector->size              = 0;
+    vector->stride            = stride;
+    vector->arena             = arena;
 }
 void vect_init(Vector* vector, Arena* arena, u64 capacity, u64 stride) {
-    vector->start = alloc_data_block(arena, capacity, stride/* , ALLOC_TAG_VECTOR */);
-    vector->end = vector->start;
-    vector->current = vector->start;
+    vector->start             = alloc_data_block(arena, capacity, stride /* , ALLOC_TAG_VECTOR */);
+    vector->end               = vector->start;
+    vector->current           = vector->start;
     vector->next_insert_index = 0;
-    vector->capacity = capacity;
-    vector->size = 0;
-    vector->stride = stride;
-    vector->arena = NULL;
+    vector->capacity          = capacity;
+    vector->size              = 0;
+    vector->stride            = stride;
+    vector->arena             = NULL;
 }
 
 void vect_clear(Vector* vector) {
-    vector->size = 0;
-    vector->current = vector->start;
+    vector->size              = 0;
+    vector->current           = vector->start;
     vector->next_insert_index = 0;
 }
 
@@ -242,7 +242,7 @@ bool vect_peek(const Vector* vector, void* out) {
     void* src;
     if (vector->next_insert_index == 0) {
         struct data_block* blk = vector->current->prev;
-        src = offset(blk->data, (blk->capacity - 1) * stride);
+        src                    = offset(blk->data, (blk->capacity - 1) * stride);
     } else
         src = offset(vector->current->data, (vector->next_insert_index - 1) * stride);
 

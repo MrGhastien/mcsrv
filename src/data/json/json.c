@@ -80,9 +80,9 @@ enum JSONStatus json_set_root(JSON* json, enum JSONType type) {
 void append_token(JSON* json, JSONToken* new_token) {
     JSONToken* parent = get_current_node(json);
     if (!parent) {
-        new_token->local_index = 0;
+        new_token->local_index        = 0;
         new_token->prev_sibling_index = -1;
-        new_token->parent_index = -1;
+        new_token->parent_index       = -1;
     } else {
         new_token->local_index = json_get_length(json);
         vect_peek(&json->stack, &new_token->parent_index);
@@ -100,7 +100,7 @@ enum JSONStatus json_push_simple(JSON* json, enum JSONType type, union JSONSimpl
     if (status != JSONE_OK)
         return status;
     JSONToken new_token = {
-        .type = type,
+        .type        = type,
         .data.simple = value,
     };
     append_token(json, &new_token);
@@ -112,7 +112,7 @@ enum JSONStatus json_push_str(JSON* json, const string* str) {
     if (status != JSONE_OK)
         return status;
     JSONToken new_token = {
-        .type = JSON_STRING,
+        .type     = JSON_STRING,
         .data.str = str_create_copy(str, json->arena),
     };
     append_token(json, &new_token);
@@ -136,9 +136,9 @@ json_put_simple(JSON* json, const string* name, enum JSONType type, union JSONSi
     if (status != JSONE_OK)
         return status;
     JSONToken new_token = {
-        .type = type,
+        .type        = type,
         .data.simple = value,
-        .name = str_create_copy(name, json->arena),
+        .name        = str_create_copy(name, json->arena),
     };
     append_token(json, &new_token);
     return JSONE_OK;
@@ -148,9 +148,9 @@ enum JSONStatus json_put_str(JSON* json, const string* name, const string* str) 
     if (status != JSONE_OK)
         return status;
     JSONToken new_token = {
-        .type = JSON_STRING,
+        .type     = JSON_STRING,
         .data.str = str_create_copy(str, json->arena),
-        .name = str_create_copy(name, json->arena),
+        .name     = str_create_copy(name, json->arena),
     };
     append_token(json, &new_token);
     return JSONE_OK;
@@ -387,7 +387,7 @@ i64 json_get_length(JSON* json) {
 string* json_get_name(JSON* json) {
     JSONToken* token = get_current_node(json);
     i64 parent_idx;
-    if(!vect_get(&json->stack, json->stack.size - 2, &parent_idx))
+    if (!vect_get(&json->stack, json->stack.size - 2, &parent_idx))
         return NULL;
     JSONToken* parent = vect_ref(&json->tokens, parent_idx);
     if (parent->type != JSON_OBJECT)

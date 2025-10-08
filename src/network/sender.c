@@ -1,8 +1,8 @@
 #include "compression.h"
 #include "network/common_types.h"
-#include "security.h"
 #include "packet.h"
 #include "packet_codec.h"
+#include "security.h"
 
 #include "containers/bytebuffer.h"
 #include "logger.h"
@@ -16,7 +16,7 @@ void send_packet(const Packet* pkt, Connection* conn) {
         return;
 
     mcmutex_lock(&conn->mutex);
-    Arena scratch_arena = conn->scratch_arena;
+    Arena scratch_arena       = conn->scratch_arena;
     ByteBuffer scratch_buffer = bytebuf_create_fixed(MAX_PACKET_SIZE, &scratch_arena);
 
     bytebuf_write_varint(&scratch_buffer, pkt->id);
@@ -26,9 +26,8 @@ void send_packet(const Packet* pkt, Connection* conn) {
 
     if (conn->compression) {
         if (scratch_buffer.size >= conn->cmprss_ctx.threshold) {
-            u64 uncompressed_size = scratch_buffer.size;
-            ByteBuffer compressed_scratch =
-                bytebuf_create_fixed(uncompressed_size, &scratch_arena);
+            u64 uncompressed_size         = scratch_buffer.size;
+            ByteBuffer compressed_scratch = bytebuf_create_fixed(uncompressed_size, &scratch_arena);
             compression_compress(&conn->cmprss_ctx, &compressed_scratch, &scratch_buffer);
 
             bytebuf_prepend_varint(&compressed_scratch, uncompressed_size);
@@ -47,12 +46,12 @@ void send_packet(const Packet* pkt, Connection* conn) {
 
     bytebuf_write_buffer(&conn->send_buffer, &scratch_buffer);
 
-    if(!conn->pending_send) {
+    if (!conn->pending_send) {
         enum IOCode code;
         do {
             code = empty_buffer(conn);
-        } while(code == IOC_OK && conn->send_buffer.size > 0);
-        if(code == IOC_PENDING || code == IOC_AGAIN)
+        } while (code == IOC_OK && conn->send_buffer.size > 0);
+        if (code == IOC_PENDING || code == IOC_AGAIN)
             conn->pending_send = TRUE;
     }
 

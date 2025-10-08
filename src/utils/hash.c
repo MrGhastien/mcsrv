@@ -7,7 +7,7 @@ u64 default_hash_acc(u64 hash, const void* data, u64 size) {
     const u8* bytes = data;
     u8 b;
     for (u64 i = 0; i < size; i++) {
-        b = bytes[i];
+        b    = bytes[i];
         hash = b + (hash << 6) + (hash << 16) - hash;
     }
     return hash;
@@ -22,13 +22,13 @@ i32 default_cmp(const void* lhs, const void* rhs, u64 size) {
 }
 
 u64 cmp_hash(const Comparator* comparator, const void* data, u64 size) {
-    if(!comparator)
+    if (!comparator)
         return default_hash(data, size);
     return comparator->hfunc(data);
 }
 
 u64 cmp_compare(const Comparator* comparator, const void* lhs, const void* rhs, u64 size) {
-    if(!comparator)
+    if (!comparator)
         return default_cmp(lhs, rhs, size);
     return comparator->comp(lhs, rhs);
 }

@@ -43,13 +43,14 @@ typedef u64 (*hash_function)(const void* key);
  * Structure representing a dictionary.
  */
 typedef struct Dict {
-    void* base;                   /**< Memory region containing elements of the dictionnary. */
-    const Comparator* comparator; /**< Comparison and hashing functions used to search and add key-value pairs. */
-    u64 capacity;                 /**< maximum number of elements that can be stored in the dict. */
-    u64 size;                     /**< number of elements in the dict. */
-    u64 key_stride;               /**< Size (in bytes) of keys. */
-    u64 value_stride;             /**< Size (in bytes) of values. */
-    bool fixed;                   /**< True if the underlying array cannot be resized. */
+    void* base; /**< Memory region containing elements of the dictionnary. */
+    const Comparator*
+        comparator; /**< Comparison and hashing functions used to search and add key-value pairs. */
+    u64 capacity;   /**< maximum number of elements that can be stored in the dict. */
+    u64 size;       /**< number of elements in the dict. */
+    u64 key_stride; /**< Size (in bytes) of keys. */
+    u64 value_stride; /**< Size (in bytes) of values. */
+    bool fixed;       /**< True if the underlying array cannot be resized. */
 } Dict;
 
 /**
@@ -58,7 +59,8 @@ typedef struct Dict {
  * Dynamic dictionaries are automatically resized when their capacity is reached.
  *
  * @param[out] map The dictionary structure to initialize.
- * @param cmp Comparison and hashing functions used to put elements in and get elements from the dictionnary.
+ * @param cmp Comparison and hashing functions used to put elements in and get elements from the
+ * dictionnary.
  * @param key_stride The size in bytes of keys.
  * @param value_stride The size in bytes of values.
  */
@@ -69,7 +71,8 @@ void dict_init(Dict* map, const Comparator* cmp, u64 key_stride, u64 value_strid
  * Fixed dictionaries can not be resized.
  *
  * @param[out] map The dictionary structure to initialize.
- * @param cmp Comparison and hashing functions used to put elements in and get elements from the dictionnary.
+ * @param cmp Comparison and hashing functions used to put elements in and get elements from the
+ * dictionnary.
  * @param arena The arena to use to allocate underlying memory.
  * @param key_stride The size in bytes of keys.
  * @param value_stride The size in bytes of values.
@@ -92,16 +95,19 @@ void dict_destroy(Dict* map);
  * @param map The dictionary to remove the mapping from.
  * @param key A pointer to the key to create a mapping for.
  * @param value A pointer to the value to create a mapping for.
- * @return The index of the newly created mapping inside the dictionary, or `-1` if the insertion failed.
+ * @return The index of the newly created mapping inside the dictionary, or `-1` if the insertion
+ * failed.
  */
 i64 dict_put(Dict* map, const void* key, const void* value);
 /**
  * Removes a mapping between a key and a value inside a dictionary.
  *
- * This function removes the mapping with the given key, and returns the value of such mapping (if it existed)
+ * This function removes the mapping with the given key, and returns the value of such mapping (if
+ * it existed)
  * @param map The dictionary to remove the mapping from.
  * @param key A pointer to the key of the mapping to remove.
- * @param[out] out_value A pointer to a memory region that will contain the value of the deleted mapping.
+ * @param[out] out_value A pointer to a memory region that will contain the value of the deleted
+ * mapping.
  * @return The index of the mapping inside the dictionary, or `-1` if no mapping with the
  * given key exists.
  */

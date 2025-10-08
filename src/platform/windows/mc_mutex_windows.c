@@ -11,10 +11,10 @@
 #include <synchapi.h>
 
 bool mcmutex_create(MCMutex* mutex) {
-    if(!mutex)
+    if (!mutex)
         return FALSE;
 
-   InitializeCriticalSection(mutex);
+    InitializeCriticalSection(mutex);
 
     return TRUE;
 }

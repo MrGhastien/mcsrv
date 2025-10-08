@@ -31,7 +31,8 @@ static MCMutex internal_array_mutex;
 static bool initialized = FALSE;
 
 void mcthread_init(void) {
-    arena = arena_create_silent(MAX_THREADS * (sizeof(struct ThreadInternal) + sizeof(bool)), BLK_TAG_PLATFORM);
+    arena = arena_create_silent(MAX_THREADS * (sizeof(struct ThreadInternal) + sizeof(bool)),
+                                BLK_TAG_PLATFORM);
     objpool_init(&threads, &arena, MAX_THREADS, sizeof(struct ThreadInternal));
     if (!mcmutex_create(&internal_array_mutex)) {
         log_fatal("Failed to prepare the platform layer for threading.");
@@ -48,7 +49,7 @@ void mcthread_cleanup(void) {
 
 static unsigned long routine_wrapper(void* arg) {
     struct ThreadInternal* wrapper = arg;
-    wrapper->res = wrapper->routine(wrapper->arg);
+    wrapper->res                   = wrapper->routine(wrapper->arg);
     return 0;
 }
 
@@ -63,9 +64,9 @@ i32 mcthread_create(MCThread* thread, mcthread_routine routine, void* arg) {
     mcmutex_lock(&internal_array_mutex);
     struct ThreadInternal* internal = objpool_add(&threads, &index);
     mcmutex_unlock(&internal_array_mutex);
-    internal->arg = arg;
+    internal->arg     = arg;
     internal->routine = routine;
-    internal->index = index;
+    internal->index   = index;
 
     internal->handle = CreateThread(NULL, 0, &routine_wrapper, internal, 0, &internal->id);
     if (!internal->handle) {
@@ -85,17 +86,17 @@ void mcthread_destroy(MCThread* thread) {
         return;
 
     struct ThreadInternal* internal = thread->internal;
-    if(!CloseHandle(internal->handle))
+    if (!CloseHandle(internal->handle))
         log_fatalf("Failed to destroy thread: %s", get_last_error());
     mcmutex_lock(&internal_array_mutex);
     objpool_remove(&threads, internal->index);
     mcmutex_unlock(&internal_array_mutex);
 
-    internal->arg = NULL;
+    internal->arg     = NULL;
     internal->routine = NULL;
-    internal->handle = NULL;
-    internal->id = 0;
-    thread->internal = NULL;
+    internal->handle  = NULL;
+    internal->id      = 0;
+    thread->internal  = NULL;
 }
 
 bool mcthread_set_name(const char* name) {
@@ -106,7 +107,7 @@ bool mcthread_set_name(const char* name) {
 
 bool mcthread_create_attachment(MCThreadKey* out_key) {
     i64 key = TlsAlloc();
-    if(key == TLS_OUT_OF_INDEXES) {
+    if (key == TLS_OUT_OF_INDEXES) {
         log_fatalf("Failed to create thread attachment: %s.", get_last_error());
         return FALSE;
     }
@@ -124,19 +125,18 @@ bool mcthread_destroy_attachment(MCThreadKey key) {
     return TRUE;
 }
 void mcthread_attach_data(MCThreadKey key, void* data) {
-    if(!TlsSetValue(key, data))
+    if (!TlsSetValue(key, data))
         log_errorf("Failed to attach data to thread: %s", get_last_error());
 }
 
 void* mcthread_get_data(MCThreadKey key) {
     void* res = TlsGetValue(key);
-    if(res == NULL)  {
+    if (res == NULL) {
         i64 ecode = GetLastError();
-        if(ecode != ERROR_SUCCESS) {
+        if (ecode != ERROR_SUCCESS) {
             log_errorf("Failed to get data from thread: %s", get_error_from_code(ecode));
             return NULL;
         }
-
     }
     return res;
 }
@@ -155,7 +155,7 @@ bool mcthread_is_running(MCThread* thread) {
 
 bool mcthread_join(MCThread* thread, void** out_return) {
     struct ThreadInternal* internal = thread->internal;
-    DWORD code = WaitForSingleObject(internal->handle, INFINITE);
+    DWORD code                      = WaitForSingleObject(internal->handle, INFINITE);
     if (code != WAIT_OBJECT_0)
         return FALSE;
 
@@ -165,7 +165,7 @@ bool mcthread_join(MCThread* thread, void** out_return) {
 
     mcthread_destroy(thread);
 
-    if(out_return)
+    if (out_return)
         *out_return = internal->res;
 
     return TRUE;

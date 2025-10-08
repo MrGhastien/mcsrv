@@ -3,8 +3,8 @@
 #include "containers/vector.h"
 #include "definitions.h"
 #include "logger.h"
-#include "memory/memory.h"
 #include "memory/mem_tags.h"
+#include "memory/memory.h"
 #include "packet.h"
 #include "utils/bitwise.h"
 
@@ -26,7 +26,8 @@ DEF_PKT_DECODER(dummy) {
 }
 
 DEF_PKT_DECODER(handshake) {
-    PacketHandshake* hshake = arena_allocate(arena, sizeof(PacketHandshake)/* , ALLOC_TAG_PACKET */);
+    PacketHandshake* hshake =
+        arena_allocate(arena, sizeof(PacketHandshake) /* , ALLOC_TAG_PACKET */);
     if (!hshake)
         return;
 
@@ -48,7 +49,7 @@ DEF_PKT_DECODER(handshake) {
 }
 
 DEF_PKT_DECODER(ping) {
-    PacketPing* ping = arena_allocate(arena, sizeof *ping/* , ALLOC_TAG_PACKET */);
+    PacketPing* ping = arena_allocate(arena, sizeof *ping /* , ALLOC_TAG_PACKET */);
 
     // There is no need to care about endianess, as we don't do operations or comparisons
     // on the received number.
@@ -57,7 +58,7 @@ DEF_PKT_DECODER(ping) {
 }
 
 DEF_PKT_DECODER(login_start) {
-    PacketLoginStart* payload = arena_allocate(arena, sizeof *payload/* , ALLOC_TAG_PACKET */);
+    PacketLoginStart* payload = arena_allocate(arena, sizeof *payload /* , ALLOC_TAG_PACKET */);
     bytebuf_read_mcstring(bytes, arena, &payload->player_name);
     bytebuf_read(bytes, 16, &payload->uuid);
 
@@ -65,15 +66,16 @@ DEF_PKT_DECODER(login_start) {
 }
 
 DEF_PKT_DECODER(crypt_response) {
-    PacketCryptResponse* payload = arena_allocate(arena, sizeof *payload/* , ALLOC_TAG_PACKET */);
+    PacketCryptResponse* payload = arena_allocate(arena, sizeof *payload /* , ALLOC_TAG_PACKET */);
 
     bytebuf_read_varint(bytes, &payload->shared_secret_length);
     payload->shared_secret =
-        arena_allocate(arena, payload->shared_secret_length/* , ALLOC_TAG_UNKNOWN */);
+        arena_allocate(arena, payload->shared_secret_length /* , ALLOC_TAG_UNKNOWN */);
     bytebuf_read(bytes, payload->shared_secret_length, payload->shared_secret);
 
     bytebuf_read_varint(bytes, &payload->verify_token_length);
-    payload->verify_token = arena_allocate(arena, payload->verify_token_length/* , ALLOC_TAG_UNKNOWN */);
+    payload->verify_token =
+        arena_allocate(arena, payload->verify_token_length /* , ALLOC_TAG_UNKNOWN */);
     bytebuf_read(bytes, payload->verify_token_length, payload->verify_token);
 
     packet->payload = payload;
@@ -82,7 +84,7 @@ DEF_PKT_DECODER(crypt_response) {
 /* === CONFIGURATION === */
 
 DEF_PKT_DECODER(cfg_custom) {
-    PacketCustom* payload = arena_callocate(arena, sizeof *payload/* , ALLOC_TAG_PACKET */);
+    PacketCustom* payload = arena_callocate(arena, sizeof *payload /* , ALLOC_TAG_PACKET */);
 
     u64 res = 0;
 
@@ -107,7 +109,7 @@ DEF_PKT_DECODER(cfg_custom) {
 }
 
 DEF_PKT_DECODER(cfg_client_info) {
-    PacketClientInfo* payload = arena_callocate(arena, sizeof *payload/* , ALLOC_TAG_PACKET */);
+    PacketClientInfo* payload = arena_callocate(arena, sizeof *payload /* , ALLOC_TAG_PACKET */);
 
     bytebuf_read_mcstring(bytes, arena, &payload->locale);
     if (payload->locale.length > 16) {
@@ -134,7 +136,8 @@ DEF_PKT_DECODER(cfg_client_info) {
     packet->payload = payload;
 }
 DEF_PKT_DECODER(cfg_known_datapacks) {
-    PacketKnownDatapacks* payload = arena_callocate(arena, sizeof *payload/* , ALLOC_TAG_PACKET */);
+    PacketKnownDatapacks* payload =
+        arena_callocate(arena, sizeof *payload /* , ALLOC_TAG_PACKET */);
 
     i32 count;
     bytebuf_read_varint(bytes, &count);
@@ -152,7 +155,7 @@ DEF_PKT_DECODER(cfg_known_datapacks) {
     packet->payload = payload;
 }
 DEF_PKT_DECODER(cfg_keep_alive) {
-    PacketKeepAlive* payload = arena_callocate(arena, sizeof *payload/* , ALLOC_TAG_PACKET */);
+    PacketKeepAlive* payload = arena_callocate(arena, sizeof *payload /* , ALLOC_TAG_PACKET */);
 
     i64 tmp;
     bytebuf_read(bytes, sizeof payload->keep_alive_id, &tmp);
@@ -161,7 +164,8 @@ DEF_PKT_DECODER(cfg_keep_alive) {
     packet->payload = payload;
 }
 DEF_PKT_DECODER(cfg_respack_response) {
-    PacketResourcePackResponse* payload = arena_callocate(arena, sizeof *payload/* , ALLOC_TAG_PACKET */);
+    PacketResourcePackResponse* payload =
+        arena_callocate(arena, sizeof *payload /* , ALLOC_TAG_PACKET */);
 
     if (read_uuid(payload->uuid, bytes) < (i64) sizeof *payload->uuid * 2)
         return;

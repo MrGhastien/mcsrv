@@ -71,7 +71,7 @@ static void print_debug_info(const char* unw_function_name, u64 offset, const u6
     char* debuginfo_path = NULL;
 
     Dwfl_Callbacks callbacks = {
-        .find_elf = dwfl_linux_proc_find_elf,
+        .find_elf       = dwfl_linux_proc_find_elf,
         .find_debuginfo = dwfl_standard_find_debuginfo,
         .debuginfo_path = &debuginfo_path,
     };
@@ -81,16 +81,16 @@ static void print_debug_info(const char* unw_function_name, u64 offset, const u6
     dwfl_report_end(dwfl, NULL, NULL);
 
     Dwarf_Addr addr = ip;
-    //Dwfl_Module* module = dwfl_addrmodule(dwfl, addr);
+    // Dwfl_Module* module = dwfl_addrmodule(dwfl, addr);
 
-    //const char* function_name = dwfl_module_addrname(module, addr);
+    // const char* function_name = dwfl_module_addrname(module, addr);
 
     Dwfl_Line* line = dwfl_getsrc(dwfl, addr);
     if (line != NULL) {
         i32 nline;
         Dwarf_Addr addr;
         const char* filename = dwfl_lineinfo(line, &addr, &nline, NULL, NULL, NULL);
-        log_fatalf("  at %s (%s:%i)", unw_function_name, strrchr(filename, '/')+1, nline);
+        log_fatalf("  at %s (%s:%i)", unw_function_name, strrchr(filename, '/') + 1, nline);
     } else {
         log_fatalf("  at %s<+%li> [%p]", unw_function_name, offset, ip);
     }
@@ -117,8 +117,8 @@ inline void platform_abort(void) {
             buf[0] = '?';
             buf[1] = 0;
         }
-        //log_fatalf("  at [0x%lx] %s <+%li>", (i64) ip, buf, (i64) offp);
-        print_debug_info(buf, offp, (u64)ip);
+        // log_fatalf("  at [0x%lx] %s <+%li>", (i64) ip, buf, (i64) offp);
+        print_debug_info(buf, offp, (u64) ip);
     }
 #endif
     abort();

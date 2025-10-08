@@ -25,8 +25,8 @@
 static char* names[_LOG_LEVEL_COUNT] = {
     [LOG_LEVEL_FATAL] = "[FATAL]",
     [LOG_LEVEL_ERROR] = "[ERROR]",
-    [LOG_LEVEL_WARN] = "[ WARN]",
-    [LOG_LEVEL_INFO] = "[ INFO]",
+    [LOG_LEVEL_WARN]  = "[ WARN]",
+    [LOG_LEVEL_INFO]  = "[ INFO]",
 #ifdef DEBUG
     [LOG_LEVEL_DEBUG] = "[DEBUG]",
 #endif
@@ -38,8 +38,8 @@ static char* names[_LOG_LEVEL_COUNT] = {
 static char* colors[_LOG_LEVEL_COUNT] = {
     [LOG_LEVEL_FATAL] = "\x1b[91;1m",
     [LOG_LEVEL_ERROR] = "\x1b[31m",
-    [LOG_LEVEL_WARN] = "\x1b[33m",
-    [LOG_LEVEL_INFO] = "\x1b[0m",
+    [LOG_LEVEL_WARN]  = "\x1b[33m",
+    [LOG_LEVEL_INFO]  = "\x1b[0m",
 #ifdef DEBUG
     [LOG_LEVEL_DEBUG] = "\x1b[32;3m",
 #endif
@@ -82,22 +82,22 @@ void logger_system_init(void) {
     mcvar_create(&ctx.cond_var);
 
     ctx.had_messages = FALSE;
-    ctx.running = TRUE;
+    ctx.running      = TRUE;
 }
 
 static RingQueue* get_entry_queue(void) {
-    time_t min_time = time(NULL);
+    time_t min_time  = time(NULL);
     RingQueue* queue = NULL;
-    u32 size = ctx.thread_buffers.size;
+    u32 size         = ctx.thread_buffers.size;
     for (u32 i = 0; i < size; i++) {
-        RingQueue* q = vect_ref(&ctx.thread_buffers, i);
+        RingQueue* q          = vect_ref(&ctx.thread_buffers, i);
         const LogEntry* entry = rqueue_peek(q);
         if (!entry)
             continue;
         f64 diff = difftime(entry->timestamp, min_time);
         if (diff < 0) {
             min_time = entry->timestamp;
-            queue = q;
+            queue    = q;
         }
     }
 
@@ -158,13 +158,13 @@ void logger_system_cleanup(void) {
 static void add_log_entry(enum LogLevel lvl, ByteBuffer* buffer) {
     RingQueue* q = mcthread_get_data(ctx.buffer_key);
     if (!q) {
-        q = vect_reserve(&ctx.thread_buffers);
+        q  = vect_reserve(&ctx.thread_buffers);
         *q = rqueue_create(LOGGER_MAX_ENTRY_COUNT, sizeof(LogEntry), &ctx.arena);
         mcthread_attach_data(ctx.buffer_key, q);
     }
     LogEntry e = {
-        .data = *buffer,
-        .lvl = lvl,
+        .data      = *buffer,
+        .lvl       = lvl,
         .timestamp = time(NULL),
     };
 
@@ -199,7 +199,7 @@ void _log_msgf(enum LogLevel lvl, char* msg, ...) {
     arena_save(&ctx.arena);
 
     i32 msg_len = vsnprintf(NULL, 0, msg, args);
-    char* buf = arena_allocate(&ctx.arena, msg_len + 1);
+    char* buf   = arena_allocate(&ctx.arena, msg_len + 1);
     if (buf) {
         vsnprintf(buf, msg_len + 1, msg, args);
         bytebuf_write(&buffer, buf, msg_len);

@@ -16,32 +16,32 @@ i32 str_compare_raw(const void* lhs, const void* rhs) {
 
 const Comparator CMP_STRING = {
     .hfunc = &str_hash,
-    .comp = &str_compare_raw,
+    .comp  = &str_compare_raw,
 };
 
 string str_create(const char* cstr, Arena* arena) {
     size_t len = strlen(cstr);
-    char* base = arena_allocate(arena, len + 1/* , ALLOC_TAG_STRING */);
+    char* base = arena_allocate(arena, len + 1 /* , ALLOC_TAG_STRING */);
     memcpy(base, cstr, len);
     base[len] = 0;
-    return (string){
-        .base = base,
+    return (string) {
+        .base   = base,
         .length = len,
     };
 }
 
 string str_view(const char* cstr) {
     u64 len = cstr == NULL ? 0 : strlen(cstr);
-    return (string){
-        .base = (char*) cstr,
+    return (string) {
+        .base   = (char*) cstr,
         .length = len,
     };
 }
 
 string str_alloc(u64 length, Arena* arena) {
-    char* base = arena_callocate(arena, length + 1/* , ALLOC_TAG_STRING */);
-    return (string){
-        .base = base,
+    char* base = arena_callocate(arena, length + 1 /* , ALLOC_TAG_STRING */);
+    return (string) {
+        .base   = base,
         .length = length,
     };
 }
@@ -78,7 +78,7 @@ string str_substring(const string* str, u64 begin, u64 end) {
     else
         size = end - begin;
     string sub = {
-        .base = str->base + begin,
+        .base   = str->base + begin,
         .length = size,
     };
     return sub;
@@ -121,7 +121,7 @@ string str_concat(string* lhs, const string* rhs, Arena* arena) {
 }
 
 const char* cstr(const string* str) {
-    if(str->length == 0)
+    if (str->length == 0)
         return "";
     if (str->base[str->length] != 0) {
         log_warn("String is not null terminated, setting a null byte.");
@@ -165,7 +165,7 @@ char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size
 
     if (out_size)
         *out_size = res;
-    char* buf = arena_allocate(scratch, res + 1/* , ALLOC_TAG_STRING */);
+    char* buf = arena_allocate(scratch, res + 1 /* , ALLOC_TAG_STRING */);
     vsnprintf(buf, res + 1, format, args);
     return buf;
 }

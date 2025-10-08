@@ -1,17 +1,16 @@
-#include "definitions.h"
 #include "entity.h"
+#include "definitions.h"
 #include "player.h"
 
 #include "memory/_memory_internal.h"
 #include "memory/allocators/pool.h"
 #include "memory/mem_tags.h"
 
-
 #include <string.h>
 
 static u64 component_sizes[] = {
     [EC_POSITION] = sizeof(TransformComponent),
-    [EC_PLAYER] = sizeof(PlayerComponent),
+    [EC_PLAYER]   = sizeof(PlayerComponent),
 };
 
 static PoolAllocator component_pools[_EC_COUNT];

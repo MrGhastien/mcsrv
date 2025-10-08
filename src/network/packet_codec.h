@@ -1,14 +1,14 @@
 /**
  * @file
  *
- * Part of the network subsystem that encodes and sends packets. 
+ * Part of the network subsystem that encodes and sends packets.
  */
 
 #ifndef PACKET_CODEC_H
 #define PACKET_CODEC_H
 
-#include "packet.h"
 #include "connection.h"
+#include "packet.h"
 
 /**
  * Packet handler function.
@@ -36,9 +36,9 @@ typedef void (*pkt_decoder)(Packet* pkt, Arena* arena, ByteBuffer* bytes);
 /**
  * Packet encoder function.
  *
- * Encoder functions are responsible for converting a @ref Packet structure to a stream of raw bytes.
- * Raw bytes are then sent over the network to clients.
- * Encoder funtions do the inverse operation of decoder functions.
+ * Encoder functions are responsible for converting a @ref Packet structure to a stream of raw
+ * bytes. Raw bytes are then sent over the network to clients. Encoder funtions do the inverse
+ * operation of decoder functions.
  */
 typedef void (*pkt_encoder)(const Packet* pkt, ByteBuffer* buffer);
 
@@ -92,15 +92,16 @@ pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn);
  */
 const char* get_pkt_name(const Packet* pkt, const Connection* conn, bool clientbound);
 
-
 /**
  * Reads, decodes, and handles a single packet from the given connection.
  *
  * @param[in] conn The connection to read from
  * @return A code indicating the current IO status:
  *         - @ref IOC_OK if a packet was read successfully in its entirety,
- *         - @ref IOC_AGAIN if the receiver could not finish reading a packet without waiting for IO,
- *         - @ref IOC_PENDING if the receiver has started IO operations which could not be completed immediately,
+ *         - @ref IOC_AGAIN if the receiver could not finish reading a packet without waiting for
+ * IO,
+ *         - @ref IOC_PENDING if the receiver has started IO operations which could not be completed
+ * immediately,
  *         - @ref IOC_ERROR if a reading error occurred,
  *         - @ref IOC_CLOSED if the connection was closed while reading a packet.
  */
