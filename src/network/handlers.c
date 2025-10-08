@@ -308,6 +308,22 @@ DEF_PKT_HANDLER(login_ack) {
     };
     send_packet(&pkt_to_send, conn);
 
+    PacketKnownDatapacks known_datapacks = {};
+    vect_init(&known_datapacks.known_packs, &conn->scratch_arena, 1, sizeof(KnownDatapack));
+    KnownDatapack* pack = vect_reserve(&known_datapacks.known_packs);
+    *pack =
+        (KnownDatapack) {
+            .namespace = str_view("minecraft"),
+            .id = str_view("core"),
+            .version = str_view("1.21"),
+    };
+
+    pkt_to_send = (Packet) {
+        .id = PKT_CFG_KNOWN_DATAPACKS_CLIENT,
+        .payload = &known_datapacks,
+    };
+    send_packet(&pkt_to_send, conn);
+
     return TRUE;
 }
 
@@ -340,7 +356,21 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
     PacketKnownDatapacks* payload = pkt->payload;
     UNUSED(payload);
 
+    log_debug("Datapacks to omit:");
+    for (u64 i = 0; i < vect_size(&payload->known_packs); i++) {
+        KnownDatapack* pack = vect_ref(&payload->known_packs, i);
+        log_debugf("- " RESID " version %s", cstr(&pack->namespace), cstr(&pack->id), cstr(&pack->version));
+    }
+    if (vect_size(&payload->known_packs) == 0)
+        log_debug("None.");
+
     // TODO: Work with registry data
+
+    Packet cfg_finish = {
+        .id = PKT_CFG_FINISH,
+    };
+    send_packet(&cfg_finish, conn);
+
     return TRUE;
 }
 DEF_PKT_HANDLER(cfg_finish_config_ack) {
