@@ -216,6 +216,15 @@ static PacketFunction function_table[_STATE_COUNT][_PKT_TYPE_COUNT] = {
             "SERVER_LINKS"
         },
     },
+    [STATE_PLAY] = {
+        [PKT_PLAY_LOGIN] = {
+            NULL,
+            NULL,
+            &PKT_ENCODER(play_login),
+            NULL,
+            "PLAY_LOGIN"
+        },
+    }
 };
 
 static PacketFunction* get_pkt_funcs(const Packet* pkt, const Connection* conn) {

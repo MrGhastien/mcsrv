@@ -5,9 +5,11 @@
 #include "logger.h"
 #include "packet.h"
 #include "platform/platform.h"
+#include "resource/resource_id.h"
 #include "utils/bitwise.h"
 #include "utils/iomux.h"
-#include "utils/str_builder.h"
+
+#define write_simple(buffer, value) bytebuf_write((buffer), &(value), sizeof(value))
 
 static void write_string(const string* str, ByteBuffer* buffer) {
     bytebuf_write_varint(buffer, str->length);
@@ -51,6 +53,13 @@ static void write_u16(u16 num, ByteBuffer* buffer) {
     bytebuf_write(buffer, &num, sizeof num);
 }
 */
+
+static bool write_vec3i(const Vec3i* v, ByteBuffer* buffer) {
+    u64 encoded = ((v->x & 0x3ffffff) << 38) | ((v->z & 0x3ffffff) << 12) | (v->y & 0xfff);
+    encoded = uhton64(encoded);
+    bytebuf_write(buffer, &encoded, sizeof encoded);
+    return TRUE;
+}
 
 DEF_PKT_ENCODER(dummy) {
     (void) pkt;
@@ -272,4 +281,47 @@ DEF_PKT_ENCODER(cfg_server_links) {
             write_nbt(&link->label.custom, buffer);
         write_string(&link->url, buffer);
     }
+}
+
+DEF_PKT_ENCODER(play_login) {
+    PacketLoginPlay* payload = pkt->payload;
+
+    i32 endian_player_entity_id = hton32(payload->player_entity_id);
+    write_simple(buffer, endian_player_entity_id);
+    write_simple(buffer, payload->hardcore);
+    i32 dimension_count = vect_size(&payload->dimension_names);
+    bytebuf_write_varint(buffer, dimension_count);
+    for (i32 i = 0; i < dimension_count; i++) {
+        const ResourceID* dim_id = vect_ref(&payload->dimension_names, i);
+        write_resid(dim_id, buffer);
+    }
+
+    bytebuf_write_varint(buffer, payload->max_players);
+    bytebuf_write_varint(buffer, payload->view_distance);
+    bytebuf_write_varint(buffer, payload->simulation_distance);
+
+    write_simple(buffer, payload->reduced_debug_info);
+    write_simple(buffer, payload->enable_respawn_screen);
+    write_simple(buffer, payload->limited_crafting);
+
+    bytebuf_write_varint(buffer, payload->spawn_dimension_type);
+    write_resid(&payload->spawn_dimension_id, buffer);
+
+    long hashed_seed = hton64(payload->hashed_seed);
+    bytebuf_write(buffer, &hashed_seed, sizeof(hashed_seed));
+
+    write_simple(buffer, payload->gamemode);
+    write_simple(buffer, payload->previous_game_mode);
+
+    write_simple(buffer, payload->debug_world);
+    write_simple(buffer, payload->flat_world);
+    write_simple(buffer, payload->has_death_location);
+
+    if (payload->has_death_location) {
+        write_resid(&payload->death_dimension, buffer);
+        write_vec3i(&payload->death_position, buffer);
+    }
+    bytebuf_write_varint(buffer, payload->portal_cooldown);
+    bytebuf_write_varint(buffer, payload->sea_level);
+    write_simple(buffer, payload->enforce_secure_chat);
 }

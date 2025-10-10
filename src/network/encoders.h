@@ -60,4 +60,7 @@ DEF_PKT_ENCODER(cfg_known_datapacks);
 DEF_PKT_ENCODER(cfg_custom_report);
 DEF_PKT_ENCODER(cfg_server_links);
 
+/* === PLAY === */
+DEF_PKT_ENCODER(play_login);
+
 #endif /* ! ENCODERS_H */

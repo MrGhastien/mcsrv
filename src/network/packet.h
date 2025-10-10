@@ -32,6 +32,7 @@
 #include "data/nbt.h"
 #include "definitions.h"
 #include "resource/resource_id.h"
+#include "utils/position.h"
 #include "utils/string.h"
 
 #include <stddef.h>
@@ -117,7 +118,15 @@ enum PacketType {
     PKT_CFG_KNOWN_DATAPACKS_SERVER = 0x7,
     /**@}*/
 
-    _PKT_TYPE_COUNT = 0x11
+    // === CONFIGURATION ===
+    /** @name Configuration */
+    /**@{*/
+    /** @ref State#STATE_PLAY "Play" phase (Client-Bound) */
+    PKT_PLAY_LOGIN = 0x2b,
+    /** @ref State#STATE_PLAY "Play" phase (Server-Bound) */
+    /**@}*/
+
+    _PKT_TYPE_COUNT = 0x2c
 };
 
 /**
@@ -407,6 +416,33 @@ typedef struct {
     u64 uuid[2];
     enum ResourcePackResult result;
 } PacketResourcePackResponse;
+
+/* === PLAY === */
+
+typedef struct {
+    bool debug_world;
+    bool flat_world;
+    bool has_death_location;
+    bool hardcore;
+    bool reduced_debug_info;
+    bool enable_respawn_screen;
+    bool limited_crafting;
+    bool enforce_secure_chat;
+    u8 gamemode;
+    i8 previous_game_mode;
+    int player_entity_id;
+    int max_players;
+    int view_distance;
+    int simulation_distance;
+    int spawn_dimension_type;
+    int portal_cooldown;
+    int sea_level;
+    long hashed_seed;
+    ResourceID spawn_dimension_id;
+    ResourceID death_dimension;
+    Vec3i death_position;
+    Vector dimension_names;
+} PacketLoginPlay;
 
 #endif /* ! PACKET_H */
 
