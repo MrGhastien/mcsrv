@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
+#include "registry/registries.h"
 #include "registry/registry.h"
 #include "resource/resource_id.h"
 #include "utils/string.h"

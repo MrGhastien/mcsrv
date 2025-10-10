@@ -5,6 +5,7 @@
 #include "resource/resource_id.h"
 
 #include "registries.h"
+#include "world/data/block.h"
 
 #include <stdlib.h>
 
@@ -18,7 +19,37 @@ typedef struct registry {
 static Registry root;
 static Arena arena;
 
+const ResourceID REGISTRY_BLOCK_KEY = STATIC_RESID("minecraft", "block");
+const ResourceID REGISTRY_BIOME_KEY = STATIC_RESID("minecraft", "worldgen/biome");
+const ResourceID REGISTRY_CHAT_TYPE_KEY = STATIC_RESID("minecraft", "chat_type");
+const ResourceID REGISTRY_TRIM_PATTERN_KEY = STATIC_RESID("minecraft", "trim_pattern");
+const ResourceID REGISTRY_TRIM_MATERIAL_KEY = STATIC_RESID("minecraft", "trim_material");
+const ResourceID REGISTRY_WOLF_VARIANT_KEY = STATIC_RESID("minecraft", "wolf_variant");
+const ResourceID REGISTRY_PAINTING_VARIANT_KEY = STATIC_RESID("minecraft", "painting_variant");
+const ResourceID REGISTRY_DIMENSION_TYPE_KEY = STATIC_RESID("minecraft", "dimension_type");
+const ResourceID REGISTRY_DAMAGE_TYPE_KEY = STATIC_RESID("minecraft", "damage_type");
+const ResourceID REGISTRY_BANNER_PATTERN_KEY = STATIC_RESID("minecraft", "banner_pattern");
+const ResourceID REGISTRY_ENCHANTMENT_KEY = STATIC_RESID("minecraft", "enchantment");
+const ResourceID REGISTRY_JUKEBOX_SONG_KEY = STATIC_RESID("minecraft", "jukebox_song");
+
+static void initialize_registries(void) {
+    // TODO: Put correct structures here !
+    registry_create(REGISTRY_BLOCK_KEY, sizeof(Block));
+    registry_create(REGISTRY_BIOME_KEY, sizeof(Block));
+    registry_create(REGISTRY_CHAT_TYPE_KEY, sizeof(Block));
+    registry_create(REGISTRY_TRIM_PATTERN_KEY, sizeof(Block));
+    registry_create(REGISTRY_TRIM_MATERIAL_KEY, sizeof(Block));
+    registry_create(REGISTRY_WOLF_VARIANT_KEY, sizeof(Block));
+    registry_create(REGISTRY_PAINTING_VARIANT_KEY, sizeof(Block));
+    registry_create(REGISTRY_DIMENSION_TYPE_KEY, sizeof(Block));
+    registry_create(REGISTRY_DAMAGE_TYPE_KEY, sizeof(Block));
+    registry_create(REGISTRY_BANNER_PATTERN_KEY, sizeof(Block));
+    registry_create(REGISTRY_ENCHANTMENT_KEY, sizeof(Block));
+    registry_create(REGISTRY_JUKEBOX_SONG_KEY, sizeof(Block));
+}
+
 static void register_game_elements(void) {
+    initialize_registries();
     register_blocks();
 }
 
@@ -41,7 +72,13 @@ bool registry_create(ResourceID name, u64 stride) {
     // dict_init_fixed(&reg.entries, NULL, &arena, 512, sizeof(ResourceID), stride);
     dict_init(&reg.entries, &CMP_RESID, sizeof(ResourceID), stride);
 
-    return dict_put(&root.entries, &name, &reg) >= 0;
+    i64 idx = dict_put(&root.entries, &name, &reg);
+    if (idx < 0) {
+        log_errorf("Failed to create registry " RESID_FORMAT ".", RESID_UNWRAP(name));
+        return FALSE;
+    }
+    log_debugf("Successfully created registry " RESID_FORMAT ".", RESID_UNWRAP(name));
+    return TRUE;
 }
 
 void registry_register(ResourceID registry_name, ResourceID id, void* instance) {

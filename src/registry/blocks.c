@@ -15,20 +15,6 @@
 static Arena arena;
 static PoolAllocator property_pool;
 
-// static i64 PROPERTY_LEVEL;
-
-static const ResourceID BLOCK_KEY = {
-    .namespace =
-        {
-                    .base   = "minecraft",
-                    .length = 9,
-                    },
-    .path = {
-                    .base   = "blocks",
-                    .length = 6,
-                    }
-};
-
 static bool validate_property_name(const string* name) {
     char c;
     for (u32 i = 0; i < name->length; i++) {
@@ -132,7 +118,7 @@ static void register_simple_block(const char* name, Arena* arena, const BlockPro
     };
 
     create_state_definition(&blk, NULL, arena, &blk.state_definition);
-    registry_register(BLOCK_KEY, blk.id, &blk);
+    registry_register(REGISTRY_BLOCK_KEY, blk.id, &blk);
 }
 
 static void register_state_properties(JSON* json) {
@@ -214,7 +200,7 @@ static void register_blocks_internal(JSON* json) {
 
         json_move_to_parent(json);
 
-        registry_register(BLOCK_KEY, blk.id, &blk);
+        registry_register(REGISTRY_BLOCK_KEY, blk.id, &blk);
     } while (json_move_to_next_sibling(json) == JSONE_OK);
 }
 
@@ -273,11 +259,6 @@ static void print_state_properties(void) {
 #endif
 
 void register_blocks(void) {
-
-    if (!registry_create(BLOCK_KEY, sizeof(Block))) {
-        log_fatal("Could not create blocks registry.");
-        return;
-    }
 
     arena = arena_create(1 << 25, BLK_TAG_REGISTRY, INVALID_CHAIN);
     pool_init(&property_pool, 128, sizeof(StateProperty), BLK_TAG_REGISTRY, INVALID_CHAIN);
