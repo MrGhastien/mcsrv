@@ -29,6 +29,8 @@
 #define STR_EMPTY ((string) {0})
 #define STR_INVALID ((string) {.base = NULL, .length = -1})
 
+#define STR_STATIC(cstr) (string) {.base = (cstr), .length = (sizeof(cstr) / sizeof(cstr[0]) - 1)}
+
 /**
  * The string structure.
  */

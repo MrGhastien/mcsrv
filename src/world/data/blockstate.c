@@ -142,7 +142,7 @@ const BlockState* state_with_value(const BlockState* state,
                                    union StatePropertyValue value);
 
 bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID block_id) {
-    const Block* block = registry_get(resid_default_cstr("blocks"), block_id);
+    const Block* block = registry_get(REGISTRY_BLOCK_KEY, block_id);
     if (!block)
         return FALSE;
     out_ctx->block = block;

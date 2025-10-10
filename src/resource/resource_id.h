@@ -3,8 +3,13 @@
 
 #include "utils/string.h"
 
-#define RESID_EXTRACT_STRING(resid) cstr(&(resid).namespace), cstr(&(resid).path)
-#define RESID "[%s:%s]"
+#define RESID_UNWRAP(resid) cstr(&(resid).namespace), cstr(&(resid).path)
+#define RESID_FORMAT "[%s:%s]"
+
+#define STATIC_RESID(namespace_arg, path_arg)                                                      \
+    (ResourceID) {                                                                                 \
+        .namespace = STR_STATIC(namespace_arg), .path = STR_STATIC(path_arg),                      \
+    }
 
 typedef struct resid {
     string namespace;

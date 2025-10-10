@@ -52,13 +52,13 @@ void registry_register(ResourceID registry_name, ResourceID id, void* instance) 
 
     reg = dict_ref(&root.entries, reg_idx);
 
-    log_debugf("Registering " RESID " into registry " RESID ".",
-               RESID_EXTRACT_STRING(id),
-               RESID_EXTRACT_STRING(registry_name));
+    log_debugf("Registering " RESID_FORMAT " into registry " RESID_FORMAT ".",
+               RESID_UNWRAP(id),
+               RESID_UNWRAP(registry_name));
     if (dict_put(&reg->entries, &id, instance) < 0)
-        log_errorf("Registration of " RESID " into registry " RESID " failed.",
-                   RESID_EXTRACT_STRING(id),
-                   RESID_EXTRACT_STRING(registry_name));
+        log_errorf("Registration of " RESID_FORMAT " into registry " RESID_FORMAT " failed.",
+                   RESID_UNWRAP(id),
+                   RESID_UNWRAP(registry_name));
 }
 
 const void* registry_get(ResourceID registry_name, ResourceID element_id) {
@@ -71,9 +71,9 @@ const void* registry_get(ResourceID registry_name, ResourceID element_id) {
 
     i64 idx = dict_get(&reg->entries, &element_id, NULL);
     if (idx == -1) {
-        log_errorf("Failed to get element " RESID " of registry " RESID ".",
-                   RESID_EXTRACT_STRING(element_id),
-                   RESID_EXTRACT_STRING(registry_name));
+        log_errorf("Failed to get element " RESID_FORMAT " of registry " RESID_FORMAT ".",
+                   RESID_UNWRAP(element_id),
+                   RESID_UNWRAP(registry_name));
         return NULL;
     }
 

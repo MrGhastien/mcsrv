@@ -335,7 +335,7 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
     log_debug("Datapacks to omit:");
     for (u64 i = 0; i < vect_size(&payload->known_packs); i++) {
         KnownDatapack* pack = vect_ref(&payload->known_packs, i);
-        log_debugf("- " RESID " version %s",
+        log_debugf("- " RESID_FORMAT " version %s",
                    cstr(&pack->namespace),
                    cstr(&pack->id),
                    cstr(&pack->version));
