@@ -16,10 +16,19 @@
 #include "memory/memory.h"
 #include "platform/platform.h"
 #include "platform/time.h"
+#include "utils/hash.h"
 #include "utils/string.h"
 
 #include <string.h>
 #include <zlib.h>
+
+static inline void create_send_packet(enum PacketType type, void* packet_payload, Connection* conn) {
+    Packet to_send = {
+        .payload = packet_payload,
+        .id = type,
+    };
+    send_packet(&to_send, conn);
+}
 
 DEF_PKT_HANDLER(dummy) {
     UNUSED(pkt);
@@ -89,16 +98,13 @@ DEF_PKT_HANDLER(status) {
     }
 
     log_tracef("Status response: %s", response.data.base);
-    Packet out_pkt = {.id = PKT_STATUS, .payload = &response};
-    send_packet(&out_pkt, conn);
+    create_send_packet(PKT_STATUS, &response, conn);
     return TRUE;
 }
 DEF_PKT_HANDLER(ping) {
     PacketPing* ping = pkt->payload;
     PacketPing pong  = {.num = ping->num};
-    Packet response  = {.id = PKT_STATUS_PING, .payload = &pong};
-
-    send_packet(&response, conn);
+    create_send_packet(PKT_STATUS_PING, &pong, conn);
     return TRUE;
 }
 
@@ -110,9 +116,7 @@ DEF_PKT_HANDLER(login_start) {
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
 
-    PacketCryptRequest* req =
-        arena_callocate(&conn->scratch_arena, sizeof *req /* , ALLOC_TAG_PACKET */);
-    *req = (PacketCryptRequest) {
+    PacketCryptRequest req = {
         .server_id         = str_view(""),
         .pkey_length       = conn->global_enc_ctx->encoded_key_size,
         .pkey              = conn->global_enc_ctx->encoded_key,
@@ -120,18 +124,13 @@ DEF_PKT_HANDLER(login_start) {
         .verify_tok        = arena_allocate(&conn->scratch_arena, 4 /* , ALLOC_TAG_UNKNOWN */),
         .authenticate      = TRUE,
     };
-    memset(req->verify_tok, 78, req->verify_tok_length);
+    memset(req.verify_tok, 78, req.verify_tok_length);
     conn->verify_token =
-        arena_allocate(&conn->persistent_arena, req->verify_tok_length /* , ALLOC_TAG_UNKNOWN */);
-    memcpy(conn->verify_token, req->verify_tok, req->verify_tok_length);
-    conn->verify_token_size = req->verify_tok_length;
+        arena_allocate(&conn->persistent_arena, req.verify_tok_length /* , ALLOC_TAG_UNKNOWN */);
+    memcpy(conn->verify_token, req.verify_tok, req.verify_tok_length);
+    conn->verify_token_size = req.verify_tok_length;
 
-    Packet response = {
-        .id      = PKT_LOGIN_CRYPT_REQUEST,
-        .payload = req,
-    };
-
-    send_packet(&response, conn);
+    create_send_packet(PKT_LOGIN_CRYPT_REQUEST, &req, conn);
 
     return TRUE;
 }
@@ -141,12 +140,7 @@ static bool enable_compression(Connection* conn) {
         .threshold = COMPRESS_THRESHOLD,
     };
 
-    Packet cmprss_pkt = {
-        .id      = PKT_LOGIN_COMPRESS,
-        .payload = &payload,
-    };
-
-    send_packet(&cmprss_pkt, conn);
+    create_send_packet(PKT_LOGIN_COMPRESS, &payload, conn);
 
     if (!compression_init(&conn->cmprss_ctx, &conn->persistent_arena))
         return FALSE;
@@ -210,12 +204,7 @@ static bool send_login_success(Connection* conn, JSON* json) {
             property->is_signed = FALSE;
     }
 
-    Packet pkt = {
-        .id      = PKT_LOGIN_SUCCESS,
-        .payload = &login_success,
-    };
-
-    send_packet(&pkt, conn);
+    create_send_packet(PKT_LOGIN_SUCCESS, &login_success, conn);
 
     return TRUE;
 }
@@ -291,22 +280,13 @@ DEF_PKT_HANDLER(login_ack) {
     string srv_brand = str_view("mcsrv");
     bytebuf_write_varint(&server_brand_payload.data, srv_brand.length);
     bytebuf_write(&server_brand_payload.data, srv_brand.base, srv_brand.length);
-    Packet pkt_to_send = {
-        .id      = PKT_CFG_CUSTOM_CLIENT,
-        .payload = &server_brand_payload,
-    };
-
-    send_packet(&pkt_to_send, conn);
+    create_send_packet(PKT_CFG_CUSTOM_CLIENT, &server_brand_payload, conn);
 
     PacketSetFeatureFlags feature_flags_payload = {0};
     vect_init(&feature_flags_payload.features, &conn->scratch_arena, 1, sizeof(ResourceID));
     ResourceID* feature = vect_reserve(&feature_flags_payload.features);
     *feature            = resid_default_cstr("core");
-    pkt_to_send         = (Packet) {
-                .id      = PKT_CFG_SET_FEATURE_FLAGS,
-                .payload = &feature_flags_payload,
-    };
-    send_packet(&pkt_to_send, conn);
+    create_send_packet(PKT_CFG_SET_FEATURE_FLAGS, &feature_flags_payload, conn);
 
     PacketKnownDatapacks known_datapacks = {};
     vect_init(&known_datapacks.known_packs, &conn->scratch_arena, 1, sizeof(KnownDatapack));
@@ -317,11 +297,7 @@ DEF_PKT_HANDLER(login_ack) {
                       .version   = str_view("1.21"),
     };
 
-    pkt_to_send = (Packet) {
-        .id      = PKT_CFG_KNOWN_DATAPACKS_CLIENT,
-        .payload = &known_datapacks,
-    };
-    send_packet(&pkt_to_send, conn);
+    create_send_packet(PKT_CFG_KNOWN_DATAPACKS_CLIENT, &known_datapacks, conn);
 
     return TRUE;
 }
@@ -368,11 +344,7 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
         log_debug("None.");
 
     // TODO: Work with registry data
-
-    Packet cfg_finish = {
-        .id = PKT_CFG_FINISH,
-    };
-    send_packet(&cfg_finish, conn);
+    create_send_packet(PKT_CFG_FINISH, NULL, conn);
 
     return TRUE;
 }
