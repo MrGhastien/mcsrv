@@ -12,6 +12,7 @@
 #include "platform/network.h"
 #include "platform/platform.h"
 #include "platform/socket.h"
+#include "platform/time.h"
 
 #include <errno.h>
 #include <fcntl.h>

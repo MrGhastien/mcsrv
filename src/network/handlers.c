@@ -353,7 +353,32 @@ DEF_PKT_HANDLER(cfg_finish_config_ack) {
 
     log_infof("Configuration for player %s is finished.", cstr(&conn->player_name));
     // LETS GO GAMING!!!
+    log_debug("Switching connection state to PLAY.");
     conn->state = STATE_PLAY;
+
+    PacketLoginPlay play = {
+        .player_entity_id      = conn->player_entity_id,
+        .hardcore              = FALSE,
+        .max_players           = 69, // TODO
+        .view_distance         = 12,
+        .simulation_distance   = 15,
+        .reduced_debug_info    = FALSE,
+        .enable_respawn_screen = TRUE,
+        .limited_crafting      = FALSE,
+        .spawn_dimension_type  = 0,
+        .spawn_dimension_id    = resid_default_cstr("overworld"),
+        .hashed_seed           = default_hash("12345", 5),
+        .gamemode              = 0,
+        .previous_game_mode    = -1,
+        .debug_world           = FALSE,
+        .flat_world            = FALSE,
+        .has_death_location    = FALSE,
+        .portal_cooldown       = 0,
+        .sea_level             = 64,
+        .enforce_secure_chat = FALSE,
+    };
+
+    create_send_packet(PKT_PLAY_LOGIN, &play, conn);
 
     return TRUE;
 }
