@@ -151,9 +151,9 @@ void* vect_ref(const Vector* vector, u64 index);
  * @param[in] elem The value to add into the vector.
  * @param[in] type The type of the element to add.
  */
-#define vect_add_imm(vector, elem, type)                                                           \
+#define vect_add_imm(vector, elem)                                                                 \
     {                                                                                              \
-        type holder = elem;                                                                        \
+        typeof(elem) holder = elem;                                                                \
         vect_add(vector, &holder);                                                                 \
     }
 
@@ -165,9 +165,9 @@ void* vect_ref(const Vector* vector, u64 index);
  * @param[in] idx The index in the vector at which to add the element.
  * @param[in] type The type of the element to add.
  */
-#define vect_insert_imm(vector, elem, idx, type)                                                   \
+#define vect_insert_imm(vector, elem, idx)                                                         \
     {                                                                                              \
-        type holder = elem;                                                                        \
+        typeof(elem) holder = elem;                                                                \
         vect_insert(vector, &holder, idx);                                                         \
     }
 

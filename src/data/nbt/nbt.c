@@ -104,7 +104,7 @@ NBT nbt_create(Arena* arena, u64 max_token_count) {
                              },
     };
 
-    vect_add_imm(&nbt.stack, 0LL, i64);
+    vect_add_imm(&nbt.stack, (i64)0LL);
 
     return nbt;
 }

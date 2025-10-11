@@ -576,7 +576,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
             status = JSONE_MISSING_TOKEN;
         } else {
             assert(info.val_idx == vect_size(&unit_values));
-            vect_add_imm(&info.json->stack, 0, i64);
+            vect_add_imm(&info.json->stack, (i64)0);
         }
     }
     arena_destroy(&parsing_arena);

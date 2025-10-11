@@ -307,7 +307,7 @@ DEF_PKT_HANDLER(login_ack) {
 DEF_PKT_HANDLER(cfg_custom) {
     PacketCustom* payload = pkt->payload;
 
-    if (resid_is(&payload->channel, "minecraft:brand")) {
+    if (resid_is_cstr(&payload->channel, "minecraft:brand")) {
         bytebuf_read_mcstring(&payload->data, &conn->persistent_arena, &conn->peer_brand);
         log_debugf("Peer brand: %s", cstr(&conn->peer_brand));
     } else

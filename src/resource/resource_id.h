@@ -26,6 +26,7 @@ ResourceID resid_default_cstr(const char* path);
 
 bool resid_is_namespace(const ResourceID* id, const char* name);
 bool resid_is_path(const ResourceID* id, const char* name);
-bool resid_is(const ResourceID* id, const char* name);
+bool resid_is_cstr(const ResourceID* id, const char* name);
+bool resid_is(const ResourceID* id, const ResourceID* other);
 
 #endif /* ! RESOURCE_ID_H */

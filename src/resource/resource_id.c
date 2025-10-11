@@ -67,7 +67,7 @@ bool resid_is_path(const ResourceID* id, const char* name) {
     string view = str_view(name);
     return str_compare(&id->path, &view) == 0;
 }
-bool resid_is(const ResourceID* id, const char* name) {
+bool resid_is_cstr(const ResourceID* id, const char* name) {
     string name_view = str_view(name);
     i64 idx          = str_find_char(&name_view, ':');
     if (idx == -1)
@@ -77,4 +77,8 @@ bool resid_is(const ResourceID* id, const char* name) {
     string path      = str_substring(&name_view, idx + 1, -1);
 
     return str_compare(&id->namespace, &namespace) == 0 && str_compare(&id->path, &path) == 0;
+}
+
+bool resid_is(const ResourceID* id, const ResourceID* other) {
+    return str_compare(&id->namespace, &other->namespace) == 0 && str_compare(&id->path, &other->path) == 0;
 }

@@ -73,7 +73,7 @@ enum JSONStatus json_set_root(JSON* json, enum JSONType type) {
         .type = type,
     };
     vect_add(&json->tokens, &new_root);
-    vect_add_imm(&json->stack, 0, i64);
+    vect_add_imm(&json->stack, (i64)0);
     return JSONE_OK;
 }
 
@@ -233,7 +233,7 @@ enum JSONStatus json_move(JSON* json, string path) {
 
     if (path.base[0] == '/') {
         vect_clear(&json->stack);
-        vect_add_imm(&json->stack, 0, i64);
+        vect_add_imm(&json->stack, (i64)0);
     }
 
     while ((idx = str_find_char(&path, '/')) >= 0) {

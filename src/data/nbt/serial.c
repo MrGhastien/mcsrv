@@ -475,7 +475,7 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, IOMux input, NBT* ou
 
     } while (ctx.stack.size > 0);
 
-    vect_add_imm(&out_nbt->stack, 0, i64);
+    vect_add_imm(&out_nbt->stack, (i64) 0);
 
     arena_destroy(&parsing_arena);
     return NBTE_OK;
