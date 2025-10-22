@@ -162,7 +162,7 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
         memory_block blk = chain_head(pool->mem);
         do {
             if (is_addr_in_block(ptr, blk)) {
-                total += (void*) node - block_memory(blk);
+                total += ptr_diff(node, block_memory(blk));
                 break;
             }
             total += block_capacity(blk);

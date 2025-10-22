@@ -3,6 +3,7 @@
 #include "memory/_memory_internal.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
+#include <platform/platform.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,7 +109,9 @@ void arena_free(Arena* arena, u64 bytes) {
 void arena_free_ptr(Arena* arena, void* ptr) {
     if (ptr < arena->block || ptr >= offsetu(arena->block, arena->length))
         return;
-    arena_free(arena, ptr - arena->block);
+    ptrdiff_t diff = ptr_diff(ptr, arena->block);
+    platform_assert(diff >= 0, "Given pointer to free is not inside the arena");
+    arena_free(arena, diff);
 }
 
 void arena_save(Arena* arena) {

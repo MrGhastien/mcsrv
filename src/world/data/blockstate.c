@@ -220,11 +220,12 @@ union StatePropertyValue parse_state_property_value(string value, const StatePro
         else
             abort();
         break;
-    case BLOCK_PROP_INTEGER:
+    case BLOCK_PROP_INTEGER: {
         i64 num     = strtol(cstr(&value), NULL, 10);
         res.integer = num;
         break;
-    case BLOCK_PROP_ENUM:
+    }
+    case BLOCK_PROP_ENUM: {
         u32 i;
         for (i = 0; i < prop->info.enumeration.value_count; i++) {
             string* possible_value = &prop->info.enumeration.values[i];
@@ -233,6 +234,7 @@ union StatePropertyValue parse_state_property_value(string value, const StatePro
         }
         res.enum_index = i;
         break;
+    }
     default:
         res.integer = -1;
         break;

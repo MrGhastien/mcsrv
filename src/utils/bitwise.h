@@ -2,6 +2,7 @@
 #define BITWISE_H
 
 #include "definitions.h"
+#include <stddef.h>
 
 #define CONTINUE_BIT 0x80
 #define SEGMENT_BITS 0x7F
@@ -18,6 +19,10 @@ u64 ceil_two_pow(u64 num);
 u64 u64_log2(u64 x);
 void* offset(const void* ptr, i64 offset);
 void* offsetu(const void* ptr, u64 offset);
+
+static inline ptrdiff_t ptr_diff(const void* a, const void* b) {
+    return (const char*)a - (const char*) b;
+}
 
 bool is_addr_aligned(void* addr, u64 alignment);
 

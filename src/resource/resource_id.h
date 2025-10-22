@@ -7,8 +7,9 @@
 #define RESID_FORMAT "[%s:%s]"
 
 #define STATIC_RESID(namespace_arg, path_arg)                                                      \
-    (ResourceID) {                                                                                 \
-        .namespace = STR_STATIC(namespace_arg), .path = STR_STATIC(path_arg),                      \
+    {                                                                                              \
+        .namespace = STR_STATIC(namespace_arg),                                                    \
+        .path      = STR_STATIC(path_arg),                                                         \
     }
 
 typedef struct resid {

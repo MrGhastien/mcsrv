@@ -4,7 +4,7 @@
 #include "definitions.h"
 
 typedef struct voxel_shape {
-
+    int TODO;
 } VoxelShape;
 
 #endif /* ! SHAPE_H */

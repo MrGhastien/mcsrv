@@ -288,7 +288,7 @@ DEF_PKT_HANDLER(login_ack) {
     *feature            = resid_default_cstr("core");
     create_send_packet(PKT_CFG_SET_FEATURE_FLAGS, &feature_flags_payload, conn);
 
-    PacketKnownDatapacks known_datapacks = {};
+    PacketKnownDatapacks known_datapacks = {0};
     vect_init(&known_datapacks.known_packs, &conn->scratch_arena, 1, sizeof(KnownDatapack));
     KnownDatapack* pack = vect_reserve(&known_datapacks.known_packs);
     *pack               = (KnownDatapack) {

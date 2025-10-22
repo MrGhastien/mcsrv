@@ -97,7 +97,6 @@ static void print_debug_info(const char* unw_function_name, u64 offset, const u6
 }
 #endif
 
-[[noreturn]]
 inline void platform_abort(void) {
 #ifdef DEBUG
     log_fatal("ABORTED:");

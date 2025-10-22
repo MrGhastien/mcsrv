@@ -386,7 +386,7 @@ bool iomux_writec(IOMux multiplexer, i32 chr) {
         strbuild_appendc(&mux->backend.string_backend.builder, chr);
         break;
     case IO_ZLIB:
-        log_fatalf(" TODO: %s", __FUNCTION__);
+        log_fatal(" TODO: iomux_writec for zlib");
         res = -1;
         break;
     default:
@@ -423,7 +423,7 @@ i32 iomux_writes(IOMux multiplexer, const char* cstr) {
         strbuild_appends(&mux->backend.string_backend.builder, cstr);
         break;
     case IO_ZLIB:
-        log_fatalf(" TODO: %s", __FUNCTION__);
+        log_fatal(" TODO: iomux_writes for zlib");
         res = -1;
         break;
     default:
@@ -460,7 +460,7 @@ i32 iomux_write_str(IOMux multiplexer, const string* str) {
         res = str->length;
         break;
     case IO_ZLIB:
-        log_fatalf(" TODO: %s", __FUNCTION__);
+        log_fatal(" TODO: iomux_write_str for zlib");
         res = -1;
         break;
     default:

@@ -13,7 +13,8 @@
 static MCThread thread;
 static bool running = FALSE;
 
-static void* simulate(void*) {
+static void* simulate(void* unused) {
+    UNUSED(unused);
     Level level;
     level_init(&level, str_view("./world"));
 

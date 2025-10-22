@@ -26,7 +26,6 @@ const char* get_error_from_code(i64 code);
 void* platform_alloc(u64* capacity);
 void platform_free(void* ptr, u64 size);
 
-[[noreturn]]
 void platform_abort(void);
 
 #define platform_assert(cond, msg)                                                                 \

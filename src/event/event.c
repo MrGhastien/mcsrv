@@ -66,7 +66,6 @@ static void broadcast_stop_event(void) {
     EventEntry* entry = dict_ref(&ctx.event_registry, idx);
 
     EventInfo info = {
-        .event_data = {},
         .sender     = NULL,
     };
     for (u32 i = 0; i < entry->listeners.size; i++) {

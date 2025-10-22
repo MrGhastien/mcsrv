@@ -4,6 +4,7 @@
 #include "memory/mem_tags.h"
 #include "memory/memory.h"
 #include "network/network.h"
+#include "platform/mc_thread.h"
 #include "platform/platform.h"
 #include "registry/registry.h"
 
@@ -64,6 +65,8 @@ int main(int argc, char** argv) {
     if (res != 0) {
         return res;
     }
+
+    mcthread_set_name("main");
 
     event_handle();
 

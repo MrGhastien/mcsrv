@@ -9,6 +9,7 @@
 #include "world/data/entity/player.h"
 #include "world/physics/block_hit.h"
 #include "world/physics/shape.h"
+#include <wchar.h>
 
 typedef struct block_state BlockState;
 typedef struct block Block;
@@ -59,6 +60,7 @@ enum Mirror {
 
 typedef struct placement_context {
     // TODO;
+    int TODO;
 } PlacementContext;
 
 typedef struct block_behavior {

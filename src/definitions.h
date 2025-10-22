@@ -85,13 +85,15 @@ CHECK_TYPE_SIZE(f64, 8);
 
 CHECK_TYPE_SIZE(bool, 1);
 
-STATIC_ASSERT(sizeof(i32) < sizeof(void*), "Cannot store i32 as a pointer to void !");
-STATIC_ASSERT(sizeof(u32) < sizeof(void*), "Cannot store u32 as a pointer to void !");
+STATIC_ASSERT(sizeof(i32) <= sizeof(intptr_t), "Cannot store i32 in a intptr_t !");
+STATIC_ASSERT(sizeof(u32) <= sizeof(uintptr_t), "Cannot store u32 in a uintptr_t !");
 
-STATIC_ASSERT(sizeof(u64) == sizeof(size_t), "size_t and u64 do not have the same size");
-STATIC_ASSERT(sizeof(i64) == sizeof(ssize_t), "size_t and u64 do not have the same size");
-STATIC_ASSERT(sizeof(u64) >= sizeof(intptr_t), "Cannot convert pointers to long integers");
-STATIC_ASSERT(sizeof(i64) >= sizeof(void*), "Cannot convert pointers to long integers");
+STATIC_ASSERT(sizeof(u64) >= sizeof(size_t), "Cannot store size_t inside a u64");
+STATIC_ASSERT(sizeof(i64) >= sizeof(ssize_t), "Cannot store ssize_t inside a i64");
+STATIC_ASSERT(sizeof(u64) >= sizeof(uintptr_t), "Cannot store uintptr_t inside a u64");
+STATIC_ASSERT(sizeof(i64) >= sizeof(intptr_t), "Cannot store intptr_t inside a i64");
+
+STATIC_ASSERT(sizeof(i64) >= sizeof(ptrdiff_t), "Cannot store ptrdiff_t inside a i64");
 
 #define UNUSED(x) ((void) (x))
 #define EXPLICIT_FALLTHROUGH __attribute__((fallthrough))
