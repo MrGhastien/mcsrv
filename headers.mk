@@ -43,18 +43,11 @@ HDRS := $(SRC_DIR)/world/data/block.h \
 		$(SRC_DIR)/containers/bytebuffer.h \
 		$(SRC_DIR)/containers/dict.h \
 		$(SRC_DIR)/event/event.h \
-		$(SRC_DIR)/platform/linux/mc_cond_var_linux.h \
-		$(SRC_DIR)/platform/linux/mc_mutex_linux.h \
-		$(SRC_DIR)/platform/linux/mc_thread_linux.h \
-		$(SRC_DIR)/platform/linux/signal-handler.h \
 		$(SRC_DIR)/platform/mc_cond_var.h \
 		$(SRC_DIR)/platform/mc_mutex.h \
 		$(SRC_DIR)/platform/mc_thread.h \
 		$(SRC_DIR)/platform/platform.h \
 		$(SRC_DIR)/platform/socket.h \
-		$(SRC_DIR)/platform/windows/mc_cond_var_windows.h \
-		$(SRC_DIR)/platform/windows/mc_mutex_windows.h \
-		$(SRC_DIR)/platform/windows/mc_thread_windows.h \
 		$(SRC_DIR)/platform/network.h \
 		$(SRC_DIR)/platform/time.h \
 		$(SRC_DIR)/registry/registries.h \
