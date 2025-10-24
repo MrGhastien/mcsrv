@@ -5,6 +5,9 @@
 #include "network.h"
 #include "packet.h"
 #include "packet_codec.h"
+#include "registry/codec.h"
+#include "registry/registries.h"
+#include "registry/registry.h"
 #include "resource/resource_id.h"
 #include "security.h"
 #include "utils.h"
@@ -18,6 +21,7 @@
 #include "platform/time.h"
 #include "utils/hash.h"
 #include "utils/string.h"
+#include "world/data/dimension_type.h"
 
 #include <string.h>
 #include <zlib.h>
@@ -348,6 +352,25 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
 
     return TRUE;
 }
+
+struct registry_data_serialize_data {
+    Vector* entries;
+    Arena scratch_arena;
+    Arena* persistent_arena;
+};
+
+static void dimension_type_action(ResourceID* id, const void* entry, void* user_data) {
+
+    struct registry_data_serialize_data* ctx = user_data;
+
+    RegistryDataEntry pkt_entry = {
+        .id = *id,
+    };
+
+    dimension_type_to_nbt(entry, ctx->scratch_arena, ctx->persistent_arena, &pkt_entry.data);
+    vect_add(user_data, entry);
+}
+
 DEF_PKT_HANDLER(cfg_finish_config_ack) {
     UNUSED(pkt);
 
@@ -355,6 +378,19 @@ DEF_PKT_HANDLER(cfg_finish_config_ack) {
     // LETS GO GAMING!!!
     log_debug("Switching connection state to PLAY.");
     conn->state = STATE_PLAY;
+
+    PacketRegistryData reg_data_pkt = {
+        .registry_id = REGISTRY_DIMENSION_TYPE_KEY,
+    };
+    vect_init(&reg_data_pkt.entries, &conn->scratch_arena, registry_count(REGISTRY_DIMENSION_TYPE_KEY), sizeof(RegistryDataEntry));
+
+    struct registry_data_serialize_data ctx = {
+        .entries       = &reg_data_pkt.entries,
+        .scratch_arena = conn->scratch_arena,
+        .persistent_arena = &conn->persistent_arena,
+    };
+
+    registry_foreach(REGISTRY_DIMENSION_TYPE_KEY, &dimension_type_action, &ctx);
 
     PacketLoginPlay play = {
         .player_entity_id      = conn->player_entity_id,

@@ -1,15 +1,24 @@
 #include "registry.h"
 #include "containers/dict.h"
 #include "containers/vector.h"
+#include "data/json.h"
+#include "definitions.h"
 #include "logger.h"
+#include "memory/allocators/arena.h"
+#include "memory/mem_tags.h"
 #include "memory/memory.h"
 #include "platform/platform.h"
+#include "registry/codec.h"
 #include "resource/resource_id.h"
 
 #include "registries.h"
+#include "utils/string.h"
 #include "world/data/block.h"
+#include "world/data/dimension_type.h"
 
+#include <dirent.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define REGISTRY_ARENA_SIZE 1048576
 
@@ -49,16 +58,48 @@ static void initialize_registries(void) {
     registry_create(REGISTRY_TRIM_MATERIAL_KEY, sizeof(Block));
     registry_create(REGISTRY_WOLF_VARIANT_KEY, sizeof(Block));
     registry_create(REGISTRY_PAINTING_VARIANT_KEY, sizeof(Block));
-    registry_create(REGISTRY_DIMENSION_TYPE_KEY, sizeof(Block));
+    registry_create(REGISTRY_DIMENSION_TYPE_KEY, sizeof(DimensionType));
     registry_create(REGISTRY_DAMAGE_TYPE_KEY, sizeof(Block));
     registry_create(REGISTRY_BANNER_PATTERN_KEY, sizeof(Block));
     registry_create(REGISTRY_ENCHANTMENT_KEY, sizeof(Block));
     registry_create(REGISTRY_JUKEBOX_SONG_KEY, sizeof(Block));
 }
 
+static void register_dimension_types(void) {
+    string dirpath = str_view("data/minecraft/dimension_type/");
+    DIR* dir       = opendir(cstr(&dirpath));
+
+    // Stop being overkill and doing shit: Just make a new arena.
+    // This is MUCH simpler than using only one arena to make everything: No memory corruption !
+    Arena scratch = arena_create(8192, BLK_TAG_REGISTRY, arena.chain);
+
+    struct dirent* entry;
+    while ((entry = readdir(dir))) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+        string filename = str_view(entry->d_name);
+        string filepath = str_concat(&dirpath, &filename, &scratch);
+        JSON json;
+        if (json_from_file(filepath, &scratch, &json) != JSONE_OK)
+            return;
+
+        DimensionType new_type = dimension_type_from_json(&json, arena, &arena);
+
+        i64 extension_pos = str_find_char(&filename, '.');
+        platform_assert(extension_pos > 0, "Invalid data file name.");
+
+        string type_path = str_substring(&filename, 0, extension_pos);
+        ResourceID id    = resid_default(&type_path, &arena);
+        registry_register(REGISTRY_DIMENSION_TYPE_KEY, id, &new_type);
+    }
+
+    arena_destroy(&scratch);
+}
+
 static void register_game_elements(void) {
     initialize_registries();
     register_blocks();
+    register_dimension_types();
 }
 
 void registry_system_init(void) {
@@ -134,6 +175,17 @@ const void* registry_get(ResourceID registry_name, ResourceID element_id) {
     return dict_ref(&reg->entries, idx);
 }
 
+u64 registry_count(ResourceID registry_name) {
+    Registry* reg;
+    i64 reg_idx;
+    if ((reg_idx = dict_get(&root.entries, &registry_name, NULL)) < 0)
+        abort();
+
+    reg = dict_ref(&root.entries, reg_idx);
+
+    return reg->entries.size;
+}
+
 i64 registry_create_tag(ResourceID registry_name, ResourceID tag_name) {
     Registry* reg = get_registry(registry_name);
 
@@ -152,38 +204,61 @@ i64 registry_create_tag(ResourceID registry_name, ResourceID tag_name) {
 void registry_tag_add(ResourceID registry_name, i64 tag_idx, ResourceID object_name) {
     platform_assert(tag_idx >= 0, "Invalid tag index passed when adding objects.");
 
-    Registry* reg = get_registry(registry_name);
+    Registry* reg        = get_registry(registry_name);
     Vector* tag_contents = dict_ref(&reg->tags, tag_idx);
     if (!tag_contents)
         platform_abort();
 
-    TagElement elem = { .name = object_name, .is_tag = FALSE };
+    TagElement elem = {.name = object_name, .is_tag = FALSE};
     vect_add(tag_contents, &elem);
 }
-void registry_tag_inherit(ResourceID registry_name,
-                          i64 tag_idx,
-                          ResourceID inherit_tag_name) {
+void registry_tag_inherit(ResourceID registry_name, i64 tag_idx, ResourceID inherit_tag_name) {
 
     platform_assert(tag_idx >= 0, "Invalid tag index passed when adding objects.");
 
-    Registry* reg = get_registry(registry_name);
+    Registry* reg        = get_registry(registry_name);
     Vector* tag_contents = dict_ref(&reg->tags, tag_idx);
     if (!tag_contents)
         platform_abort();
 
-    TagElement elem = { .name = inherit_tag_name, .is_tag = TRUE };
+    TagElement elem = {.name = inherit_tag_name, .is_tag = TRUE};
     vect_add(tag_contents, &elem);
 }
 
 bool registry_is_in_tag(ResourceID registry_name, i64 tag_idx, ResourceID object_name) {
     platform_assert(tag_idx >= 0, "Invalid tag index passed when checking objects.");
-    Registry* reg = get_registry(registry_name);
+    Registry* reg        = get_registry(registry_name);
     Vector* tag_contents = dict_ref(&reg->tags, tag_idx);
 
     for (i64 i = 0; i < vect_size(tag_contents); i++) {
         TagElement* elem_ref = vect_ref(tag_contents, i);
-        if(!elem_ref->is_tag && resid_is(&elem_ref->name, &object_name))
+        if (!elem_ref->is_tag && resid_is(&elem_ref->name, &object_name))
             return TRUE;
     }
     return FALSE;
+}
+
+struct reg_wrapper_data {
+    reg_entry_action user_action;
+    void* user_data;
+};
+
+static void dict_action_wrapper(const Dict* dict, u64 idx, void* key, void* value, void* data) {
+    UNUSED(dict);
+    UNUSED(idx);
+    struct reg_wrapper_data* wrapper_data = data;
+
+    wrapper_data->user_action(key, value, wrapper_data->user_data);
+}
+
+void registry_foreach(ResourceID registry_name, reg_entry_action action, void* user_data) {
+    Registry* reg = get_registry(registry_name);
+    if (!reg)
+        return;
+
+    struct reg_wrapper_data wrapper_data = {
+        .user_action = action,
+        .user_data   = user_data,
+    };
+    dict_foreach(&reg->entries, &dict_action_wrapper, &wrapper_data);
 }

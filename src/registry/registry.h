@@ -16,6 +16,11 @@ i64 registry_create_tag(ResourceID registry_name, ResourceID tag_name);
 void registry_tag_add(ResourceID registry_name, i64 tag_idx, ResourceID object_name);
 void registry_tag_inherit(ResourceID registry_name, i64 tag_idx, ResourceID inherit_tag_name);
 
+u64 registry_count(ResourceID registry_name);
+
 bool registry_is_in_tag(ResourceID registry_name, i64 tag_idx, ResourceID object_name);
+
+typedef void (*reg_entry_action)(ResourceID* id, const void* entry, void* user_data);
+void registry_foreach(ResourceID registry_name, reg_entry_action action, void* user_data);
 
 #endif /* ! REGISTRY_H */

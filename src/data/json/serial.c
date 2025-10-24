@@ -586,7 +586,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
 enum JSONStatus json_from_file(string path, Arena* arena, JSON* out_json) {
     IOMux mux = iomux_open(&path, "r");
     if (mux == -1) {
-        log_errorf("[JSON] Could not open file for JSON parsing: %s", get_last_error());
+        log_errorf("[JSON] Could not open file '%s' for JSON parsing: %s", cstr(&path), get_last_error());
         return JSONE_IO;
     }
 

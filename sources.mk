@@ -35,6 +35,7 @@ SRCS := $(SRC_DIR)/logger1.c \
 		$(SRC_DIR)/containers/ring_queue.c \
 		$(SRC_DIR)/event/event.c \
 		$(SRC_DIR)/registry/blocks.c \
+		$(SRC_DIR)/registry/codec.c \
 		$(SRC_DIR)/registry/registry.c \
 		$(SRC_DIR)/resource/resource_id.c \
 		$(SRC_DIR)/data/json/json.c \

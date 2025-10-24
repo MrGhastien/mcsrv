@@ -50,6 +50,7 @@ HDRS := $(SRC_DIR)/world/data/block.h \
 		$(SRC_DIR)/platform/socket.h \
 		$(SRC_DIR)/platform/network.h \
 		$(SRC_DIR)/platform/time.h \
+		$(SRC_DIR)/registry/codec.h \
 		$(SRC_DIR)/registry/registries.h \
 		$(SRC_DIR)/registry/registry.h \
 		$(SRC_DIR)/resource/resource_id.h \
