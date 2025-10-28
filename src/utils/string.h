@@ -34,10 +34,10 @@
 /**
  * The string structure.
  */
-typedef struct str {
+struct str {
     char* base; /**< The pointer to the character array. Always null-terminated. */
     u64 length; /**< The length of the character array, excluding the null-terminator. */
-} string;
+};
 
 /**
  * The string comparator.
@@ -221,6 +221,6 @@ i32 str_compare_cstr(const string* lhs, const char* rhs);
  * @param[out] out_size Output for the size of the returned string.
  * @return A pointer to the formatted string, allocated with the arena.
  */
-char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size);
+char* format_cstr(Arena* scratch, const char* format, va_list args, u64* out_size);
 
 #endif /* ! STRING_H */

@@ -56,7 +56,7 @@ i32 strbuild_appendf(StringBuilder* builder, const char* format, ...) {
 i32 strbuild_appendvf(StringBuilder* builder, const char* format, va_list args) {
     Arena scratch = *builder->arena;
     u64 size;
-    const char* formatted = format_str(&scratch, format, args, &size);
+    const char* formatted = format_cstr(&scratch, format, args, &size);
     strbuild_append_buf(builder, formatted, size);
     return size;
 }
@@ -95,7 +95,7 @@ i32 strbuild_insertf(StringBuilder* builder, u64 index, const char* format, ...)
 i32 strbuild_insertvf(StringBuilder* builder, u64 index, const char* format, va_list args) {
     Arena scratch = *builder->arena;
     u64 size;
-    const char* formatted = format_str(&scratch, format, args, &size);
+    const char* formatted = format_cstr(&scratch, format, args, &size);
     strbuild_insert_buf(builder, index, formatted, size);
     return size;
 }

@@ -329,7 +329,7 @@ i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
     case IO_BUFFER: {
         Arena scratch = arena_create(8192, BLK_TAG_PLATFORM, INVALID_CHAIN);
         u64 size;
-        char* formatted = format_str(&scratch, format, args, &size);
+        char* formatted = format_cstr(&scratch, format, args, &size);
         bytebuf_write(mux->backend.buffer, formatted, size * sizeof *formatted);
         arena_destroy(&scratch);
         res = size;
@@ -345,7 +345,7 @@ i32 iomux_writef(IOMux multiplexer, const char* format, ...) {
     case IO_ZLIB: {
         Arena scratch = arena_create(8192, BLK_TAG_PLATFORM, INVALID_CHAIN);
         u64 size;
-        char* formatted = format_str(&scratch, format, args, &size);
+        char* formatted = format_cstr(&scratch, format, args, &size);
         compression_compress_to(&mux->backend.zlib.ctx, mux->backend.zlib.source, formatted, size);
         arena_destroy(&scratch);
         res = size;

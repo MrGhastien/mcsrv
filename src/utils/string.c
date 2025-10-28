@@ -6,6 +6,7 @@
 #include "utils/hash.h"
 
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -153,7 +154,7 @@ i32 str_compare_cstr(const string* lhs, const char* rhs) {
     return str_compare(lhs, &rhs_view);
 }
 
-char* format_str(Arena* scratch, const char* format, va_list args, u64* out_size) {
+char* format_cstr(Arena* scratch, const char* format, va_list args, u64* out_size) {
     va_list args_copy;
     va_copy(args_copy, args);
     i32 res = vsnprintf(NULL, 0, format, args_copy);
