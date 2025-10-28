@@ -71,7 +71,7 @@ static void register_dimension_types(void) {
 
     // Stop being overkill and doing shit: Just make a new arena.
     // This is MUCH simpler than using only one arena to make everything: No memory corruption !
-    Arena scratch = arena_create(8192, BLK_TAG_REGISTRY, arena.chain);
+    Arena scratch = arena_create(1 << 16, BLK_TAG_REGISTRY, arena.chain);
 
     struct dirent* entry;
     while ((entry = readdir(dir))) {
@@ -83,7 +83,7 @@ static void register_dimension_types(void) {
         if (json_from_file(filepath, &scratch, &json) != JSONE_OK)
             return;
 
-        DimensionType new_type = dimension_type_from_json(&json, arena, &arena);
+        DimensionType new_type = dimension_type_from_json(&json, scratch, &arena);
 
         i64 extension_pos = str_find_char(&filename, '.');
         platform_assert(extension_pos > 0, "Invalid data file name.");

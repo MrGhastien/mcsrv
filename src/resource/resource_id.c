@@ -1,6 +1,7 @@
 #include "resource_id.h"
 #include "utils/hash.h"
 #include "utils/string.h"
+#include <string.h>
 
 i32 resid_compare_raw(const void* lhs, const void* rhs) {
     const ResourceID* lhs_id = lhs;
@@ -81,4 +82,17 @@ bool resid_is_cstr(const ResourceID* id, const char* name) {
 
 bool resid_is(const ResourceID* id, const ResourceID* other) {
     return str_compare(&id->namespace, &other->namespace) == 0 && str_compare(&id->path, &other->path) == 0;
+}
+
+string resid_to_string(const ResourceID* id, Arena* arena) {
+    u64 ns_length = id->namespace.length;
+    u64 path_length = id->path.length;
+    u64 total_length = ns_length + path_length + 1;
+
+    string str = str_alloc(total_length, arena);
+    memcpy(str.base, id->namespace.base, ns_length);
+    memcpy(str.base + ns_length + 1, id->path.base, path_length);
+    str.base[ns_length] = ':';
+
+    return str;
 }

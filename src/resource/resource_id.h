@@ -29,4 +29,6 @@ bool resid_is_path(const ResourceID* id, const char* name);
 bool resid_is_cstr(const ResourceID* id, const char* name);
 bool resid_is(const ResourceID* id, const ResourceID* other);
 
+string resid_to_string(const ResourceID* id, Arena* arena);
+
 #endif /* ! RESOURCE_ID_H */
