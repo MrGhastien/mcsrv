@@ -101,6 +101,6 @@ clean:
 	rm -f $(OBJS)
 	rm -f $(MAIN_TARGET)
 	rm -f $(CORE_LIB)
-	@echo -e "\e[32m>>	MAKE	$(LIBDIR)\e[0m"
+	@echo -e "\e[32m>>	MAKE	$(SRC_DIR)/platform\e[0m"
 	@$(MAKE) -C $(SRC_DIR)/platform clean
 	@echo -e "\e[32m<<	. . .\e[0m"
