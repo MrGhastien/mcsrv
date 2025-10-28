@@ -402,3 +402,9 @@ string* json_get_string(JSON* json) {
     }
     return &token->data.str;
 }
+
+enum JSONType json_get_type(JSON* json) {
+    JSONToken* token = get_current_node(json);
+
+    return token->type;
+}

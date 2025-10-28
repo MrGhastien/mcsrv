@@ -190,6 +190,8 @@ enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {
         .type = tag->data.list.elem_type,
     };
     append_tag(nbt, &new_tag);
+    u64 new_tag_idx = vect_size(&nbt->tags) - 1;
+    vect_add(&nbt->stack, &new_tag_idx);
     return NBTE_OK;
 }
 
@@ -235,6 +237,8 @@ enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type) {
     else if (type == NBT_LIST)
         new_tag.data.composite.total_tag_length = 1;
     append_tag(nbt, &new_tag);
+    u64 new_tag_idx = vect_size(&nbt->tags) - 1;
+    vect_add(&nbt->stack, &new_tag_idx);
     return NBTE_OK;
 }
 

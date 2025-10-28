@@ -251,6 +251,8 @@ enum NBTStatus nbt_push_str(NBT* nbt, const string* str);
  * The newly pushed tag is initialized to zero. It can be set using the `nbt_set_*` family of
  * functions. If the current tag is not a list this function does nothing.
  *
+ * @note After a call to this function, the newly added tag is selected.
+ *
  * @param[in] nbt The NBT tree containing the list to push into.
  * @param[in] type The type of tag to push.
  */
@@ -283,6 +285,8 @@ enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str);
  * Adds a tag to the current compound NBT.
  *
  * If the current tag is not a compound this function does nothing.
+ *
+ * @note After a call to this function, the newly added tag is selected.
  *
  * @param[in] nbt The NBT tree containing the compound to put into.
  * @param[in] name The name of the tag to put into the current compound.

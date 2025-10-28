@@ -356,4 +356,12 @@ string* json_get_name(JSON* json);
  */
 string* json_get_string(JSON* json);
 
+/**
+ * Gets the type of the currently selected JSON token.
+ *
+ * @param[in] json The JSON tree.
+ * @return The type.
+ */
+enum JSONType json_get_type(JSON* json);
+
 #endif /* ! JSON_H */
