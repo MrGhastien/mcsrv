@@ -293,7 +293,7 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
              hash.base,
              conn->player_name.base);
 
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     // curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.8.0");
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data_callback);

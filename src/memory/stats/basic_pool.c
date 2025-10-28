@@ -27,6 +27,7 @@ static inline u64 total_stride(const struct basic_pool* pool) {
         return sizeof(struct memory_chain) + sizeof(bool);
     default:
         platform_abort();
+        return 0;
     }
 }
 
