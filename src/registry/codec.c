@@ -71,12 +71,16 @@ static const string int_provider_type_names[] = {
     [INT_PROVIDER_WEIGHTED_LIST]    = STR_STATIC("weighted_list"),
 };
 
-static enum IntProviderType int_provider_parse_type(const string* str) {
+static enum IntProviderType int_provider_parse_type(const string* str, Arena scratch_arena) {
     static const size_t type_count =
         sizeof int_provider_type_names / sizeof(*int_provider_type_names);
 
+    ResourceID id;
+    if (!resid_parse(str, &scratch_arena, &id))
+        return INT_PROVIDER_INVALID;
+
     for (size_t i = 0; i < type_count; i++) {
-        if (str_compare(str, &int_provider_type_names[i]) == 0)
+        if (resid_is_path(&id, int_provider_type_names[i]))
             return i;
     }
     return INT_PROVIDER_INVALID;
@@ -97,7 +101,7 @@ int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena)
     string* type_name = json_get_string(json);
     json_move_to_parent(json);
 
-    enum IntProviderType type = int_provider_parse_type(type_name);
+    enum IntProviderType type = int_provider_parse_type(type_name, scratch_arena);
     if (type == INT_PROVIDER_INVALID) {
         return (IntOrProvider) {
             .is_provider = TRUE,

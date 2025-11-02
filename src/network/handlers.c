@@ -331,27 +331,6 @@ DEF_PKT_HANDLER(cfg_client_info) {
 
     return TRUE;
 }
-DEF_PKT_HANDLER(cfg_known_datapacks) {
-    UNUSED(conn);
-    PacketKnownDatapacks* payload = pkt->payload;
-    UNUSED(payload);
-
-    log_debug("Datapacks to omit:");
-    for (u64 i = 0; i < vect_size(&payload->known_packs); i++) {
-        KnownDatapack* pack = vect_ref(&payload->known_packs, i);
-        log_debugf("- " RESID_FORMAT " version %s",
-                   cstr(&pack->namespace),
-                   cstr(&pack->id),
-                   cstr(&pack->version));
-    }
-    if (vect_size(&payload->known_packs) == 0)
-        log_debug("None.");
-
-    // TODO: Work with registry data
-    create_send_packet(PKT_CFG_FINISH, NULL, conn);
-
-    return TRUE;
-}
 
 struct registry_data_serialize_data {
     Vector* entries;
@@ -371,13 +350,21 @@ static void dimension_type_action(ResourceID* id, const void* entry, void* user_
     vect_add(user_data, entry);
 }
 
-DEF_PKT_HANDLER(cfg_finish_config_ack) {
-    UNUSED(pkt);
+DEF_PKT_HANDLER(cfg_known_datapacks) {
+    UNUSED(conn);
+    PacketKnownDatapacks* payload = pkt->payload;
+    UNUSED(payload);
 
-    log_infof("Configuration for player %s is finished.", cstr(&conn->player_name));
-    // LETS GO GAMING!!!
-    log_debug("Switching connection state to PLAY.");
-    conn->state = STATE_PLAY;
+    log_debug("Datapacks to omit:");
+    for (u64 i = 0; i < vect_size(&payload->known_packs); i++) {
+        KnownDatapack* pack = vect_ref(&payload->known_packs, i);
+        log_debugf("- " RESID_FORMAT " version %s",
+                   cstr(&pack->namespace),
+                   cstr(&pack->id),
+                   cstr(&pack->version));
+    }
+    if (vect_size(&payload->known_packs) == 0)
+        log_debug("None.");
 
     PacketRegistryData reg_data_pkt = {
         .registry_id = REGISTRY_DIMENSION_TYPE_KEY,
@@ -391,6 +378,22 @@ DEF_PKT_HANDLER(cfg_finish_config_ack) {
     };
 
     registry_foreach(REGISTRY_DIMENSION_TYPE_KEY, &dimension_type_action, &ctx);
+    create_send_packet(PKT_CFG_REGISTRY_DATA, &reg_data_pkt, conn);
+
+    // TODO: Work with registry data
+    create_send_packet(PKT_CFG_FINISH, NULL, conn);
+
+    return TRUE;
+}
+
+DEF_PKT_HANDLER(cfg_finish_config_ack) {
+    UNUSED(pkt);
+
+    log_infof("Configuration for player %s is finished.", cstr(&conn->player_name));
+    // LETS GO GAMING!!!
+    log_debug("Switching connection state to PLAY.");
+    conn->state = STATE_PLAY;
+
 
     PacketLoginPlay play = {
         .player_entity_id      = conn->player_entity_id,
