@@ -380,12 +380,11 @@ struct stat_dump_data {
 };
 
 static void print_usage_bar(u64 used, u64 capacity, i32 bar_width) {
-    f32 ratio  = (f32) used / capacity;
-    i32 filled = (i32) (ratio * bar_width);
+    i32 filled = (i32) (used * bar_width) / capacity;
 
     printf("[");
     for (int i = 0; i < bar_width; i++) {
-        if (i < filled) {
+        if (i <= filled) {
             printf("█"); // ou '#' si ton terminal ne supporte pas Unicode
         } else {
             printf("░"); // ou '-'
