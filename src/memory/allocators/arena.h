@@ -17,11 +17,10 @@
  */
 typedef struct arena {
     memory_chain chain;
-    void* block;
+    memory_block current;
     u64 capacity;
     u64 length;
-    u64 saved_length;
-    bool logging;
+    bool statik;
 } Arena;
 
 /**
@@ -31,7 +30,7 @@ typedef struct arena {
  * @param tag
  * @return The new arena allocator.
  */
-Arena arena_create(u64 size, enum MemoryChainTag tag, memory_chain parent);
+Arena _arena_create(u64 size, enum MemoryChainTag tag, const char* name, memory_chain parent);
 /**
  * Creates an arena allocator of the specified size, without logging anything.
  *
@@ -42,7 +41,7 @@ Arena arena_create(u64 size, enum MemoryChainTag tag, memory_chain parent);
  * @param tag
  * @return The new arena allocator.
  */
-Arena arena_create_silent(u64 size, enum MemoryChainTag tag, memory_chain parent);
+Arena arena_create_static(u64 size, enum MemoryChainTag tag, memory_chain parent);
 /**
  * Frees all memory associated with an arena.
  *
@@ -83,6 +82,8 @@ void* arena_callocate_aligned(Arena* arena, u64 bytes);
  * of the arena, it is silently clamped all the memory is freed
  */
 void arena_free(Arena* arena, u64 bytes);
+
+void arena_clear(Arena* arena);
 /**
  * Frees the specified amount of bytes from an arena.
  *
@@ -98,7 +99,7 @@ void arena_free_ptr(Arena* arena, void* ptr);
  *
  * @param arena The arena of which to save the current pointer.
  */
-void arena_save(Arena* arena);
+//void arena_save(Arena* arena);
 /**
  * Restores the available memory pointer that was previously saved.
  *
@@ -107,7 +108,7 @@ void arena_save(Arena* arena);
  *
  * @param arena The arena of which to restore the available memory pointer.
  */
-void arena_restore(Arena* arena);
+//void arena_restore(Arena* arena);
 
 /**
  * Returns the number of bytes saved.
@@ -118,14 +119,14 @@ void arena_restore(Arena* arena);
  * @param arena The arena from which to get the saved pointer.
  * @return The amount of saved bytes.
  */
-u64 arena_recent_length(Arena* arena);
+//u64 arena_recent_length(Arena* arena);
 /**
  * Returns the saved available memory pointer.
  *
  * @param arena The arena from which to get the saved pointer.
  * @return The saved pointer.
  */
-void* arena_recent_pos(Arena* arena);
+//void* arena_recent_pos(Arena* arena);
 
 /**
  * Indicates whether two arenas share the same memory block or not.
@@ -135,9 +136,11 @@ void* arena_recent_pos(Arena* arena);
  * @return @ref TRUE if both arenas share the same memory block, @ref FALSE otherwise.
  */
 static inline bool arena_is_mem_shared(const Arena* a, const Arena* b) {
-    return a->block == b->block;
+    return a->chain == b->chain;
 }
 
 void memory_dump_stats(void);
+
+#define arena_create(size, tag, parent) _arena_create(size, tag, (__FILE__ ":" MACRO_STRINGIZE(__LINE__)), parent) 
 
 #endif /* ! ARENA_H */

@@ -9,13 +9,13 @@ static void test1(void) {
     Vector vector;
     vect_init_dynamic(&vector, &arena, 4, sizeof(u64));
 
-    vect_add_imm(&vector, 7837, u64);
-    vect_add_imm(&vector, 1, u64);
-    vect_add_imm(&vector, 3, u64);
-    vect_add_imm(&vector, 5, u64);
-    vect_add_imm(&vector, 7, u64);
-    vect_add_imm(&vector, 19, u64);
-    vect_add_imm(&vector, 9, u64);
+    vect_add_imm(&vector, 7837);
+    vect_add_imm(&vector, 1);
+    vect_add_imm(&vector, 3);
+    vect_add_imm(&vector, 5);
+    vect_add_imm(&vector, 7);
+    vect_add_imm(&vector, 19);
+    vect_add_imm(&vector, 9);
 
     u64 num;
     vect_get(&vector, 4, &num);

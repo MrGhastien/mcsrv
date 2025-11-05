@@ -76,9 +76,9 @@ static void grow(struct basic_pool* pool) {
     pool->head            = &new_array[pool->capacity];
     pool->tail            = &new_array[new_cap - 1];
     pool->tail->data.next = pool->capacity;
-    pool->capacity        = new_cap;
     platform_free(pool->blocks, pool->capacity * stride);
-    pool->blocks = new_array;
+    pool->capacity = new_cap;
+    pool->blocks   = new_array;
 }
 
 void* basic_pool_alloc(struct basic_pool* pool, i32* out_idx) {

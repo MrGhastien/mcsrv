@@ -375,6 +375,7 @@ void close_connection(NetworkContext* ctx, Connection* conn) {
         encryption_cleanup_peer(&conn->peer_enc_ctx);
     }
 
+    // TODO: Move this into a general function (like `connection_destroy`)
     sock_close(conn->peer_socket);
     epoll_ctl(platform_ctx.epollfd, EPOLL_CTL_DEL, conn->peer_socket, &placeholder);
     arena_destroy(&conn->scratch_arena);

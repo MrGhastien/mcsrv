@@ -97,6 +97,8 @@ STATIC_ASSERT(sizeof(i64) >= sizeof(ptrdiff_t), "Cannot store ptrdiff_t inside a
 
 #define UNUSED(x) ((void) (x))
 #define EXPLICIT_FALLTHROUGH __attribute__((fallthrough))
+#define MACRO_STRINGIZE_ENSURE(x) #x
+#define MACRO_STRINGIZE(x) MACRO_STRINGIZE_ENSURE(x)
 
 #if defined(_WIN32)
 #define strtok_r strtok_s

@@ -9,17 +9,18 @@
 #include "containers/vector.h"
 #include "definitions.h"
 #include "logger.h"
+#include "memory/allocators/arena.h"
 #include "memory/memory.h"
 #include "memory/stats/basic_pool.h"
 #include "platform/mc_mutex.h"
-#include "platform/mc_thread.h"
 #include "platform/platform.h"
 #include "utils/ansi_codes.h"
-#include "utils/bitwise.h"
+#include "utils/string.h"
 
 #include "allocators/pool.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #define TRACKER_BUF_SIZE (1 << 26)
@@ -62,7 +63,7 @@ static struct basic_pool chain_pool;
 static bool tracker_initialized = FALSE;
 static MCMutex stats_mutex;
 
-memory_chain create_chain(enum MemoryChainTag tag, memory_chain prev) {
+memory_chain create_chain(enum MemoryChainTag tag, const char* name, memory_chain prev) {
     i32 idx;
     mcmutex_lock(&stats_mutex);
     struct memory_chain* new_chain = basic_pool_alloc(&chain_pool, &idx);
@@ -74,6 +75,7 @@ memory_chain create_chain(enum MemoryChainTag tag, memory_chain prev) {
         .next_chain = INVALID_CHAIN,
         .head       = INVALID_BLOCK,
         .tail       = INVALID_BLOCK,
+        .name       = name,
     };
     if (prev >= 0) {
         struct memory_chain* prev_ptr = basic_pool_query(&chain_pool, prev);
@@ -135,7 +137,6 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
     *block = (struct memory_block) {
         .capacity = capacity,
         .next     = INVALID_BLOCK,
-        .prev     = INVALID_BLOCK,
         .start    = memory,
         .type     = ALLOC_TYPE_DYNAMIC,
     };
@@ -144,7 +145,6 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
 
     struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
 
-    block->prev = chain_ptr->tail;
     if (chain_ptr->tail >= 0) {
         struct memory_block* tail_ptr = basic_pool_query(&block_pool, chain_ptr->tail);
         tail_ptr->next                = index;
@@ -183,6 +183,16 @@ memory_block block_next(memory_block block) {
 
     return block_ptr->next;
 }
+memory_block block_prev(memory_block block) {
+    if (block < 0)
+        return INVALID_BLOCK;
+
+    const struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
+    if (block_ptr == NULL)
+        return INVALID_BLOCK;
+
+    return block_ptr->prev;
+}
 
 void* block_memory(memory_block block) {
     if (block < 0)
@@ -204,6 +214,26 @@ u64 block_capacity(memory_block block) {
         return 0ull;
 
     return block_ptr->capacity;
+}
+
+u64 block_used(memory_block block) {
+    if (block < 0)
+        return 0ull;
+
+    const struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
+    if (block_ptr == NULL)
+        return 0ull;
+
+    return block_ptr->used;
+}
+
+void block_set_used(memory_block block, u64 value) {
+    if (block < 0)
+        return;
+
+    struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
+    if (block_ptr != NULL)
+        block_ptr->used = value;
 }
 
 string get_alloc_tag_name(enum AllocTag tag) {
@@ -230,7 +260,17 @@ void memory_init(void) {
     // pool_init_static(&allocation_pool, 512, sizeof(memory_block), &allocation_chain);
 }
 
+static void check_leaks(void) {
+    if (block_pool.size == 0) {
+        log_debug("No memory leaks !");
+        return;
+    }
+    log_error("MEMORY LEAKS DETECTED ! Here is a dump of memory statistics for you !");
+    memory_dump_stats();
+}
+
 void memory_cleanup(void) {
+    check_leaks();
     tracker_initialized = FALSE;
     basic_pool_cleanup(&chain_pool);
     basic_pool_cleanup(&block_pool);
@@ -336,18 +376,44 @@ void unregister_alloc(const memory_block* block, u64 start) {
 */
 struct stat_dump_data {
     u64 total_allocated;
-    u64 total_available;
-    Vector alloc_buckets;
+    u64 total_used;
 };
+
+static void print_usage_bar(u64 used, u64 capacity, i32 bar_width) {
+    f32 ratio  = (f32) used / capacity;
+    i32 filled = (i32) (ratio * bar_width);
+
+    printf("[");
+    for (int i = 0; i < bar_width; i++) {
+        if (i < filled) {
+            printf("█"); // ou '#' si ton terminal ne supporte pas Unicode
+        } else {
+            printf("░"); // ou '-'
+        }
+    }
+    printf("] ");
+}
+
+static void print_size(u64 bytes) {
+    if (bytes < 1024) {
+        printf(ANSI_YELLOW "%zu" ANSI_RESET "B", bytes);
+    } else if (bytes < 1024 * 1024) {
+        printf(ANSI_YELLOW "%.1f" ANSI_RESET "KB", bytes / 1024.0);
+    } else {
+        printf(ANSI_YELLOW "%.1f" ANSI_RESET "MB", bytes / (1024.0 * 1024.0));
+    }
+}
 
 static void
 dump_block_stats(const struct memory_block* block, memory_block idx, struct stat_dump_data* data) {
     UNUSED(data);
-    log_infof("- Block %li, " ANSI_MAGENTA "%zu" ANSI_RESET " bytes long, starting at " ANSI_CYAN
-              "0x%p" ANSI_RESET ":",
-              idx,
-              block->capacity,
-              block->start);
+    printf("  Block " ANSI_MAGENTA "%-5i" ANSI_RESET ": ", idx);
+    print_usage_bar(block->used, block->capacity, 30);
+    printf("%5.1f%% (", 100.0 * block->used / block->capacity);
+    print_size(block->used);
+    printf(" / ");
+    print_size(block->capacity);
+    printf(")\n");
 }
 
 static void dump_chain_stats(union basic_pool_elem elem, i32 idx, void* user_data) {
@@ -356,30 +422,45 @@ static void dump_chain_stats(union basic_pool_elem elem, i32 idx, void* user_dat
 
     string tag_name = get_blk_tag_name(track->tag);
 
-    log_infof("Chain %li, " ANSI_MAGENTA "%zu" ANSI_RESET " blocks, tagged " ANSI_BLUE
-              "%s" ANSI_RESET ":",
-              idx,
-              track->block_count,
-              cstr(&tag_name));
+    printf("Chain " ANSI_MAGENTA "%i" ANSI_RESET ", " ANSI_YELLOW "%u" ANSI_RESET
+           " blocks, tagged " ANSI_BLUE "%s" ANSI_RESET " " ANSI_CYAN "%s" ANSI_RESET ":\n",
+           idx,
+           track->block_count,
+           cstr(&tag_name),
+           elem.chain->name);
 
     memory_block block = track->head;
     struct memory_block* block_ptr;
+    u64 chain_allocated = 0;
+    u64 chain_used      = 0;
     while (block != INVALID_BLOCK) {
         block_ptr = basic_pool_query(&block_pool, block);
+        chain_allocated += block_ptr->capacity;
+        chain_used += block_ptr->used;
         dump_block_stats(block_ptr, block, data);
         block = block_ptr->next;
     }
+
+    printf("  => Chain total: %.1f%% (", 100.0 * chain_used / chain_allocated);
+    print_size(chain_used);
+    printf(" / ");
+    print_size(chain_allocated);
+    puts(")");
+    data->total_allocated += chain_allocated;
+    data->total_used += chain_used;
 }
 
 void memory_dump_stats(void) {
     log_info("=== MEMORY STATISTICS ===");
 
     struct stat_dump_data data = {0};
+    printf("Total number of blocks: " ANSI_YELLOW "%u" ANSI_RESET "\n", block_pool.size);
+    printf("Total number of chains: " ANSI_YELLOW "%u" ANSI_RESET "\n", chain_pool.size);
     basic_pool_foreach(&chain_pool, &dump_chain_stats, &data);
 
-    log_infof("Total: " ANSI_MAGENTA "%zu" ANSI_RESET " bytes allocated, " ANSI_MAGENTA
-              "%zu" ANSI_RESET " bytes free in " ANSI_MAGENTA "%zu" ANSI_RESET " block(s).",
-              data.total_allocated,
-              data.total_available,
-              pool_size(&block_pool));
+    printf("\nTotal: %.1f%% (", 100.0 * data.total_used / data.total_allocated);
+    print_size(data.total_used);
+    printf(" / ");
+    print_size(data.total_allocated);
+    puts(")");
 }

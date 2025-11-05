@@ -1,6 +1,7 @@
 #include "connection.h"
 #include "containers/bytebuffer.h"
 #include "logger.h"
+#include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
 #include "memory/memory.h"
 #include "network/common_types.h"
@@ -127,7 +128,6 @@ enum IOCode receive_packet(Connection* conn) {
 
     while (code == IOC_OK) {
         if (!conn_is_resuming_read(conn)) {
-            arena_save(&conn->scratch_arena);
             conn->packet_cache = arena_callocate(
                 &conn->scratch_arena, sizeof *conn->packet_cache /* , ALLOC_TAG_PACKET */);
             conn->packet_cache->id = PKT_INVALID;
@@ -143,7 +143,7 @@ enum IOCode receive_packet(Connection* conn) {
             return IOC_ERROR;
 
         conn->packet_cache = NULL;
-        arena_restore(&conn->scratch_arena);
+        arena_clear(&conn->scratch_arena);
     }
 
     return code;

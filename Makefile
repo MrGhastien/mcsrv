@@ -65,8 +65,8 @@ release: CFLAGS += -O2
 release: $(MAIN_TARGET)
 
 test: CFLAGS += -O0 -g -DDEBUG
-test: LDLIBS += -lunity
-test: LDFLAGS += -rdynamic 
+test: LDLIBS += -lunity -lunwind -ldw
+test: LDFLAGS += -rdynamic -L$(LIBDIR)
 test: CPPFLAGS += -I"$(LIBDIR)/unity-2.6.1/src"
 test: $(TEST_TARGETS)
 
@@ -83,7 +83,7 @@ $(MAIN_TARGET): $(MAIN_OBJ) $(CORE_LIB) $(PLATFORM_LIB)
 	@echo -e "	\e[34mLD	$(notdir $@)\e[0m"
 	@$(CC) $(LDFLAGS)  -o $@ -Wl,--start-group $^ -Wl,--end-group $(LDLIBS)
 
-$(TEST_TARGETS): $(CORE_LIB) $(LIBDIR)/libunity.a
+$(TEST_TARGETS): $(CORE_LIB) $(PLATFORM_LIB) $(LIBDIR)/libunity.a
 	@echo -e "\e[32m>>	MAKE	$@\e[0m"
 	@$(MAKE) -C $@
 	@echo -e "\e[32m<<	. . .\e[0m"

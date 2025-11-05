@@ -28,7 +28,8 @@ typedef struct BuddyAllocator {
  * @param[in] size The total size of the allocator, rounded up to the nearest power of two.
  * @param[in] tag A tag to apply to the underlying memory allocation(s).
  */
-void buddy_init(BuddyAllocator* alloc, u64 size, enum MemoryChainTag tag);
+void _buddy_init(BuddyAllocator* alloc, u64 size, enum MemoryChainTag tag, const char* name);
+#define buddy_init(alloc, size, tag) _buddy_init(alloc, size, tag, __FILE__ ":" MACRO_STRINGIZE(__LINE__))
 
 /**
  * Tears down a buddy allocator.

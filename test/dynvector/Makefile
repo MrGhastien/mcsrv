@@ -1,5 +1,5 @@
 TARGET := test_dynvector
 
-$(TARGET): dynvector.c $(CORE_LIB)
+$(TARGET): dynvector.c $(CORE_LIB) $(PLATFORM_LIB)
 	@echo -e "\e[33mT	\e[36mCCLD	$(notdir $@)\e[0m"
-	@$(CC) $(LDFLAGS) $(LDLIBS) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+	@$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -Wl,--start-group $(LDLIBS) $^ -Wl,--end-group -o $@

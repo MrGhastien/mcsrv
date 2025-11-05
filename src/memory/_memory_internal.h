@@ -9,16 +9,22 @@
 #include "mem_tags.h"
 #include "utils/bitwise.h"
 
+
+typedef i32 memory_block;
+typedef i32 memory_chain;
+
 struct memory_block {
     enum AllocationType type;
+    memory_block next;
+    memory_block prev;
     u64 capacity;
+    u64 used;
     void* start;
-    i32 next;
-    i32 prev;
 };
 
 struct memory_chain {
     enum MemoryChainTag tag;
+    const char* name;
     u32 block_count;
     i32 head;
     i32 tail;
@@ -26,9 +32,6 @@ struct memory_chain {
     i32 next_chain;
     i32 prev_chain;
 };
-
-typedef i32 memory_block;
-typedef i32 memory_chain;
 
 #define INVALID_CHAIN ((memory_chain) - 1)
 #define INVALID_BLOCK ((memory_block) - 1)
@@ -43,7 +46,7 @@ void unregister_alloc(const memory_block block, u64 start);
  * @param[in] prev A pointer to an other memory chain, to link the new chain with it. Can be NULL,
  * in which case the new chain is not linked to any other chain.
  */
-memory_chain create_chain(enum MemoryChainTag tag, memory_chain prev);
+memory_chain create_chain(enum MemoryChainTag tag, const char* name, memory_chain prev);
 
 /**
  * Destroys a memory block chain by freeing all of its blocks.
@@ -69,8 +72,11 @@ void delete_block(memory_block blk);
 
 memory_block chain_head(memory_chain chain);
 memory_block block_next(memory_block block);
+memory_block block_prev(memory_block block);
 u64 block_capacity(memory_block block);
 void* block_memory(memory_block block);
+u64 block_used(memory_block block);
+void block_set_used(memory_block block, u64 value);
 
 static inline bool is_addr_in_block(const void* addr, const memory_block blk) {
     void* mem = block_memory(blk);

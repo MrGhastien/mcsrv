@@ -37,8 +37,14 @@ typedef struct PoolAllocator {
  * @param[in] capacity The maximum number of elements the pool can hold.
  * @param[in] stride The size in bytes of the elements.
  */
-void pool_init(
-    PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev);
+void _pool_init(PoolAllocator* pool,
+                u32 capacity,
+                u32 stride,
+                enum MemoryChainTag tag,
+                const char* name,
+                memory_chain prev);
+#define pool_init(pool, capacity, stride, tag, prev)                                               \
+    _pool_init(pool, capacity, stride, tag, __FILE__ ":" MACRO_STRINGIZE(__LINE__), prev)
 /**
  * Initializes a new dynamic object pool.
  *
@@ -48,11 +54,14 @@ void pool_init(
  * will be made large enough to hold this many elements.
  * @param[in] stride The size in bytes of the elements.
  */
-void pool_init_dynamic(PoolAllocator* pool,
-                       u32 initial_capacity,
-                       u32 stride,
-                       enum MemoryChainTag tag,
-                       memory_chain prev);
+void _pool_init_dynamic(PoolAllocator* pool,
+                        u32 initial_capacity,
+                        u32 stride,
+                        enum MemoryChainTag tag,
+                        const char* name,
+                        memory_chain prev);
+#define pool_init_dynamic(pool, capacity, stride, tag, prev)                                       \
+    _pool_init_dynamic(pool, capacity, stride, tag, __FILE__ ":" MACRO_STRINGIZE(__LINE__), prev)
 
 void pool_init_static(PoolAllocator* pool, u32 capacity, u32 stride, memory_chain chain);
 

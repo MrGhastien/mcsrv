@@ -267,14 +267,14 @@ i32 iomux_getc(IOMux multiplexer) {
         break;
     }
     mux->total_read += res == 0;
-    return res == 0;
+    return res;
 }
 i32 iomux_ungetc(IOMux multiplexer, i32 c) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux)
         return -1;
 
-    i32 res = c;
+    i32 res = c & 0xff;
 
     switch (mux->type) {
     case IO_FILE:
@@ -303,7 +303,7 @@ i32 iomux_ungetc(IOMux multiplexer, i32 c) {
         abort();
         return -1;
     }
-    return res & 0xff;
+    return res;
 }
 
 i32 iomux_writef(IOMux multiplexer, const char* format, ...) {

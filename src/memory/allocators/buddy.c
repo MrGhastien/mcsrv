@@ -15,11 +15,11 @@ static BuddyBlock* buddy_block_next(BuddyBlock* block) {
     return offset(block, 1ULL << (block->power_size + MIN_BLOCK_SIZE));
 }
 
-void buddy_init(BuddyAllocator* alloc, u64 size, enum MemoryChainTag tag) {
+void _buddy_init(BuddyAllocator* alloc, u64 size, enum MemoryChainTag tag, const char* name) {
 
     size = ceil_two_pow(size + sizeof(BuddyBlock));
 
-    alloc->chain            = create_chain(tag, INVALID_CHAIN);
+    alloc->chain            = create_chain(tag, name, INVALID_CHAIN);
     memory_block blk        = alloc_block(size, alloc->chain);
     alloc->head             = block_memory(blk);
     alloc->head->power_size = u64_log2(size) - MIN_BLOCK_SIZE;

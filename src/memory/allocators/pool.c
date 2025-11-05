@@ -64,9 +64,9 @@ static void init_free_list(PoolAllocator* pool) {
 }
 
 static void pool_init_common(
-    PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev) {
+                             PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, const char* name, memory_chain prev) {
     u64 actual_stride = max_u64(stride, sizeof(struct obj_node*));
-    pool->mem         = create_chain(tag, prev);
+    pool->mem         = create_chain(tag, name, prev);
     pool->capacity    = capacity;
     pool->stride      = actual_stride;
     pool->head        = NULL;
@@ -79,18 +79,19 @@ static void pool_init_common(
     init_free_list(pool);
 }
 
-void pool_init(
-    PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, memory_chain prev) {
-    pool_init_common(pool, capacity, stride, tag, prev);
+void _pool_init(
+               PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, const char* name, memory_chain prev) {
+    pool_init_common(pool, capacity, stride, tag, name, prev);
     pool->dynamic = FALSE;
 }
 
-void pool_init_dynamic(PoolAllocator* pool,
+void _pool_init_dynamic(PoolAllocator* pool,
                        u32 initial_capacity,
                        u32 stride,
                        enum MemoryChainTag tag,
+                        const char* name,
                        memory_chain prev) {
-    pool_init_common(pool, initial_capacity, stride, tag, prev);
+    pool_init_common(pool, initial_capacity, stride, tag, name, prev);
     pool->dynamic = TRUE;
 }
 

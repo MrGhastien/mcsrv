@@ -2,6 +2,7 @@
 #include "data/json.h"
 #include "definitions.h"
 #include "logger.h"
+#include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
 #include "memory/memory.h"
 #include "registries.h"
@@ -12,7 +13,7 @@
 #include "world/data/block.h"
 #include <stdlib.h>
 
-static Arena arena;
+static Arena block_persistent_arena;
 static PoolAllocator property_pool;
 
 static bool validate_property_name(const string* name) {
@@ -129,6 +130,7 @@ static void register_state_properties(JSON* json) {
         string* type = json_get_string(json);
         json_move_cstr(json, "../name");
         string* name = json_get_string(json);
+        string name_cpy = str_create_copy(name, &block_persistent_arena);
 
         log_debugf("Registry: registring block state property %s.", cstr(name));
 
@@ -137,12 +139,12 @@ static void register_state_properties(JSON* json) {
             i32 min = json_get_int(json);
             json_move_cstr(json, "../max");
             i32 max = json_get_int(json);
-            register_integer_state_property(*name, min, max);
+            register_integer_state_property(name_cpy, min, max);
         } else if (str_compare_cstr(type, "enum") == 0) {
             json_move_cstr(json, "../values");
             i64 len = json_get_length(json);
 
-            string* values = arena_callocate(&arena, sizeof *values * len /* , ALLOC_TAG_WORLD */);
+            string* values = arena_callocate(&block_persistent_arena, sizeof *values * len /* , ALLOC_TAG_WORLD */);
 
             i64 idx = 0;
             json_move_to_index(json, 0);
@@ -152,9 +154,9 @@ static void register_state_properties(JSON* json) {
             } while (json_move_to_next_sibling(json) == JSONE_OK);
             json_move_to_parent(json);
 
-            register_enum_state_property(*name, values, len);
+            register_enum_state_property(name_cpy, values, len);
         } else if (str_compare_cstr(type, "bool") == 0) {
-            register_bool_state_property(*name);
+            register_bool_state_property(name_cpy);
         } else {
             log_fatalf("Invalid block state property type: %s.", cstr(type));
             return;
@@ -174,7 +176,7 @@ static void register_blocks_internal(JSON* json) {
 
         Block blk = {0};
 
-        if (!resid_parse(name, &arena, &blk.id)) {
+        if (!resid_parse(name, &block_persistent_arena, &blk.id)) {
             log_fatalf("Invalid block name '%s'.", cstr(name));
             abort();
             return;
@@ -185,7 +187,7 @@ static void register_blocks_internal(JSON* json) {
 
         if (len > 0) {
             Vector state_properties;
-            vect_init(&state_properties, &arena, len, sizeof(StateProperty*));
+            vect_init(&state_properties, &block_persistent_arena, len, sizeof(StateProperty*));
             json_move_to_index(json, 0);
             do {
                 i64 idx             = json_get_int(json);
@@ -193,9 +195,9 @@ static void register_blocks_internal(JSON* json) {
                 vect_add(&state_properties, &prop);
             } while (json_move_to_next_sibling(json) == JSONE_OK);
             json_move_to_parent(json);
-            create_state_definition(&blk, &state_properties, &arena, &blk.state_definition);
+            create_state_definition(&blk, &state_properties, &block_persistent_arena, &blk.state_definition);
         } else {
-            create_state_definition(&blk, NULL, &arena, &blk.state_definition);
+            create_state_definition(&blk, NULL, &block_persistent_arena, &blk.state_definition);
         }
 
         json_move_to_parent(json);
@@ -207,7 +209,7 @@ static void register_blocks_internal(JSON* json) {
 #ifdef DEBUG
 static void print_property(void* obj, i64 idx, void* data) {
     UNUSED(data);
-    Arena scratch         = arena;
+    Arena scratch         = block_persistent_arena;
     StringBuilder builder = strbuild_create(&scratch);
     StateProperty* prop   = obj;
     strbuild_appendf(&builder, "%lli: ", idx);
@@ -260,14 +262,14 @@ static void print_state_properties(void) {
 
 void register_blocks(void) {
 
-    arena = arena_create(1 << 25, BLK_TAG_REGISTRY, INVALID_CHAIN);
+    block_persistent_arena = arena_create(1 << 12, BLK_TAG_REGISTRY, INVALID_CHAIN);
     pool_init(&property_pool, 128, sizeof(StateProperty), BLK_TAG_REGISTRY, INVALID_CHAIN);
 
     init_properties();
 
     Vector property_buffer;
-    vect_init(&property_buffer, &arena, 16, sizeof(StateProperty*));
-    Arena scratch = arena_create(1 << 30, BLK_TAG_REGISTRY, INVALID_CHAIN);
+    vect_init(&property_buffer, &block_persistent_arena, 16, sizeof(StateProperty*));
+    Arena scratch = arena_create(1 << 20, BLK_TAG_REGISTRY, INVALID_CHAIN);
     JSON json;
     enum JSONStatus status =
         json_from_file(str_view("./data/minecraft/block.json"), &scratch, &json);
@@ -284,6 +286,8 @@ void register_blocks(void) {
 
     register_blocks_internal(&json);
     UNUSED(register_simple_block);
+
+    arena_destroy(&scratch);
 }
 
 const StateProperty* get_state_property_by_name(const Block* block, string name) {
