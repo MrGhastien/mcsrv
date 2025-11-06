@@ -45,6 +45,15 @@ void level_init(Level* level, string path) {
     buddy_init(&level->buddy, 1 << 24, BLK_TAG_LEVEL);
 }
 
+void level_destroy(Level* level) {
+    buddy_destroy(&level->buddy);
+    pool_destroy(&level->chunk_sections);
+    pool_destroy(&level->chunks);
+    pool_destroy(&level->regions);
+
+    arena_destroy(&level->arena);
+}
+
 static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
 
     nbt_move_to_index(nbt, 0); // 1

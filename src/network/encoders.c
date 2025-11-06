@@ -152,11 +152,11 @@ DEF_PKT_ENCODER(cfg_registry_data) {
     PacketRegistryData* payload = pkt->payload;
 
     write_resid(&payload->registry_id, buffer);
-    i32 count = vect_size(&payload->entries);
+    i32 count = payload->entry_count;
 
     bytebuf_write_varint(buffer, count);
     for (i32 i = 0; i < count; ++i) {
-        RegistryDataEntry* entry = vect_ref(&payload->entries, i);
+        RegistryDataEntry* entry = &payload->entries[i];
         write_resid(&entry->id, buffer);
         bool present = entry->data.arena == NULL;
         bytebuf_write(buffer, &present, sizeof present);

@@ -2,7 +2,9 @@
 
 #include "bitwise.h"
 #include "containers/bytebuffer.h"
+#include "event/event.h"
 #include "memory/_memory_internal.h"
+#include "memory/allocators/pool.h"
 #include "memory/memory.h"
 #include "network/compression.h"
 #include "str_builder.h"
@@ -51,11 +53,20 @@ struct IOMux {
 
 static PoolAllocator multiplexers = {.mem = INVALID_CHAIN};
 
+static bool iomux_system_cleanup(u32 event, void* user_data, EventInfo info) {
+    (void) event;
+    (void) user_data;
+    (void) info;
+    pool_destroy(&multiplexers);
+    return TRUE;
+}
+
 static IOMux iomux_create(enum IOType type, union IOBackend backend) {
 
     if (multiplexers.mem == INVALID_CHAIN) {
-        pool_init_dynamic(
+        pool_init(
             &multiplexers, MAX_MULTIPLEXERS, sizeof(IOMux_t), BLK_TAG_PLATFORM, INVALID_CHAIN);
+        event_register_listener(BEVENT_STOP, &iomux_system_cleanup, NULL);
     }
 
     i64 index;

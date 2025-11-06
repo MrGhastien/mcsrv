@@ -17,6 +17,7 @@
 #include "world/data/dimension_type.h"
 
 #include <dirent.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -65,25 +66,25 @@ static void initialize_registries(void) {
     registry_create(REGISTRY_JUKEBOX_SONG_KEY, sizeof(Block));
 }
 
-static void register_dimension_types(void) {
-    string dirpath = str_view("data/minecraft/dimension_type/");
-    DIR* dir       = opendir(cstr(&dirpath));
-
+static void register_registry_elements(ResourceID reg, Arena* scratch) {
     // Stop being overkill and doing shit: Just make a new arena.
     // This is MUCH simpler than using only one arena to make everything: No memory corruption !
-    Arena scratch = arena_create(1 << 16, BLK_TAG_REGISTRY, arena.chain);
+
+    string dirpath = format_str(scratch, "data/%s/%s/", reg.namespace, reg.path);
+    DIR* dir       = opendir(cstr(&dirpath));
+
 
     struct dirent* entry;
     while ((entry = readdir(dir))) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
         string filename = str_view(entry->d_name);
-        string filepath = str_concat(&dirpath, &filename, &scratch);
+        string filepath = str_concat(&dirpath, &filename, scratch);
         JSON json;
-        if (json_from_file(filepath, &scratch, &json) != JSONE_OK)
+        if (json_from_file(filepath, scratch, &json) != JSONE_OK)
             return;
 
-        DimensionType new_type = dimension_type_from_json(&json, scratch, &arena);
+        DimensionType new_type = dimension_type_from_json(&json, *scratch, &arena);
 
         i64 extension_pos = str_find_char(&filename, '.');
         platform_assert(extension_pos > 0, "Invalid data file name.");
@@ -93,13 +94,29 @@ static void register_dimension_types(void) {
         registry_register(REGISTRY_DIMENSION_TYPE_KEY, id, &new_type);
     }
 
+}
+
+static void register_data_elements(void) {
+    Arena scratch = arena_create(1 << 16, BLK_TAG_REGISTRY, arena.chain);
+
+    register_registry_elements(REGISTRY_CHAT_TYPE_KEY, &scratch);
+    register_registry_elements(REGISTRY_TRIM_PATTERN_KEY, &scratch);
+    register_registry_elements(REGISTRY_TRIM_MATERIAL_KEY, &scratch);
+    register_registry_elements(REGISTRY_WOLF_VARIANT_KEY, &scratch);
+    register_registry_elements(REGISTRY_PAINTING_VARIANT_KEY, &scratch);
+    register_registry_elements(REGISTRY_DAMAGE_TYPE_KEY, &scratch);
+    register_registry_elements(REGISTRY_BANNER_PATTERN_KEY, &scratch);
+    register_registry_elements(REGISTRY_ENCHANTMENT_KEY, &scratch);
+    register_registry_elements(REGISTRY_JUKEBOX_SONG_KEY, &scratch);
+
+    arena_clear(&scratch);
     arena_destroy(&scratch);
 }
 
 static void register_game_elements(void) {
     initialize_registries();
     register_blocks();
-    register_dimension_types();
+    register_registry_elements();
 }
 
 void registry_system_init(void) {

@@ -269,7 +269,7 @@ void register_blocks(void) {
 
     Vector property_buffer;
     vect_init(&property_buffer, &block_persistent_arena, 16, sizeof(StateProperty*));
-    Arena scratch = arena_create(1 << 20, BLK_TAG_REGISTRY, INVALID_CHAIN);
+    Arena scratch = arena_create(1 << 5, BLK_TAG_REGISTRY, INVALID_CHAIN);
     JSON json;
     enum JSONStatus status =
         json_from_file(str_view("./data/minecraft/block.json"), &scratch, &json);

@@ -2,6 +2,7 @@
 #include "compression.h"
 #include "connection.h"
 #include "containers/bytebuffer.h"
+#include "memory/allocators/arena.h"
 #include "network.h"
 #include "packet.h"
 #include "packet_codec.h"
@@ -333,21 +334,22 @@ DEF_PKT_HANDLER(cfg_client_info) {
 }
 
 struct registry_data_serialize_data {
-    Vector* entries;
+    RegistryDataEntry* entries;
     Arena scratch_arena;
     Arena* persistent_arena;
+    i32 idx;
 };
 
 static void dimension_type_action(ResourceID* id, const void* entry, void* user_data) {
 
     struct registry_data_serialize_data* ctx = user_data;
 
-    RegistryDataEntry pkt_entry = {
+    ctx->entries[ctx->idx] = (RegistryDataEntry) {
         .id = *id,
     };
 
-    dimension_type_to_nbt(entry, ctx->scratch_arena, ctx->persistent_arena, &pkt_entry.data);
-    vect_add(user_data, entry);
+    dimension_type_to_nbt(entry, ctx->scratch_arena, ctx->persistent_arena, &ctx->entries[ctx->idx].data);
+    ctx->idx++;
 }
 
 DEF_PKT_HANDLER(cfg_known_datapacks) {
@@ -368,11 +370,12 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
 
     PacketRegistryData reg_data_pkt = {
         .registry_id = REGISTRY_DIMENSION_TYPE_KEY,
+        .entry_count = registry_count(REGISTRY_DIMENSION_TYPE_KEY),
     };
-    vect_init(&reg_data_pkt.entries, &conn->scratch_arena, registry_count(REGISTRY_DIMENSION_TYPE_KEY), sizeof(RegistryDataEntry));
+    reg_data_pkt.entries = arena_allocate(&conn->scratch_arena, sizeof *reg_data_pkt.entries * reg_data_pkt.entry_count);
 
     struct registry_data_serialize_data ctx = {
-        .entries       = &reg_data_pkt.entries,
+        .entries       = reg_data_pkt.entries,
         .scratch_arena = conn->scratch_arena,
         .persistent_arena = &conn->persistent_arena,
     };

@@ -29,6 +29,7 @@ typedef struct level {
 } Level;
 
 void level_init(Level* level, string path);
+void level_destroy(Level* level);
 
 Chunk* level_get_chunk(Level* level, BlockPos pos);
 

@@ -12,6 +12,7 @@
 #define ANSI_MAGENTA "\x1B[35m"
 #define ANSI_CYAN "\x1B[36m"
 #define ANSI_WHITE "\x1B[37m"
+#define ANSI_BLACK "\x1B[30m"
 #define ANSI_RESET "\x1B[0m"
 
 #define ANSI_BOLD "\x1B[1m"

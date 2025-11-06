@@ -23,6 +23,8 @@ static void* simulate(void* unused) {
     while (running) {
         milli_sleep(500);
     }
+
+    level_destroy(&level);
     return NULL;
 }
 

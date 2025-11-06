@@ -1,4 +1,5 @@
 #include "containers/vector.h"
+#include "definitions.h"
 #include "logger.h"
 #include "memory/_memory_internal.h"
 #include "memory/allocators/arena.h"
@@ -159,9 +160,14 @@ static void add_general_token(ParseCtx* ctx, const McdocToken token) {
     vect_add(&ctx->tokens, &token);
 }
 
+static void lex_number(ParseCtx* ctx, IOMux input) {
+    UNUSED(ctx);
+    UNUSED(input);
+}
+
 static void lex_string(ParseCtx* ctx, IOMux input) {
     char c;
-    Arena arena = arena_create(512, BLK_TAG_DATA, INVALID_CHAIN);
+    Arena arena = arena_create(4096, BLK_TAG_DATA, INVALID_CHAIN);
     StringBuilder builder = strbuild_create(&arena);
 
     while ((c = iomux_getc(input)) >= 0 && c != '"') {
@@ -187,6 +193,7 @@ static void lex_string(ParseCtx* ctx, IOMux input) {
 }
 
 static void lex_token(ParseCtx* ctx, IOMux input) {
+    UNUSED(keyword_map);
     char c = iomux_getc(input);
 
     switch (c) {
@@ -229,14 +236,11 @@ static void lex_token(ParseCtx* ctx, IOMux input) {
 }
 
 static void mcdoc_tokenize(ParseCtx* ctx, IOMux input) {
-
-    i32 lex_start   = 0;
-    i32 lex_current = 0;
     ctx->line       = 1;
 
     i32 chr;
     while ((chr = iomux_getc(input))) {
-        lex_start = lex_current;
+        lex_token(ctx, input);
     }
 }
 

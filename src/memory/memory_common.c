@@ -381,16 +381,31 @@ struct stat_dump_data {
 
 static void print_usage_bar(u64 used, u64 capacity, i32 bar_width) {
     i32 filled = (i32) (used * bar_width) / capacity;
-
     printf("[");
-    for (int i = 0; i < bar_width; i++) {
-        if (i <= filled) {
-            printf("█"); // ou '#' si ton terminal ne supporte pas Unicode
-        } else {
-            printf("░"); // ou '-'
+    if (used >= capacity || used == 0) {
+        printf(used == 0 ? ANSI_BLACK : ANSI_BLUE);
+        for (i32 i = 0; i < bar_width; i++) {
+            printf("━");
+        }
+    } else {
+        printf(ANSI_BLUE);
+        i32 i;
+        for (i = 0; i < filled; i++) {
+            printf("━");
+        }
+        if(i - 1 >= 0) {
+            printf("╸");
+            i++;
+        }
+        if(i < bar_width) {
+            printf(ANSI_BLACK "╺");
+            i++;
+        }
+        for (;i < bar_width; i++) {
+            printf("━");
         }
     }
-    printf("] ");
+    printf(ANSI_RESET "] ");
 }
 
 static void print_size(u64 bytes) {
@@ -408,7 +423,7 @@ dump_block_stats(const struct memory_block* block, memory_block idx, struct stat
     UNUSED(data);
     printf("  Block " ANSI_MAGENTA "%-5i" ANSI_RESET ": ", idx);
     print_usage_bar(block->used, block->capacity, 30);
-    printf("%5.1f%% (", 100.0 * block->used / block->capacity);
+    printf("%5.1f%% (", (100.0 * block->used) / block->capacity);
     print_size(block->used);
     printf(" / ");
     print_size(block->capacity);
@@ -440,7 +455,7 @@ static void dump_chain_stats(union basic_pool_elem elem, i32 idx, void* user_dat
         block = block_ptr->next;
     }
 
-    printf("  => Chain total: %.1f%% (", 100.0 * chain_used / chain_allocated);
+    printf("  => Chain total: %.1f%% (", (100.0 * chain_used) / chain_allocated);
     print_size(chain_used);
     printf(" / ");
     print_size(chain_allocated);

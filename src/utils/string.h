@@ -223,4 +223,6 @@ i32 str_compare_cstr(const string* lhs, const char* rhs);
  */
 char* format_cstr(Arena* scratch, const char* format, va_list args, u64* out_size);
 
+string format_str(Arena* scratch, const char* format, ...);
+
 #endif /* ! STRING_H */

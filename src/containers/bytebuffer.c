@@ -2,6 +2,7 @@
 #include "logger.h"
 #include "memory/mem_tags.h"
 #include "network/utils.h"
+#include "platform/platform.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
 #include "utils/string.h"
@@ -23,7 +24,7 @@ static void ensure_capacity(ByteBuffer* buffer, u64 size) {
         log_fatalf("Byte buffer is too small: %zu bytes needed, %zu bytes available.",
                    size - buffer->size,
                    buffer->capacity - buffer->size);
-        abort();
+        platform_abort();
     }
 
     u64 new_cap = buffer->capacity;

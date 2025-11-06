@@ -20,7 +20,7 @@ typedef struct arena {
     memory_block current;
     u64 capacity;
     u64 length;
-    bool statik;
+    void* static_mem;
 } Arena;
 
 /**
@@ -41,7 +41,7 @@ Arena _arena_create(u64 size, enum MemoryChainTag tag, const char* name, memory_
  * @param tag
  * @return The new arena allocator.
  */
-Arena arena_create_static(u64 size, enum MemoryChainTag tag, memory_chain parent);
+Arena arena_create_static(void* memory, u64 size);
 /**
  * Frees all memory associated with an arena.
  *

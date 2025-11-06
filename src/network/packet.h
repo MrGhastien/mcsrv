@@ -323,7 +323,8 @@ typedef struct RegistryDataEntry {
 
 typedef struct {
     ResourceID registry_id;
-    Vector entries; // RegistryDataEntry
+    RegistryDataEntry* entries;
+    i32 entry_count;
 } PacketRegistryData;
 
 typedef struct TagEntry {

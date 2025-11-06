@@ -3,12 +3,9 @@
 #include "memory/_memory_internal.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
-#include <platform/platform.h>
+#include "platform/platform.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <wctype.h>
 
 Arena _arena_create(u64 size, enum MemoryChainTag tag, const char* name, memory_chain parent) {
     size               = ceil_u64(size, sizeof(uintptr_t));
@@ -18,39 +15,54 @@ Arena _arena_create(u64 size, enum MemoryChainTag tag, const char* name, memory_
     if (block < 0)
         return (Arena) {0};
 
-    log_tracef("Created arena %p of %zu bytes.", block, size);
+    log_tracef("Created arena (chain: %i) of %zu bytes.", chain, size);
 
     return (Arena) {
         .chain    = chain,
         .current  = block,
-        .capacity = size,
-        .statik   = FALSE,
+        .capacity = block_capacity(block),
     };
 }
 
-Arena arena_create_static(u64 size, enum MemoryChainTag tag, memory_chain parent) {
-    size               = ceil_u64(size, sizeof(uintptr_t));
-    memory_chain chain = create_chain(tag, "", parent);
-    memory_block block = alloc_block(size, chain);
-
-    if (block < INVALID_BLOCK)
-        return (Arena) {0};
-
+Arena arena_create_static(void* memory, u64 size) {
     return (Arena) {
-        .chain    = chain,
-        .current  = block,
-        .capacity = size,
-        .statik   = TRUE,
+        .chain      = INVALID_CHAIN,
+        .current    = INVALID_BLOCK,
+        .capacity   = size,
+        .static_mem = memory,
     };
 }
 
 void arena_destroy(Arena* arena) {
+    if (arena->static_mem) {
+        log_warn("Tried to destroy a static arena.");
+        return;
+    }
+
     destroy_chain(arena->chain);
 
-    if (arena->statik) {
-        log_tracef("Destroyed arena %p (%zu / %zu).", arena->block, arena->length, arena->capacity);
-    }
+    log_tracef("Destroyed arena %p (%zu / %zu).", arena->chain, arena->length, arena->capacity);
     arena->chain = -1;
+}
+
+static void* static_allocate(Arena* arena, u64 bytes) {
+    if (arena->length + bytes > arena->capacity) {
+        log_errorf("Tried to allocate %zu bytes, but only %zu are available.",
+                   bytes,
+                   arena->capacity - arena->length);
+        platform_abort();
+        return NULL;
+    }
+
+    void* ptr = offset(arena->static_mem, arena->length);
+    arena->length += bytes;
+    log_tracef("Allocated %zu bytes from static %i (%zu/%zu).",
+               bytes,
+               arena->chain,
+               arena->length,
+               arena->capacity);
+
+    return ptr;
 }
 
 void* arena_allocate(Arena* arena, u64 bytes /*, enum AllocTag tags */) {
@@ -58,17 +70,12 @@ void* arena_allocate(Arena* arena, u64 bytes /*, enum AllocTag tags */) {
     // Alignment
     bytes = ceil_u64(bytes, sizeof(uintptr_t));
 
+    if (arena->static_mem)
+        return static_allocate(arena, bytes);
+
     u64 used      = block_used(arena->current);
     u64 remaining = block_capacity(arena->current) - used;
     if (bytes > remaining) {
-        if (arena->statik) {
-            log_errorf("Tried to allocate %zu bytes, but only %zu are available.",
-                       bytes,
-                       arena->capacity - arena->length);
-            platform_abort();
-            return NULL;
-        }
-
         memory_block empty_block = block_next(arena->current);
         if (empty_block == INVALID_BLOCK) {
             u64 new_block_cap = max_u64(bytes, arena->capacity << 1);
@@ -84,11 +91,10 @@ void* arena_allocate(Arena* arena, u64 bytes /*, enum AllocTag tags */) {
 
     void* ptr = offset(block_memory(arena->current), used);
     block_set_used(arena->current, used + bytes);
-    // register_alloc(arena->chain->head, arena->length, arena->length + bytes, tags);
     arena->length += bytes;
-    log_tracef("Allocated %zu bytes from %p (%zu/%zu).",
+    log_tracef("Allocated %zu bytes from %i (%zu/%zu).",
                bytes,
-               arena->block,
+               arena->chain,
                arena->length,
                arena->capacity);
 
@@ -118,7 +124,7 @@ void arena_free(Arena* arena, u64 bytes) {
     arena->current = blk;
     arena->length  = new_size;
     log_tracef(
-        "Freed %zu bytes from %p (%zu/%zu).", bytes, arena->block, arena->length, arena->capacity);
+        "Freed %zu bytes from %i (%zu/%zu).", bytes, arena->chain, arena->length, arena->capacity);
 }
 
 void arena_clear(Arena* arena) {
