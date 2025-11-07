@@ -1,112 +1,7 @@
 #! /usr/bin/env sh
 
 import sys
-from enum import Enum, auto
-from dataclasses import dataclass
-from typing import Optional, Union, List, TextIO
-
-class ResourceID:
-    def __init__(self, namespace, path):
-        self.namespace = namespace
-        self.path = path
-
-class TokenType(Enum):
-    NONE = None
-    INTEGER = 1
-    FLOAT = 2
-    STRING = 3
-    RESID = 4
-    IDENTIFIER = 5
-    LPAREN, = '('
-    RPAREN = ')'
-    LBRACE = '{'
-    RBRACE = '}'
-    LBRACKET = '['
-    RBRACKET = ']'
-    LCHEVRON = '<'
-    RCHEVRON = '>'
-    COMMA = ','
-    COLON = ':'
-    PIPE = '|'
-    QUESTION = '?'
-    AT = '@'
-    EQ = '='
-    DOT = '.'
-
-    RANGE = ".."
-    DOUBLE_COLON = "::"
-    ATTR_BEGIN = "#["
-
-    KW_ANY = "any"
-    KW_BYTE = "byte"
-    KW_SHORT = "short"
-    KW_INT = "int"
-    KW_LONG = "long"
-    KW_FLOAT = "float"
-    KW_DOUBLE = "double"
-    KW_STRING = "string"
-    KW_FALSE = "false"
-    KW_TRUE = "true"
-    KW_BOOLEAN = "boolean"
-    KW_ENUM = "enum"
-    KW_STRUCT = "struct"
-    KW_FALLBACK = "%fallback"
-    KW_NONE = "%none"
-    KW_UNKNOWN = "%unknown"
-    KW_KEY = "%key"
-    KW_PARENT = "%parent"
-    KW_TYPE = "type"
-    KW_USE = "use"
-    KW_AS = "as"
-    KW_INJECT = "inject"
-    KW_DISPATCH = "dispatch"
-    KW_TO = "to"
-    KW_SUPER = "super"
-
-keywords = {
-    "any": TokenType.KW_ANY,
-    "byte": TokenType.KW_BYTE,
-    "short": TokenType.KW_SHORT,
-    "int": TokenType.KW_INT,
-    "long": TokenType.KW_LONG,
-    "float": TokenType.KW_FLOAT,
-    "double": TokenType.KW_DOUBLE,
-    "string": TokenType.KW_STRING,
-    "false": TokenType.KW_FALSE,
-    "true": TokenType.KW_TRUE,
-    "boolean": TokenType.KW_BOOLEAN,
-    "enum": TokenType.KW_ENUM,
-    "struct": TokenType.KW_STRUCT,
-    "%fallback": TokenType.KW_FALLBACK,
-    "%none": TokenType.KW_NONE,
-    "%unknown": TokenType.KW_UNKNOWN,
-    "%key": TokenType.KW_KEY,
-    "%parent": TokenType.KW_PARENT,
-    "type": TokenType.KW_TYPE,
-    "use": TokenType.KW_USE,
-    "as": TokenType.KW_AS,
-    "inject": TokenType.KW_INJECT,
-    "dispatch": TokenType.KW_DISPATCH,
-    "to": TokenType.KW_TO,
-    "super": TokenType.KW_SUPER
-}
-    
-@dataclass
-class Token:
-    type: TokenType
-    line: int
-    column: int
-    value: Optional[Union[str, int, float]] = None
-
-    def __str__(self):
-        """Pour print() et str()"""
-        if self.value:
-            return f"({self.type.name}: '{self.value}')"
-        return f"{self.type.name}"
-    
-    def __repr__(self):
-        """Pour la console interactive et debugging"""
-        return self.__str__()
+from mcdoc_common import *
 
 class Scanner:
     def __init__(self, filename: str):
@@ -140,6 +35,11 @@ class Scanner:
         else:
             return False
 
+    def prev_char(self) -> Optional[str]:
+        if self.pos == 0:
+            return None
+        return self.text[self.pos - 1]
+
     def at_end(self) -> bool:
         return self.pos >= len(self.text)
         
@@ -162,16 +62,46 @@ class ParseCtx:
     def add_token(self, tok_type: TokenType):
         self.tokens.append(Token(tok_type, self.input.line, self.input.column))
 
-    def add_generic_token(self, tok_type: TokenType, value: Union[str, int, float]):
+    def add_generic_token(self, tok_type: TokenType, value: Union[str, int, float, ResourceID]):
         self.tokens.append(Token(tok_type, self.input.line, self.input.column, value=value))
 
     def lexeme(self):
         return self.input.text[self.start:self.input.pos]
 
 def lex_number(ctx: ParseCtx, input: Scanner):
-    s = ""
+    decimal_dot: bool = False
+    exponent: bool = False
+    if input.prev_char() == '.':
+        decimal_dot = True
     while (c := input.peek()) and c.isdigit():
         input.next_char()
+
+    if c == '.':
+        decimal_dot = True
+        input.next_char()
+
+    while (c := input.peek()) and c.isdigit():
+        input.next_char()
+
+    if c == 'e' or c == 'E':
+        exponent = True
+        input.next_char()
+        peeked = input.peek()
+        if peeked == '-' or peeked == '+':
+            input.next_char()
+
+    while (c := input.peek()) and c.isdigit():
+        input.next_char()
+
+    string: str = ctx.lexeme()
+    try:
+        if decimal_dot or exponent:
+            ctx.add_generic_token(TokenType.FLOAT, float(string))
+        else:
+            ctx.add_generic_token(TokenType.INTEGER, int(string))
+    except ValueError:
+        ctx.has_error = True
+        print(f"Invalid float or integer '{string}'")
         
 def lex_string(ctx: ParseCtx, input: Scanner):
     string: str = ""
@@ -187,11 +117,27 @@ def lex_string(ctx: ParseCtx, input: Scanner):
 
     ctx.add_generic_token(TokenType.STRING, string)
 
+def is_valid_resid_path_char(c: str) -> bool:
+    return c.isidentifier() or c.isdigit() or c == '/'
+
 def lex_identifier(ctx: ParseCtx, input: Scanner):
+    res_loc_delim_pos: int = -1
     while (c := input.peek()) and (c.isidentifier() or c.isdigit()):
         input.next_char()
 
+    if input.peek() == ':':
+        if is_valid_resid_path_char(input.peek(1)):
+            res_loc_delim_pos = input.pos
+            input.next_char()
+            while (c := input.peek()) and is_valid_resid_path_char(c):
+                input.next_char()
+
     text = ctx.lexeme()
+    if res_loc_delim_pos >= 0:
+        actual_delim_pos = res_loc_delim_pos - ctx.start
+        ctx.add_generic_token(TokenType.RESID, ResourceID(namespace=text[:actual_delim_pos], path=text[actual_delim_pos + 1:]))
+        return
+                              
     id_type: TokenType = keywords.get(text)
     if id_type is None:
         ctx.add_generic_token(TokenType.IDENTIFIER, text)
@@ -217,7 +163,12 @@ def lex_token(ctx: ParseCtx, input: Scanner):
         case '.':
             d = input.peek()
             if d == '.':
-                ctx.add_token(TokenType.RANGE)
+                e = input.peek(1)
+                if e == '.':
+                    ctx.add_token(TokenType.SPREAD)
+                    input.next_char()
+                else:
+                    ctx.add_token(TokenType.RANGE)
                 input.next_char()
             elif d.isdigit():
                 lex_number(ctx, input)
@@ -259,6 +210,7 @@ def lex_tokens(ctx: ParseCtx, input: Scanner):
     while not input.at_end():
         ctx.start = input.pos
         lex_token(ctx, input)
+
 
 def parse(filename: str):
 
