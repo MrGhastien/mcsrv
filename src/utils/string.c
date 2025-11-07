@@ -172,16 +172,24 @@ char* format_cstr(Arena* scratch, const char* format, va_list args, u64* out_siz
 }
 
 string format_str(Arena* scratch, const char* format, ...) {
-    va_list args;
-    va_start(args, format);
+
+    char buf[256];
 
     va_list args_cpy;
-    va_copy(args_cpy, args);
-    u64 len = vsprintf(NULL, format, args_cpy);
+    va_start(args_cpy, format);
+    u64 len = vsnprintf(buf, sizeof buf, format, args_cpy);
     va_end(args_cpy);
 
-    string res = str_alloc(len + 1, scratch);
-    vsnprintf(res.base, len + 1, format, args);
-    va_end(args);
+    string res;
+    if (len < sizeof buf) {
+        res = str_create_from_buffer(buf, len, scratch);
+    } else {
+        va_list args;
+        va_start(args, format);
+        res = str_alloc(len + 1, scratch);
+        vsnprintf(res.base, len + 1, format, args);
+        va_end(args);
+    }
+
     return res;
 }

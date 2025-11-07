@@ -3,6 +3,8 @@
 #include "json_internal.h"
 #include "logger.h"
 #include "utils/string.h"
+#include "platform/platform.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,7 +21,7 @@ void increment_parent_total_lengths(JSON* json) {
             break;
         default:
             log_fatalf("[JSON] Token of type %i cannot be a parent of other tokens !", token->type);
-            abort();
+            platform_abort();
             break;
         }
     }
@@ -350,7 +352,7 @@ i8 json_get_bool(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_BOOL) {
         log_fatalf("[JSON] Cannot get boolean value of JSON token of type %i", token->type);
-        abort();
+        platform_abort();
     }
 
     return token->data.simple.boolean;
@@ -359,7 +361,7 @@ i64 json_get_int(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_INT) {
         log_fatalf("[JSON] Cannot get integer value of JSON token of type %i", token->type);
-        abort();
+        platform_abort();
     }
 
     return token->data.simple.number;
@@ -368,7 +370,7 @@ f64 json_get_float(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_FLOAT) {
         log_fatalf("[JSON] Cannot get float value of JSON token of type %i", token->type);
-        abort();
+        platform_abort();
     }
 
     return token->data.simple.fnumber;
@@ -378,7 +380,7 @@ i64 json_get_length(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_OBJECT && token->type != JSON_ARRAY) {
         log_fatalf("[JSON] Cannot get length of JSON token of type %i", token->type);
-        abort();
+        platform_abort();
     }
 
     return token->data.compound.size;
@@ -398,7 +400,7 @@ string* json_get_string(JSON* json) {
     JSONToken* token = get_current_node(json);
     if (token->type != JSON_STRING) {
         log_fatalf("[JSON] Cannot get string value of tag of type %i", token->type);
-        abort();
+        platform_abort();
     }
     return &token->data.str;
 }

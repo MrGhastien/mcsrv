@@ -70,7 +70,7 @@ static void register_registry_elements(ResourceID reg, Arena* scratch) {
     // Stop being overkill and doing shit: Just make a new arena.
     // This is MUCH simpler than using only one arena to make everything: No memory corruption !
 
-    string dirpath = format_str(scratch, "data/%s/%s/", reg.namespace, reg.path);
+    string dirpath = format_str(scratch, "data/%s/%s/", reg.namespace.base, reg.path.base);
     DIR* dir       = opendir(cstr(&dirpath));
 
 
@@ -99,6 +99,7 @@ static void register_registry_elements(ResourceID reg, Arena* scratch) {
 static void register_data_elements(void) {
     Arena scratch = arena_create(1 << 16, BLK_TAG_REGISTRY, arena.chain);
 
+    /*
     register_registry_elements(REGISTRY_CHAT_TYPE_KEY, &scratch);
     register_registry_elements(REGISTRY_TRIM_PATTERN_KEY, &scratch);
     register_registry_elements(REGISTRY_TRIM_MATERIAL_KEY, &scratch);
@@ -108,6 +109,9 @@ static void register_data_elements(void) {
     register_registry_elements(REGISTRY_BANNER_PATTERN_KEY, &scratch);
     register_registry_elements(REGISTRY_ENCHANTMENT_KEY, &scratch);
     register_registry_elements(REGISTRY_JUKEBOX_SONG_KEY, &scratch);
+    */
+
+    register_registry_elements(REGISTRY_DIMENSION_TYPE_KEY, &scratch);
 
     arena_clear(&scratch);
     arena_destroy(&scratch);
@@ -116,7 +120,7 @@ static void register_data_elements(void) {
 static void register_game_elements(void) {
     initialize_registries();
     register_blocks();
-    register_registry_elements();
+    register_data_elements();
 }
 
 void registry_system_init(void) {
