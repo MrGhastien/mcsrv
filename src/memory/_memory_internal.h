@@ -8,7 +8,7 @@
 #include "definitions.h"
 #include "mem_tags.h"
 #include "utils/bitwise.h"
-
+#include "platform/mem_advice.h"
 
 typedef i32 memory_block;
 typedef i32 memory_chain;
@@ -65,9 +65,11 @@ void destroy_chain(memory_chain chain);
  *
  * @param[in] capacity The size of the block to allocate.
  * @param[in] chain The chain to add this block to.
+ * @param[in] advice An hint about how the block will be used.
  * @return A pointer to the allocated memory, or @ref NULL if the allocation failed.
  */
-memory_block alloc_block(u64 capacity, memory_chain chain);
+memory_block alloc_block(u64 capacity, memory_chain chain, enum MemoryAdvice advice);
+void advise_block(memory_block block, enum MemoryAdvice advice);
 void delete_block(memory_block blk);
 
 memory_block chain_head(memory_chain chain);

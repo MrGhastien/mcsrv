@@ -1,6 +1,7 @@
 #include "arena.h"
 #include "logger.h"
 #include "memory/_memory_internal.h"
+#include "platform/mem_advice.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
 #include "platform/platform.h"
@@ -10,7 +11,7 @@
 Arena _arena_create(u64 size, enum MemoryChainTag tag, const char* name, memory_chain parent) {
     size               = ceil_u64(size, sizeof(uintptr_t));
     memory_chain chain = create_chain(tag, name, parent);
-    memory_block block = alloc_block(size, chain);
+    memory_block block = alloc_block(size, chain, MEM_ADVICE_SEQUENTIAL);
 
     if (block < 0)
         return (Arena) {0};
@@ -79,7 +80,7 @@ void* arena_allocate(Arena* arena, u64 bytes /*, enum AllocTag tags */) {
         memory_block empty_block = block_next(arena->current);
         if (empty_block == INVALID_BLOCK) {
             u64 new_block_cap = max_u64(bytes, arena->capacity << 1);
-            empty_block       = alloc_block(new_block_cap, arena->chain);
+            empty_block       = alloc_block(new_block_cap, arena->chain, MEM_ADVICE_SEQUENTIAL);
             if (empty_block == INVALID_BLOCK)
                 return NULL;
             arena->capacity += block_capacity(empty_block);
@@ -118,8 +119,13 @@ void arena_free(Arena* arena, u64 bytes) {
 
         block_set_used(blk, used - to_free);
         bytes -= to_free;
-        if (to_free == used)
+        if (to_free == used) {
+            // Keep one block as 'normal', but mark the next ones as 'unused'
+            memory_block next_blk = block_next(blk);
+            if(next_blk != INVALID_BLOCK)
+                advise_block(next_blk, MEM_ADVICE_UNUSED);
             blk = block_prev(blk);
+        }
     }
     arena->current = blk;
     arena->length  = new_size;
@@ -148,6 +154,9 @@ void arena_free_ptr(Arena* arena, void* ptr) {
         } else {
             arena->length -= block_used(blk);
             block_set_used(blk, 0);
+            memory_block next_blk = block_next(blk);
+            if(next_blk != INVALID_BLOCK)
+                advise_block(next_blk, MEM_ADVICE_UNUSED);
             blk = block_prev(blk);
         }
     }

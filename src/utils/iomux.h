@@ -17,6 +17,9 @@ enum IOType {
 
 typedef i64 IOMux;
 
+void iomux_system_init(void);
+void iomux_system_cleanup(void);
+
 IOMux iomux_wrap_buffer(ByteBuffer* buffer);
 IOMux iomux_wrap_stdfile(FILE* file);
 IOMux iomux_wrap_gz(gzFile file);

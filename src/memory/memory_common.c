@@ -126,13 +126,16 @@ void destroy_chain(memory_chain chain) {
     mcmutex_unlock(&stats_mutex);
 }
 
-memory_block alloc_block(u64 capacity, memory_chain chain) {
-    void* memory = platform_alloc(&capacity);
+memory_block alloc_block(u64 capacity, memory_chain chain, enum MemoryAdvice advice) {
+    void* memory = platform_alloc(&capacity, advice);
     assert(memory != NULL);
 
-    mcmutex_lock(&stats_mutex);
     i32 index;
+
+    mcmutex_lock(&stats_mutex);
     struct memory_block* block = basic_pool_alloc(&block_pool, &index);
+    struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
+    mcmutex_unlock(&stats_mutex);
 
     *block = (struct memory_block) {
         .capacity = capacity,
@@ -141,19 +144,22 @@ memory_block alloc_block(u64 capacity, memory_chain chain) {
         .type     = ALLOC_TYPE_DYNAMIC,
     };
 
-    mcmutex_unlock(&stats_mutex);
-
-    struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
-
     if (chain_ptr->tail >= 0) {
         struct memory_block* tail_ptr = basic_pool_query(&block_pool, chain_ptr->tail);
         tail_ptr->next                = index;
     } else
         chain_ptr->head = index;
+
+    block->prev = chain_ptr->tail;
     chain_ptr->tail = index;
     chain_ptr->block_count++;
 
     return index;
+}
+
+void advise_block(memory_block block, enum MemoryAdvice advice) {
+    struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
+    platform_mem_advise(block_ptr->start, block_ptr->capacity, advice);
 }
 
 void delete_block(memory_block blk) {

@@ -1,5 +1,6 @@
 #include "buddy.h"
 #include "memory/_memory_internal.h"
+#include "platform/mem_advice.h"
 #include "utils/bitwise.h"
 
 #define MIN_BLOCK_SIZE 5
@@ -20,7 +21,7 @@ void _buddy_init(BuddyAllocator* alloc, u64 size, enum MemoryChainTag tag, const
     size = ceil_two_pow(size + sizeof(BuddyBlock));
 
     alloc->chain            = create_chain(tag, name, INVALID_CHAIN);
-    memory_block blk        = alloc_block(size, alloc->chain);
+    memory_block blk        = alloc_block(size, alloc->chain, MEM_ADVICE_RANDOM);
     alloc->head             = block_memory(blk);
     alloc->head->power_size = u64_log2(size) - MIN_BLOCK_SIZE;
     alloc->head->free       = TRUE;

@@ -2,6 +2,7 @@
 #include "logger.h"
 #include "memory/_memory_internal.h"
 #include "memory/mem_tags.h"
+#include "platform/mem_advice.h"
 #include "utils/bitwise.h"
 #include "utils/math.h"
 
@@ -11,6 +12,7 @@
 
 struct obj_node {
     bool allocated;
+    memory_block blk;
     struct obj_node* next;
 };
 
@@ -48,7 +50,9 @@ static void prepare_block(PoolAllocator* pool, const memory_block block) {
     for (u64 i = 0; i < block_element_capacity; i++) {
         struct obj_node* node = offset(block_memory(block), i * total_stride);
         add_node_to_free_list(pool, node);
+        node->blk = block;
     }
+    block_set_used(block, NODE_HEADER_SIZE * block_element_capacity);
 }
 
 static void init_free_list(PoolAllocator* pool) {
@@ -63,8 +67,12 @@ static void init_free_list(PoolAllocator* pool) {
     pool->size = 0;
 }
 
-static void pool_init_common(
-                             PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, const char* name, memory_chain prev) {
+static void pool_init_common(PoolAllocator* pool,
+                             u32 capacity,
+                             u32 stride,
+                             enum MemoryChainTag tag,
+                             const char* name,
+                             memory_chain prev) {
     u64 actual_stride = max_u64(stride, sizeof(struct obj_node*));
     pool->mem         = create_chain(tag, name, prev);
     pool->capacity    = capacity;
@@ -74,23 +82,27 @@ static void pool_init_common(
     pool->size        = 0;
 
     u64 total_stride = actual_stride + NODE_HEADER_SIZE;
-    memory_block blk = alloc_block(capacity * total_stride, pool->mem);
+    memory_block blk = alloc_block(capacity * total_stride, pool->mem, MEM_ADVICE_RANDOM);
     pool->capacity   = block_capacity(blk) / total_stride;
     init_free_list(pool);
 }
 
-void _pool_init(
-               PoolAllocator* pool, u32 capacity, u32 stride, enum MemoryChainTag tag, const char* name, memory_chain prev) {
+void _pool_init(PoolAllocator* pool,
+                u32 capacity,
+                u32 stride,
+                enum MemoryChainTag tag,
+                const char* name,
+                memory_chain prev) {
     pool_init_common(pool, capacity, stride, tag, name, prev);
     pool->dynamic = FALSE;
 }
 
 void _pool_init_dynamic(PoolAllocator* pool,
-                       u32 initial_capacity,
-                       u32 stride,
-                       enum MemoryChainTag tag,
+                        u32 initial_capacity,
+                        u32 stride,
+                        enum MemoryChainTag tag,
                         const char* name,
-                       memory_chain prev) {
+                        memory_chain prev) {
     pool_init_common(pool, initial_capacity, stride, tag, name, prev);
     pool->dynamic = TRUE;
 }
@@ -122,8 +134,8 @@ static bool ensure_capacity(PoolAllocator* pool, u64 size) {
         return FALSE;
     }
 
-    memory_block blk =
-        alloc_block((pool->capacity >> 1) * (pool->stride + NODE_HEADER_SIZE), pool->mem);
+    memory_block blk = alloc_block(
+        (pool->capacity >> 1) * (pool->stride + NODE_HEADER_SIZE), pool->mem, MEM_ADVICE_RANDOM);
     if (blk == INVALID_BLOCK)
         abort();
 
@@ -146,6 +158,7 @@ void pool_clear(PoolAllocator* pool) {
                 count++;
             }
         }
+        advise_block(blk, MEM_ADVICE_UNUSED);
     }
     pool->size = 0;
 }
@@ -171,6 +184,7 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
         } while (blk != INVALID_BLOCK);
         *out_index = total / (pool->stride + NODE_HEADER_SIZE);
     }
+    block_set_used(node->blk, block_used(node->blk) + pool->stride);
     pool->size++;
     node->allocated = TRUE;
     node->next      = NULL;
@@ -180,6 +194,8 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
 static bool free_node(PoolAllocator* pool, struct obj_node* node) {
     if (!node->allocated)
         return FALSE;
+
+    block_set_used(node->blk, block_used(node->blk) - pool->stride);
 
     add_node_to_free_list(pool, node);
     return TRUE;
@@ -199,7 +215,7 @@ bool pool_free_idx(PoolAllocator* pool, i64 idx) {
     if (!node->allocated)
         return FALSE;
 
-    return pool_free(pool, offset(node, NODE_HEADER_SIZE));
+    return free_node(pool, node);
 }
 
 void* pool_get(PoolAllocator* pool, i64 index) {

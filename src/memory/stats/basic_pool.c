@@ -1,5 +1,6 @@
 #include "basic_pool.h"
 #include "logger.h"
+#include "platform/mem_advice.h"
 #include "platform/platform.h"
 #include "utils/bitwise.h"
 #include <string.h>
@@ -36,7 +37,7 @@ void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType ty
     pool->type = type;
 
     u64 cap64    = capacity * sizeof(struct node);
-    pool->blocks = platform_alloc(&cap64);
+    pool->blocks = platform_alloc(&cap64, MEM_ADVICE_RANDOM);
     cap64 /= sizeof(struct node);
 
     for (u64 i = 0; i < cap64; i++) {
@@ -59,7 +60,7 @@ void basic_pool_cleanup(struct basic_pool* pool) {
 static void grow(struct basic_pool* pool) {
     u64 stride             = sizeof(struct node);
     u64 cap64              = (pool->capacity << 1ULL) * stride;
-    struct node* new_array = platform_alloc(&cap64);
+    struct node* new_array = platform_alloc(&cap64, MEM_ADVICE_RANDOM);
     if (!new_array)
         platform_abort();
 

@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <zlib.h>
 
-#define MAX_MULTIPLEXERS 1024
+#define MAX_MULTIPLEXERS 64
 #define INFLATE_BUFFER_SIZE 512
 
 void strbuild_append_buf(StringBuilder* builder, const char* buf, u64 size);
@@ -53,21 +53,15 @@ struct IOMux {
 
 static PoolAllocator multiplexers = {.mem = INVALID_CHAIN};
 
-static bool iomux_system_cleanup(u32 event, void* user_data, EventInfo info) {
-    (void) event;
-    (void) user_data;
-    (void) info;
+void iomux_system_init(void) {
+    pool_init_dynamic(
+        &multiplexers, MAX_MULTIPLEXERS, sizeof(IOMux_t), BLK_TAG_PLATFORM, INVALID_CHAIN);
+}
+void iomux_system_cleanup(void) {
     pool_destroy(&multiplexers);
-    return TRUE;
 }
 
 static IOMux iomux_create(enum IOType type, union IOBackend backend) {
-
-    if (multiplexers.mem == INVALID_CHAIN) {
-        pool_init(
-            &multiplexers, MAX_MULTIPLEXERS, sizeof(IOMux_t), BLK_TAG_PLATFORM, INVALID_CHAIN);
-        event_register_listener(BEVENT_STOP, &iomux_system_cleanup, NULL);
-    }
 
     i64 index;
     IOMux_t* mux    = pool_alloc(&multiplexers, &index);

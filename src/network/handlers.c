@@ -357,6 +357,7 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
     PacketKnownDatapacks* payload = pkt->payload;
     UNUSED(payload);
 
+#ifdef DEBUG
     log_debug("Datapacks to omit:");
     for (u64 i = 0; i < vect_size(&payload->known_packs); i++) {
         KnownDatapack* pack = vect_ref(&payload->known_packs, i);
@@ -367,6 +368,7 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
     }
     if (vect_size(&payload->known_packs) == 0)
         log_debug("None.");
+#endif
 
     PacketRegistryData reg_data_pkt = {
         .registry_id = REGISTRY_DIMENSION_TYPE_KEY,
@@ -450,6 +452,7 @@ DEF_PKT_HANDLER(cfg_respack_response) {
                payload->uuid[0],
                payload->uuid[1],
                payload->result);
+    UNUSED(payload);
     // TODO: Handle resource packs
     return TRUE;
 }

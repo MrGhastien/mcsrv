@@ -31,7 +31,7 @@ typedef struct region {
 } Region;
 
 void level_init(Level* level, string path) {
-    level->arena = arena_create(1 << 30, BLK_TAG_LEVEL, -1);
+    level->arena = arena_create(1 << 10, BLK_TAG_LEVEL, -1);
     level->path  = str_create_copy(&path, &level->arena);
 
     dict_init(&level->region_dict, &CMP_VEC2I, sizeof(RegionPos), sizeof(i64));
@@ -42,7 +42,7 @@ void level_init(Level* level, string path) {
     pool_init_dynamic(
         &level->chunk_sections, 512, sizeof(ChunkSection), BLK_TAG_LEVEL, INVALID_CHAIN);
 
-    buddy_init(&level->buddy, 1 << 24, BLK_TAG_LEVEL);
+    buddy_init(&level->buddy, 1 << 14, BLK_TAG_LEVEL);
 }
 
 void level_destroy(Level* level) {
@@ -239,7 +239,7 @@ static void locate_and_read_chunk(Level* level, Region* region, ChunkPos pos) {
     u32 sector_count = chunk_offset & 0xff;
     chunk_offset >>= 8;
 
-    Arena scratch = arena_create(1 << 24, BLK_TAG_LEVEL, level->arena.chain);
+    Arena scratch = arena_create(1 << 13, BLK_TAG_LEVEL, level->arena.chain);
 
     i64 chunk_index;
     Chunk* new_chunk = pool_alloc(&level->chunks, &chunk_index);

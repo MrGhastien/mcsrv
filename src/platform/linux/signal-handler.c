@@ -17,6 +17,7 @@ static void* handle_signals(void* param);
 static pthread_t thread;
 
 void signal_system_init(void) {
+    //return;
     struct sigaction action;
     sigemptyset(&action.sa_mask);
     sigaddset(&action.sa_mask, SIGINT);

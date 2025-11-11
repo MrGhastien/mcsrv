@@ -7,6 +7,7 @@
 #include "platform/mc_thread.h"
 #include "platform/platform.h"
 #include "registry/registry.h"
+#include "utils/iomux.h"
 
 #include <world/simulation/simulation.h>
 
@@ -20,10 +21,10 @@ static i32 init(char* host, i32 port, u64 max_connections) {
     i32 code = 0;
 
     logger_system_init();
-
     platform_init();
     memory_init();
 
+    iomux_system_init();
     event_system_init();
     // memory_dump_stats();
     registry_system_init();
@@ -49,6 +50,7 @@ static void cleanup(void) {
     network_stop();
     registry_system_cleanup();
     event_system_cleanup();
+    iomux_system_cleanup();
 
     platform_cleanup();
     memory_cleanup();

@@ -149,7 +149,7 @@ static void register_state_properties(JSON* json) {
             i64 idx = 0;
             json_move_to_index(json, 0);
             do {
-                values[idx] = *json_get_string(json);
+                values[idx] = str_create_copy(json_get_string(json), &block_persistent_arena);
                 idx++;
             } while (json_move_to_next_sibling(json) == JSONE_OK);
             json_move_to_parent(json);
@@ -262,13 +262,13 @@ static void print_state_properties(void) {
 
 void register_blocks(void) {
 
-    block_persistent_arena = arena_create(1 << 12, BLK_TAG_REGISTRY, INVALID_CHAIN);
+    block_persistent_arena = arena_create((1 << 20) + (1 << 16), BLK_TAG_REGISTRY, INVALID_CHAIN);
     pool_init(&property_pool, 128, sizeof(StateProperty), BLK_TAG_REGISTRY, INVALID_CHAIN);
 
     init_properties();
 
     Vector property_buffer;
-    vect_init(&property_buffer, &block_persistent_arena, 16, sizeof(StateProperty*));
+    vect_init(&property_buffer, &block_persistent_arena, 32, sizeof(StateProperty*));
     Arena scratch = arena_create(1 << 5, BLK_TAG_REGISTRY, INVALID_CHAIN);
     JSON json;
     enum JSONStatus status =

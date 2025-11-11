@@ -13,8 +13,8 @@
 #include "platform/mc_mutex.h"
 #include "platform/socket.h"
 
-#define CONN_PARENA_SIZE 33554432
-#define CONN_SARENA_SIZE 4194304
+#define CONN_PARENA_SIZE (1 << 22)
+#define CONN_SARENA_SIZE (1 << 16)
 #define CONN_BYTEBUF_SIZE 4194304
 
 typedef struct pkt_func {
