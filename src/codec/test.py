@@ -2,71 +2,7 @@
 
 import sys
 from mcdoc_common import *
-
-class Scanner:
-    def __init__(self, filename: str):
-        with open(filename, 'r', encoding='utf-8') as f:
-            self.text = f.read()
-        self.pos = 0
-        self.__line = 1
-        self.__column = 1
-
-    def next_char(self) -> Optional[str]:
-        c = self.text[self.pos]
-        if c == '\n':
-            self.__line += 1
-            self.__column = 1
-        else:
-            self.__column += 1
-        self.pos += 1
-        return c
-
-    def peek(self, offset: int = 0) -> Optional[str]:
-        peek_pos = self.pos + offset
-        if peek_pos >= len(self.text):
-            return None
-        return self.text[peek_pos]
-
-    def match(self, expected) -> bool:
-        c = self.peek()
-        if c == expected:
-            self.next_char()
-            return True;
-        else:
-            return False
-
-    def prev_char(self) -> Optional[str]:
-        if self.pos == 0:
-            return None
-        return self.text[self.pos - 1]
-
-    def at_end(self) -> bool:
-        return self.pos >= len(self.text)
-        
-
-    @property
-    def line(self):
-        return self.__line
-
-    @property
-    def column(self):
-        return self.__column
-
-class ParseCtx:
-    def __init__(self, input: Scanner):
-        self.tokens: List[Token] = []
-        self.start = 0
-        self.has_error = False
-        self.input = input
-
-    def add_token(self, tok_type: TokenType):
-        self.tokens.append(Token(tok_type, self.input.line, self.input.column))
-
-    def add_generic_token(self, tok_type: TokenType, value: Union[str, int, float, ResourceID]):
-        self.tokens.append(Token(tok_type, self.input.line, self.input.column, value=value))
-
-    def lexeme(self):
-        return self.input.text[self.start:self.input.pos]
+from mcdoc_ast import analyze
 
 def lex_number(ctx: ParseCtx, input: Scanner):
     decimal_dot: bool = False
@@ -224,6 +160,8 @@ def parse(filename: str):
             print()
             prev_line = t.line
         print(t, end=' ')
+
+    analyze(ctx)
 
 
 parse(sys.argv[1])
