@@ -13,8 +13,13 @@ def lex_number(ctx: ParseCtx, input: Scanner):
         input.next_char()
 
     if c == '.':
+        if (d := input.peek(1)) and d == '.':
+            # Range !
+            ctx.add_generic_token(TokenType.INTEGER, int(ctx.lexeme()))
+            return
         decimal_dot = True
         input.next_char()
+
 
     while (c := input.peek()) and c.isdigit():
         input.next_char()

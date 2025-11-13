@@ -64,15 +64,18 @@ class TokenScanner:
         self.pos -= 1
         return self.tokens[self.pos]
 
+    def backtrack(self, new_pos: int):
+        if new_pos >= self.pos:
+            return
+        self.pos = new_pos
+
     def at_end(self) -> bool:
         return self.pos >= len(self.tokens)
 
 
 class ASTNode(ABC):
+    pass
 
-    @abstractmethod
-    def __str__(self):
-        pass
 # Basic nodes
 @dataclass
 class Identifier:
@@ -89,19 +92,15 @@ class Range(ASTNode):
     start_exclusive: bool = False
     end_exclusive: bool = False
 
-
-
-class TreeBody:
-    values = []
-
-class TreeValue:
-    name: Optional[Token]
-    value: TreeBody
+@dataclass
+class AttributeValue:
+    value: Union['McdocTypeNode', List['AttributeValue']]
+    name: Optional[Identifier] = None
 
 @dataclass
 class Attribute:
     name: Identifier
-    value: List[TreeValue] = None
+    value: List[AttributeValue] = None
 
 # Type nodes
 @dataclass
@@ -134,7 +133,7 @@ class UnattrTypeRefNode(UnattrTypeNode):
 
 @dataclass
 class UnattrSimpleTypeNode(UnattrTypeNode):
-    literal = None
+    literal: Union[str, int, float, bool] = None
     value_range: Optional[Range] = None
 
     def __str__(self) -> str:
@@ -210,7 +209,7 @@ def analyze_path(ctx: ParseCtx, scanner: TokenScanner) -> Optional[UnattrTypeRef
 def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner):
      t = scanner.peek()
      if t.type is TokenType.RPAREN or t.type is TokenType.RBRACKET or t.type is TokenType.RBRACE:
-         analyze_attribute_tree_value(ctx, scanner)
+         analyze_attribute_value(ctx, scanner)
 
 def analyze_range(ctx: ParseCtx, scanner: TokenScanner) -> Range:
     t = scanner.peek()
@@ -342,7 +341,6 @@ def analyze_enum(ctx: ParseCtx, scanner: TokenScanner) -> Optional[UnattrComposi
         
 
 def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[UnattrTypeNode]:
-    literal = None
     kind: TypeKind
     t = scanner.next()
     kind = TypeKind.from_token_type(t.type)
@@ -377,7 +375,7 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
                 elems.append(typ)
             if not scanner.match(TokenType.RPAREN):
                 return None
-            return UnattrTypeNode(TypeKind.UNION, elements=elems)
+            return UnattrCompositeTypeNode(TypeKind.UNION, elements=elems)
 
         case TokenType.LBRACKET:
             # List or Tuple
@@ -398,7 +396,7 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
                 # List !
                 size_range = analyze_ranged_type(ctx, scanner)
                 return UnattrListTypeNode(TypeKind.LIST, elem_type=elems[0], size_range=size_range)
-            return UnattrTypeNode(TypeKind.TUPLE, elements=elems)
+            return UnattrCompositeTypeNode(TypeKind.TUPLE, elements=elems)
         case TokenType.KW_SUPER | TokenType.DOUBLE_COLON | TokenType.IDENTIFIER:
             scanner.prev()
             return analyze_path(ctx, scanner)
@@ -414,7 +412,8 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
             return analyze_struct(ctx, scanner)
             pass
         case TokenType.KW_FALSE | TokenType.KW_TRUE:
-            return UnattrSimpleTypeNode(TypeKind.BOOLEAN, literal=(t.type == TokenType.KW_TRUE))
+            literal = t.type == TokenType.KW_TRUE
+            return UnattrSimpleTypeNode(TypeKind.BOOLEAN, literal=literal)
         case TokenType.STRING | TokenType.INTEGER | TokenType.FLOAT:
             return UnattrSimpleTypeNode(TypeKind.from_token_type(t.type), literal=t.value)
 
@@ -432,74 +431,88 @@ def analyze_type(ctx: ParseCtx, scanner: TokenScanner):
 
     return McdocTypeNode(unattr, attributes=attrs)
         
-def analyze_attribute_tree_body(ctx: ParseCtx, scanner: TokenScanner) -> TreeValue:
-     t = scanner.peek()
-     match t.type:
-         case TokenType.LPAREN | TokenType.LBRACKET | TokenType.LBRACE:
-             # Value
-             pass
-         case TokenType.IDENTIFIER | TokenType.STRING:
-             t2 = scanner.peek(1)
-             if t2 and t2.type == TokenType.EQ:
-                 # Named value
-                 pass
-             else:
-                 # Value (Type in grammar)
-                 pass
-         case _:
-             passpapass
-        
-    
-def analyze_attribute_tree_value(ctx: ParseCtx, scanner: TokenScanner) -> TreeValue:
+def analyze_named_or_plain_value(ctx: ParseCtx, scanner: TokenScanner) -> AttributeValue:
     t = scanner.peek()
     match t.type:
+        case TokenType.IDENTIFIER | TokenType.STRING:
+            t2 = scanner.peek(1)
+            if t2 and t2.type == TokenType.EQ:
+                scanner.next()
+                scanner.next()
+                val = analyze_attribute_value(ctx, scanner)
+                return AttributeValue(val, name=Identifier(t.value))
+            else:
+                return analyze_attribute_value(ctx, scanner)
+        case _:
+            return analyze_attribute_value(ctx, scanner)
+
+
+def analyze_attribute_composite_value(ctx: ParseCtx, scanner: TokenScanner, delimiter: TokenType) -> AttributeValue:
+    end_delimiter: TokenType
+    match delimiter:
         case TokenType.LPAREN:
-            analyze_attribute_tree_body(ctx, scanner)
-            scanner.expect(TokenType.RPAREN)
+            end_delimiter = TokenType.RPAREN
         case TokenType.LBRACKET:
-            analyze_attribute_tree_body(ctx, scanner)
-            scanner.expect(TokenType.RBRACKET)
+            end_delimiter = TokenType.RBRACKET
         case TokenType.LBRACE:
-            analyze_attribute_tree_body(ctx, scanner)
-            scanner.expect(TokenType.RBRACE)
-    return None
+            end_delimiter = TokenType.RBRACE
+        case _:
+            raise SyntaxError(f"Invalid attribute composite value delimiter '{delimiter}'")
 
+    scanner.expect(delimiter)
+    values = [analyze_named_or_plain_value(ctx, scanner)]
 
-def analyze_attribute(ctx: ParseCtx, scanner: TokenScanner, list: List[Attribute]):
+    while (t := scanner.peek()) and t.type == TokenType.COMMA:
+        scanner.next()
+        if (u := scanner.peek()) and u.type == end_delimiter:
+            break
+        res = analyze_named_or_plain_value(ctx, scanner)
+        if values[-1].name is not None and res.name is None:
+            raise SyntaxError("Cannot have an anonymous attribute value after a named value.", scanner.peek())
+        values.append(res)
+
+    scanner.expect(end_delimiter)
+
+    return AttributeValue(values)
+ 
+    
+def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner) -> List[AttributeValue]:
+    t = scanner.peek()
+    cur_pos = scanner.pos
+    closing_token_type = None
+    match t.type:
+        case TokenType.LPAREN | TokenType.LBRACKET | TokenType.LBRACE:
+            try:
+                return analyze_attribute_composite_value(ctx, scanner, t.type)
+            except SyntaxError:
+                scanner.backtrack(cur_pos)
+                typ = analyze_type(ctx, scanner)
+                return [AttributeValue(typ)]
+        case _:
+            typ = analyze_type(ctx, scanner)
+            return [AttributeValue(typ)]
+
+def analyze_attribute(ctx: ParseCtx, scanner: TokenScanner) -> Attribute:
     scanner.expect(TokenType.ATTR_BEGIN)
 
-    id: Identifier
-    if (t := scanner.next()) and t.type == TokenType.IDENTIFIER:
-        id = Identifier(t.value)
-    else:
-        return False
+    t = scanner.expect(TokenType.IDENTIFIER)
+    id = Identifier(t.value)
 
-    if scanner.match(TokenType.RBRACKET):
-        list.append(Attribute(id))
-        return True
+    eq_sign = scanner.match(TokenType.EQ)
 
-    tok = scanner.peek()
-    match tok.type:
-        case TokenType.EQ:
-              pass
-        case TokenType.LPAREN:
-            analyze_attribute_tree_body(ctx, scanner)
-            scanner.expect(TokenType.RPAREN)
-        case TokenType.LBRACKET:
-            analyze_attribute_tree_body(ctx, scanner)
-            scanner.expect(TokenType.RBRACKET)
-        case TokenType.LBRACE:
-            analyze_attribute_tree_body(ctx, scanner)
-            scanner.expect(TokenType.RBRACE)
-        case _:
-            return False
+    res: AttributeValue = analyze_attribute_value(ctx, scanner)
+    if eq_sign and (type(res.value) is not list or len(res.value) == 1):
+        raise SyntaxError("Simple attribute values must be separated by an equal sign '=' from the attribute identifier.")
+
+    scanner.expect(TokenType.RBRACKET)
+
+    return Attribute(id, value=res)
 
 
 def analyze_attributes(ctx: ParseCtx, scanner: TokenScanner):
     list = []
     while (t := scanner.peek()) and t.type == TokenType.ATTR_BEGIN:
-        if not analyze_attribute(ctx, scanner, list):
-            return None
+        list.append(analyze_attribute(ctx, scanner))
     return list
 
 def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[StructField]:
@@ -518,7 +531,7 @@ def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[Struc
             key = analyze_type(ctx, scanner)
             scanner.expect(TokenType.RBRACKET)
         case _:
-            raise SyntaxError(" ", key_tok)
+            raise SyntaxError("Invalid struct field", key_tok)
     if scanner.match(TokenType.QUESTION):
         optional = True
 
