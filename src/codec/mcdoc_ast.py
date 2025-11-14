@@ -82,7 +82,7 @@ class Identifier:
     name: str
 
     def __str__(self) -> str:
-        return name
+        return self.name
 
 @dataclass
 class Range(ASTNode):
@@ -161,7 +161,7 @@ class UnattrEnumTypeNode(UnattrTypeNode):
 
 @dataclass
 class StructField:
-    key: Identifier
+    key: Union[Identifier, McdocTypeNode]
     optional: bool
     spread: bool
     attributes: List[Attribute]
@@ -271,16 +271,9 @@ def analyze_enum_field(ctx: ParseCtx, scanner: TokenScanner) -> Tuple[Identifier
 
     scanner.expect(TokenType.EQ)
 
-    match (t := scanner.peek()):
-        case TokenType.INTEGER:
-            pass
-        case TokenType.FLOAT:
-            pass
-        case TokenType.STRING:
-            pass
-        case _:
-            raise SyntaxError(t)
-
+    t = scanner.peek();
+    if t.type is not TokenType.INTEGER and t.type is not TokenType.STRING and t.type is not TokenType.FLOAT:
+        raise SyntaxError(f"Enum field {id} is not of valid type: '{t.type}'.", t)
     value = t.value;
     scanner.next()
 
@@ -293,7 +286,7 @@ def analyze_enum(ctx: ParseCtx, scanner: TokenScanner) -> Optional[UnattrComposi
     scanner.expect(TokenType.LPAREN)
 
     kind = None
-    t = scanner.peek()
+    t = scanner.next()
     match t.type:
         case TokenType.KW_BYTE:
             kind = TypeKind.BYTE
@@ -310,34 +303,29 @@ def analyze_enum(ctx: ParseCtx, scanner: TokenScanner) -> Optional[UnattrComposi
         case TokenType.KW_STRING:
             kind = TypeKind.STRING
         case _:
-            return None
+            raise SyntaxWarning(f"Invalid enum type '{t}'", t)
 
     scanner.expect(TokenType.RPAREN)
 
     t = scanner.peek()
     id: Optional[Identifier]
-    if t.type == TokenType.Identifier:
+    if t.type == TokenType.IDENTIFIER:
         id = Identifier(t.value)
         scanner.next()
 
     scanner.expect(TokenType.LBRACE)
 
     fields = [analyze_enum_field(ctx, scanner)]
-    if not fields[0]:
-        return None
-    while t := scanner.peek() and t.type == TokenType.COMMA:
+    while (t := scanner.peek()) and t.type == TokenType.COMMA:
         scanner.next()
         if (u := scanner.peek()) and u.type == TokenType.RBRACE:
             break
         res = analyze_enum_field(ctx, scanner)
-        if not res:
-            return None
         fields.append(res)
 
-    if not scanner.match(TokenType.RBRACE):
-        return NONE
+    scanner.expect(TokenType.RBRACE)
 
-    return UnattrEnumTypeNode(TypeKind.ENUM, value_kind=kind, fields=fields)
+    return UnattrEnumTypeNode(TypeKind.ENUM, name=id, value_kind=kind, fields=fields)
         
 
 def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[UnattrTypeNode]:
@@ -349,9 +337,7 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
             value_range = analyze_ranged_type(ctx, scanner)
             is_array, array_size_range = analyze_array_type(ctx, scanner);
             
-            if is_array is None:
-                return None
-            elif is_array:
+            if is_array:
                 return UnattrArrayTypeNode(TypeKind.ARRAY, value_range=value_range, array_element_kind=kind, array_size_range=array_size_range)
             else:
                 return UnattrTypeNode(kind, value_range=value_range)
@@ -359,22 +345,17 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
             value_range = analyze_ranged_type(ctx, scanner)
             return UnattrSimpleTypeNode(kind, value_range=value_range)
         case TokenType.KW_ANY | TokenType.KW_BOOLEAN:
-            return UnattrArrayTypeNode(kind)
+            return UnattrArrayTypeNode(TypeKind.ARRAY, kind)
         case TokenType.LPAREN:
             # Union
             elems = [analyze_type(ctx, scanner)]
-            if not elems[0]:
-                return None
-            while t := scanner.peek() and t.type == TokenType.PIPE:
+            while (t := scanner.peek()) and t.type == TokenType.PIPE:
                 scanner.next()
                 if (u := scanner.peek()) and u.type == TokenType.RPAREN:
                     break
                 typ = analyze_type(ctx, scanner)
-                if not typ:
-                    return None
                 elems.append(typ)
-            if not scanner.match(TokenType.RPAREN):
-                return None
+            scanner.expect(TokenType.RPAREN)
             return UnattrCompositeTypeNode(TypeKind.UNION, elements=elems)
 
         case TokenType.LBRACKET:
@@ -387,12 +368,9 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
                     trailing_comma = True
                     break
                 typ = analyze_type(ctx, scanner)
-                if not typ:
-                    return None
                 elems.append(typ)
-            if not scanner.match(TokenType.RBRACKET):
-                return None
-            if len(elems) == 1 and trailing_comma:
+            scanner.expect(TokenType.RBRACKET)
+            if len(elems) == 1 and not trailing_comma:
                 # List !
                 size_range = analyze_ranged_type(ctx, scanner)
                 return UnattrListTypeNode(TypeKind.LIST, elem_type=elems[0], size_range=size_range)
@@ -421,11 +399,7 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
 
 
 def analyze_type(ctx: ParseCtx, scanner: TokenScanner):
-    attrs: List = None
-    if (t := scanner.peek()) and t.type == TokenType.ATTR_BEGIN:
-        attrs = analyze_attributes(ctx, scanner)
-        if not attrs:
-            raise SyntaxError("", t)
+    attrs = analyze_attributes(ctx, scanner)
 
     unattr = analyze_unattributed_type(ctx, scanner)
 
@@ -484,25 +458,28 @@ def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner) -> List[Attrib
         case TokenType.LPAREN | TokenType.LBRACKET | TokenType.LBRACE:
             try:
                 return analyze_attribute_composite_value(ctx, scanner, t.type)
-            except SyntaxError:
+            except SyntaxError as e:
+                print(e)
                 scanner.backtrack(cur_pos)
                 typ = analyze_type(ctx, scanner)
-                return [AttributeValue(typ)]
+                return AttributeValue(typ)
         case _:
             typ = analyze_type(ctx, scanner)
-            return [AttributeValue(typ)]
+            return AttributeValue(typ)
 
 def analyze_attribute(ctx: ParseCtx, scanner: TokenScanner) -> Attribute:
     scanner.expect(TokenType.ATTR_BEGIN)
 
     t = scanner.expect(TokenType.IDENTIFIER)
     id = Identifier(t.value)
+    if scanner.match(TokenType.RBRACKET):
+        return Attribute(id)
 
     eq_sign = scanner.match(TokenType.EQ)
 
     res: AttributeValue = analyze_attribute_value(ctx, scanner)
-    if eq_sign and (type(res.value) is not list or len(res.value) == 1):
-        raise SyntaxError("Simple attribute values must be separated by an equal sign '=' from the attribute identifier.")
+    if not eq_sign and type(res.value) is not list:
+        raise SyntaxError("Simple attribute values must be separated by an equal sign '=' from the attribute identifier.", scanner.peek())
 
     scanner.expect(TokenType.RBRACKET)
 
@@ -516,14 +493,12 @@ def analyze_attributes(ctx: ParseCtx, scanner: TokenScanner):
     return list
 
 def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[StructField]:
-    key_tok = scanner.peek()
     key: Union[str, Identifier, McdocTypeNode] = None
     optional: bool = False
+    attrs = analyze_attributes(ctx, scanner)
+    key_tok = scanner.peek()
     match key_tok.type:
-        case TokenType.STRING:
-            scanner.next()
-            key = key_tok.value
-        case TokenType.IDENTIFIER:
+        case TokenType.STRING | TokenType.IDENTIFIER:
             scanner.next()
             key = Identifier(key_tok.value)
         case TokenType.LBRACKET:
@@ -531,7 +506,7 @@ def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[Struc
             key = analyze_type(ctx, scanner)
             scanner.expect(TokenType.RBRACKET)
         case _:
-            raise SyntaxError("Invalid struct field", key_tok)
+            raise SyntaxError(f"Invalid struct field (beginning with '{key_tok}')", key_tok)
     if scanner.match(TokenType.QUESTION):
         optional = True
 
@@ -544,7 +519,7 @@ def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[Struc
 
     type: McdocType = analyze_type(ctx, scanner)
 
-    return StructField(key, optional, False, [], type)
+    return StructField(key, optional, False, attrs, type)
 
 def analyze_struct(ctx: ParseCtx, scanner: TokenScanner):
     if not scanner.match(TokenType.KW_STRUCT):
