@@ -2,11 +2,6 @@ from enum import Enum, auto
 from dataclasses import dataclass
 from typing import Optional, Union, List, TextIO
 
-class ResourceID:
-    def __init__(self, namespace, path):
-        self.namespace = namespace
-        self.path = path
-
 class TokenType(Enum):
     NONE = None
     INTEGER = 1
@@ -49,6 +44,7 @@ class TokenType(Enum):
     KW_BOOLEAN = "boolean"
     KW_ENUM = "enum"
     KW_STRUCT = "struct"
+    KW_SUPER = "super"
     KW_FALLBACK = "%fallback"
     KW_NONE = "%none"
     KW_UNKNOWN = "%unknown"
@@ -60,7 +56,6 @@ class TokenType(Enum):
     KW_INJECT = "inject"
     KW_DISPATCH = "dispatch"
     KW_TO = "to"
-    KW_SUPER = "super"
 
     def is_keyword(self) -> bool:
         return self.value in keywords
@@ -98,6 +93,13 @@ keywords = {
 class ResourceID:
     namespace: str
     path: str
+
+    def __str__(self):
+        return f"{self.namespace}:{self.path}"
+
+    def __repr__(self):
+        return self.__str__()
+
 
 @dataclass
 class Token:
@@ -175,6 +177,7 @@ class ParseCtx:
         self.start = 0
         self.has_error = False
         self.input = input
+
 
     def add_token(self, tok_type: TokenType):
         self.tokens.append(Token(tok_type, self.input.line, self.input.column))
