@@ -531,7 +531,7 @@ def analyze_attributes(ctx: ParseCtx, scanner: TokenScanner):
         list.append(analyze_attribute(ctx, scanner))
     return list
 
-def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[StructField]:
+def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[StructFieldNode]:
     key: Union[str, Identifier, McdocTypeNode] = None
     optional: bool = False
     attrs = analyze_attributes(ctx, scanner)
@@ -551,7 +551,7 @@ def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[Struc
         case TokenType.SPREAD:
             scanner.next()
             spread_type = analyze_type(ctx, scanner)
-            return StructField(attributes=attrs, spread=True, type=spread_type)
+            return StructFieldNode(attributes=attrs, spread=True, type=spread_type)
         case _:
             raise SyntaxError(f"Invalid struct field (beginning with '{key_tok}')", key_tok)
     if scanner.match(TokenType.QUESTION):
@@ -566,7 +566,7 @@ def analyze_struct_field(ctx: ParseCtx, scanner: TokenScanner) -> Optional[Struc
 
     type: McdocType = analyze_type(ctx, scanner)
 
-    return StructField(attrs, type, key=key, optional=optional)
+    return StructFieldNode(attrs, type, key=key, optional=optional)
 
 def analyze_struct(ctx: ParseCtx, scanner: TokenScanner):
     if not scanner.match(TokenType.KW_STRUCT):

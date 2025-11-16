@@ -1,5 +1,6 @@
 from mcdoc_common import TokenType
 from enum import Enum, auto
+from abstract import ABC
 
 class TypeKind(Enum):
     ANY = 0
@@ -60,3 +61,20 @@ _tokentype_to_typekind_table = {
     # TokenType.KW_TO:
     # TokenType.KW_SUPER
 }
+
+@dataclass
+class McdocType(ABC):
+    pass
+
+@dataclass
+class StructField:
+    name: Optional[str] = None
+    key_type: Optional[McdocType] = None
+    typ: McdocType
+    # attributes
+    
+
+@dataclass
+class StructType(McdocType):
+    fields: List[StructField]
+    name: Optional[str] = None
