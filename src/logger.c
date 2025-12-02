@@ -11,20 +11,20 @@
 #define LOGGER_ARENA_SIZE 262144
 
 static char* names[_LOG_LEVEL_COUNT] = {
-    [LOG_LEVEL_FATAL] = "[FATAL]",
-    [LOG_LEVEL_ERROR] = "[ERROR]",
-    [LOG_LEVEL_WARN]  = "[ WARN]",
-    [LOG_LEVEL_INFO]  = "[ INFO]",
+  [LOG_LEVEL_FATAL] = "\x1b[91;7m FATAL " ANSI_RESET,
+  [LOG_LEVEL_ERROR] = "\x1b[31;7m ERROR " ANSI_RESET,
+  [LOG_LEVEL_WARN]  = "\x1b[33;7m  WARN " ANSI_RESET,
+  [LOG_LEVEL_INFO]  = "\x1b[0;7m  INFO " ANSI_RESET,
 #ifdef DEBUG
-    [LOG_LEVEL_DEBUG] = "[DEBUG]",
+    [LOG_LEVEL_DEBUG] = "\x1b[32;3;7m DEBUG " ANSI_RESET,
 #endif
 #ifdef TRACE
-    [LOG_LEVEL_TRACE] = "[TRACE]",
+    [LOG_LEVEL_TRACE] = "\x1b[30;3;7m TRACE " ANSI_RESET,
 #endif
 };
 
 static char* colors[_LOG_LEVEL_COUNT] = {
-    [LOG_LEVEL_FATAL] = "\x1b[91;1m",
+  [LOG_LEVEL_FATAL] = "\x1b[91m",
     [LOG_LEVEL_ERROR] = "\x1b[31m",
     [LOG_LEVEL_WARN]  = "\x1b[33m",
     [LOG_LEVEL_INFO]  = "\x1b[0m",
@@ -65,7 +65,7 @@ void _log_msg(enum LogLevel lvl, const char* msg) {
         break;
     }
 
-    fprintf(stream, "%s%s %s" ANSI_RESET "\n", colors[lvl], names[lvl], msg);
+    fprintf(stream, "%s%s %s" ANSI_RESET "\n", names[lvl], colors[lvl], msg);
 }
 
 void _log_msgf(enum LogLevel lvl, const char* msg, ...) {
@@ -88,7 +88,7 @@ void _log_msgf(enum LogLevel lvl, const char* msg, ...) {
 
     mcmutex_lock(&ctx.mutex);
 
-    fprintf(stream, "%s%s ", colors[lvl], names[lvl]);
+    fprintf(stream, "%s%s ", names[lvl], colors[lvl]);
     vfprintf(stream, msg, args);
     puts(ANSI_RESET);
 
