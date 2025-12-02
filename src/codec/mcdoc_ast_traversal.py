@@ -26,11 +26,11 @@ def _traverse_internal(root: ASTNode, indent: int):
             print(name)
         case Path() as path:
             print(f" {path}")
-        case Attribute() as a:
+        case AttributeNode() as a:
             print(f"Attribute {a.name}", end='')
             if a.value is not None:
                 _traverse_internal(a.value, indent + 1)
-        case AttributeValue() as v:
+        case AttributeValueNode() as v:
             if v.name is not None:
                 print(v.name)
             if type(v.value) is McdocTypeNode:

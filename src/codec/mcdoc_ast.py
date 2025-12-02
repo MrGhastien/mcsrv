@@ -442,7 +442,7 @@ def analyze_use(ctx: ParseCtx, scanner: TokenScanner) -> UseStatement:
 
     return UseStatement(path=path, alias=alias)
         
-def analyze_named_or_plain_value(ctx: ParseCtx, scanner: TokenScanner) -> AttributeValue:
+def analyze_named_or_plain_value(ctx: ParseCtx, scanner: TokenScanner) -> AttributeValueNode:
     t = scanner.peek()
     match t.type:
         case TokenType.IDENTIFIER | TokenType.STRING:
@@ -454,14 +454,14 @@ def analyze_named_or_plain_value(ctx: ParseCtx, scanner: TokenScanner) -> Attrib
                 # Make sure named attribute values can also have multiple values.
                 # This removes a level of nesting of attributes making it
                 # easier to traverse the line
-                return AttributeValue(val.value, name=Identifier(t.value))
+                return AttributeValueNode(val.value, name=Identifier(t.value))
             else:
                 return analyze_attribute_value(ctx, scanner)
         case _:
             return analyze_attribute_value(ctx, scanner)
 
 
-def analyze_attribute_composite_value(ctx: ParseCtx, scanner: TokenScanner, delimiter: TokenType) -> AttributeValue:
+def analyze_attribute_composite_value(ctx: ParseCtx, scanner: TokenScanner, delimiter: TokenType) -> AttributeValueNode:
     end_delimiter: TokenType
     match delimiter:
         case TokenType.LPAREN:
@@ -487,10 +487,10 @@ def analyze_attribute_composite_value(ctx: ParseCtx, scanner: TokenScanner, deli
 
     scanner.expect(end_delimiter)
 
-    return AttributeValue(values)
+    return AttributeValueNode(values)
  
     
-def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner) -> AttributeValue:
+def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner) -> AttributeValueNode:
     t = scanner.peek()
     cur_pos = scanner.pos
     closing_token_type = None
@@ -502,27 +502,27 @@ def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner) -> AttributeVa
                 print(e)
                 scanner.backtrack(cur_pos)
                 typ = analyze_type(ctx, scanner)
-                return AttributeValue(typ)
+                return AttributeValueNode(typ)
         case _:
             typ = analyze_type(ctx, scanner)
-            return AttributeValue(typ)
+            return AttributeValueNode(typ)
 
-def analyze_attribute(ctx: ParseCtx, scanner: TokenScanner) -> Attribute:
+def analyze_attribute(ctx: ParseCtx, scanner: TokenScanner) -> AttributeNode:
     scanner.expect(TokenType.ATTR_BEGIN)
 
     id = analyze_identifier(ctx, scanner)
     if scanner.match(TokenType.RBRACKET):
-        return Attribute(id)
+        return AttributeNode(id)
 
     eq_sign = scanner.match(TokenType.EQ)
 
-    res: AttributeValue = analyze_attribute_value(ctx, scanner)
+    res: AttributeValueNode = analyze_attribute_value(ctx, scanner)
     if not eq_sign and type(res.value) is not list:
         raise SyntaxError("Simple attribute values must be separated by an equal sign '=' from the attribute identifier.", scanner.peek())
 
     scanner.expect(TokenType.RBRACKET)
 
-    return Attribute(id, value=res)
+    return AttributeNode(id, value=res)
 
 
 def analyze_attributes(ctx: ParseCtx, scanner: TokenScanner):

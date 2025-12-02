@@ -1,6 +1,9 @@
 from mcdoc_common import TokenType
 from enum import Enum, auto
-from abstract import ABC
+from abc import ABC
+from dataclasses import dataclass, field
+
+from typing import List, Optional, Union, Tuple
 
 class TypeKind(Enum):
     ANY = 0
@@ -63,18 +66,107 @@ _tokentype_to_typekind_table = {
 }
 
 @dataclass
+class Range:
+    floating: bool
+    start: Optional[Union[int, float]] = None
+    end: Optional[Union[int, float]] = None
+    start_exclusive: bool = False
+    end_exclusive: bool = False
+
+    def __str__(self) -> str:
+        return f"{self.start}{'<' if self.start_exclusive else ''}..{'<' if self.end_exclusive else ''}{self.end}"
+
+
+@dataclass(kw_only=True, repr=False)
 class McdocType(ABC):
-    pass
+    attributes: List['Attribute'] = field(default_factory=lambda: [])
+
+    def __str__(self) -> str:
+        pass
+
+    def __repr__(self) -> str:
+        return str(self)
+
+@dataclass
+class AttributeValue:
+    value: Union['McdocType', List['AttributeValue']]
+    name: Optional[str] = None
+
+@dataclass
+class Attribute:
+    name: str
+    value: Optional[AttributeValue] = None
+
+@dataclass
+class BuiltinType(McdocType):
+    type: TypeKind
+
+@dataclass
+class LiteralType(BuiltinType):
+    value: Union[str, float, int, bool]
 
 @dataclass
 class StructField:
+    typ: McdocType
+    attributes: List[Attribute]
     name: Optional[str] = None
     key_type: Optional[McdocType] = None
-    typ: McdocType
     # attributes
     
+@dataclass
+class EnumField:
+    name: str
+    value: Union[int, float, str]
 
 @dataclass
 class StructType(McdocType):
     fields: List[StructField]
     name: Optional[str] = None
+
+    def __str__(self) -> str:
+        if self.name is None:
+            return f"Anonymous Struct"
+        return f"Struct '{self.name}'"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+            
+
+@dataclass
+class EnumType(McdocType):
+    fields: List[EnumField]
+    type: BuiltinType
+    name: Optional[str] = None
+
+    def __str__(self) -> str:
+        if self.name is None:
+            return f"Anonymous Enum"
+        return f"Enum '{self.name}'"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+
+
+@dataclass
+class TypeAlias(McdocType):
+    source: McdocType
+
+@dataclass
+class UnionType(McdocType):
+    elements: List[McdocType]
+
+@dataclass
+class TupleType(McdocType):
+    elements: List[McdocType]
+
+@dataclass
+class ListType(McdocType):
+    elem_type: McdocType
+    size_range: Optional[Range] = None
+
+@dataclass
+class ArrayType(McdocType):
+    elem_type: BuiltinType
+    size_range: Optional[Range] = None

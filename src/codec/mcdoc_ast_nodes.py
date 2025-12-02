@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional, Union
 
 from mcdoc_common import *
-from mcdoc_types import TypeKind
+from mcdoc_types import TypeKind, Range
 
 class ASTNode(ABC):
     pass
@@ -29,25 +29,14 @@ class Path:
         return res
     
 @dataclass
-class Range:
-    floating: bool
-    start: Optional[Union[int, float]] = None
-    end: Optional[Union[int, float]] = None
-    start_exclusive: bool = False
-    end_exclusive: bool = False
-
-    def __str__(self) -> str:
-        return f"{self.start}{'<' if self.start_exclusive else ''}..{'<' if self.end_exclusive else ''}{self.end}"
-
-@dataclass
-class AttributeValue(ASTNode):
+class AttributeValueNode(ASTNode):
     value: Union['McdocTypeNode', List['AttributeValue']]
     name: Optional[Identifier] = None
 
 @dataclass
-class Attribute(ASTNode):
+class AttributeNode(ASTNode):
     name: Identifier
-    value: AttributeValue = None
+    value: AttributeValueNode = None
 
 # Type nodes
 @dataclass
@@ -62,7 +51,7 @@ class TypeIndex:
 @dataclass
 class McdocTypeNode(ASTNode):
     unattr_type: UnattrTypeNode
-    attributes: List[Attribute] = None
+    attributes: List[AttributeNode] = None
     indices: List[TypeIndex] = None
     args: List['McdocTypeNode'] = None
 
@@ -118,7 +107,7 @@ class UnattrEnumTypeNode(UnattrTypeNode):
 
 @dataclass
 class StructFieldNode:
-    attributes: List[Attribute]
+    attributes: List[AttributeNode]
     type: McdocTypeNode
     key: Union[Identifier, McdocTypeNode] = None
     optional: bool = False
