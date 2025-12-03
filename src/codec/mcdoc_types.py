@@ -74,7 +74,7 @@ class Range:
     end_exclusive: bool = False
 
     def __str__(self) -> str:
-        return f"{self.start}{'<' if self.start_exclusive else ''}..{'<' if self.end_exclusive else ''}{self.end}"
+        return f"{self.start if self.start else ''}{'<' if self.start_exclusive else ''}..{'<' if self.end_exclusive else ''}{self.end if self.end else ''}"
 
 
 @dataclass(kw_only=True, repr=False)
@@ -82,10 +82,14 @@ class McdocType(ABC):
     attributes: List['Attribute'] = field(default_factory=lambda: [])
 
     def __str__(self) -> str:
-        pass
+        return ""
 
     def __repr__(self) -> str:
         return str(self)
+
+    def get_name(self) -> str:
+        return None
+
 
 @dataclass
 class AttributeValue:
@@ -101,9 +105,13 @@ class Attribute:
 class BuiltinType(McdocType):
     type: TypeKind
 
+    def __repr__(self):
+        return str(self.type.name.lower())
+
 @dataclass
 class LiteralType(BuiltinType):
     value: Union[str, float, int, bool]
+    value_range: Optional[Range] = None
 
 @dataclass
 class StructField:
@@ -112,6 +120,9 @@ class StructField:
     name: Optional[str] = None
     key_type: Optional[McdocType] = None
     # attributes
+
+    def get_name(self) -> str:
+        return name
     
 @dataclass
 class EnumField:
@@ -131,6 +142,9 @@ class StructType(McdocType):
     def __repr__(self) -> str:
         return str(self)
 
+    def get_name(self) -> str:
+        return self.name
+
             
 
 @dataclass
@@ -147,11 +161,18 @@ class EnumType(McdocType):
     def __repr__(self) -> str:
         return str(self)
 
+    def get_name(self) -> str:
+        return self.name
+
 
 
 @dataclass
 class TypeAlias(McdocType):
     source: McdocType
+    name: str
+
+    def get_name(self) -> str:
+        return self.name
 
 @dataclass
 class UnionType(McdocType):
@@ -166,7 +187,26 @@ class ListType(McdocType):
     elem_type: McdocType
     size_range: Optional[Range] = None
 
+    def __str__(self):
+        return f"[{self.elem_type}]{f" @ {self.size_range}" if self.size_range else ''}"
+
+    def __repr__(self):
+        return self.__str__()
+
 @dataclass
 class ArrayType(McdocType):
     elem_type: BuiltinType
     size_range: Optional[Range] = None
+
+@dataclass
+class TypeRef(McdocType):
+    target: 'Path'
+
+    def __str__(self):
+        return str(self.target)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def get_name(self) -> str:
+        return str(self.target)

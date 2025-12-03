@@ -27,6 +27,9 @@ class Path:
             res += f"{s}::"
         res += str(self.segments[-1])
         return res
+
+    def __repr__(self) -> str:
+        return self.__str__()
     
 @dataclass
 class AttributeValueNode(ASTNode):
@@ -63,14 +66,7 @@ class UnattrTypeRefNode(UnattrTypeNode):
     path: Path
 
     def __str__(self) -> str:
-        res = ""
-        if self.absolute:
-            res = "::"
-        for i in range(len(self.segments) - 1):
-            res += f"{self.segments[i]}::"
-        res += str(self.segments[len(self.segments) - 1])
-        return res
-            
+        return str(self.path)            
 
 @dataclass
 class UnattrSimpleTypeNode(UnattrTypeNode):

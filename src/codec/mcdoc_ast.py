@@ -184,6 +184,9 @@ def analyze_array_type(ctx: ParseCtx, scanner: TokenScanner) -> Tuple[Optional[b
         return (False, None)
 
 def analyze_enum_field(ctx: ParseCtx, scanner: TokenScanner) -> Tuple[Identifier, Union[int, float, str]]:
+    attrs = []
+    if scanner.match_peek(TokenType.ATTR_BEGIN):
+        attrs = analyze_attributes(ctx, scanner)
     id = analyze_identifier(ctx, scanner)
 
     scanner.expect(TokenType.EQ)
@@ -417,6 +420,7 @@ def analyze_type_params(ctx: ParseCtx, scanner: TokenScanner) -> List[Identifier
 
 
 def analyze_type_alias(ctx: ParseCtx, scanner: TokenScanner) -> TypeAliasStatement:
+    attrs = analyze_attributes(ctx, scanner)
     scanner.expect(TokenType.KW_TYPE)
 
     alias = scanner.expect(TokenType.IDENTIFIER).value;

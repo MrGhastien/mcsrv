@@ -4,7 +4,7 @@ import sys
 from mcdoc_common import *
 from mcdoc_ast import analyze
 from mcdoc_ast_traversal import traverse
-from mcdoc_binding import traverse_bind
+from mcdoc_binding import bind_bind
 
 def lex_number(ctx: ParseCtx, input: Scanner):
     decimal_dot: bool = False
@@ -171,7 +171,7 @@ def parse(filename: str):
     print('')
     tree = analyze(ctx)
     traverse(tree)
-    traverse_bind(tree)
+    bind_bind(tree)
 
 
 parse(sys.argv[1])
