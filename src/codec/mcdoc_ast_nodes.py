@@ -80,6 +80,7 @@ class UnattrSimpleTypeNode(UnattrTypeNode):
 class UnattrArrayTypeNode(UnattrTypeNode):
     array_element_kind: TypeKind
     array_size_range: Optional[Range] = None
+    value_range: Optional[Range] = None
 
 @dataclass
 class UnattrListTypeNode(UnattrTypeNode):
@@ -126,7 +127,7 @@ class UnattrStructTypeNode(UnattrTypeNode):
     
 
 @dataclass
-class McdocFile(ASTNode):
+class McdocFileNode(ASTNode):
     things: List[ASTNode]
 
 @dataclass

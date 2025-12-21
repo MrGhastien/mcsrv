@@ -37,7 +37,7 @@ class TokenScanner:
 
     def match(self, expected: TokenType, value=None) -> bool:
         t:Token = self.peek()
-        if t.type == expected and t.value == value:
+        if t is not None and t.type == expected and t.value == value:
             self.next()
             return True;
         else:
@@ -74,6 +74,15 @@ class TokenScanner:
 
     def at_end(self) -> bool:
         return self.pos >= len(self.tokens)
+
+def is_valid_list_range(r) -> bool:
+    match r:
+        case Range() as rng:
+            return not rng.floating
+        case int():
+            return True
+        case _:
+            return False
 
 
 def can_be_identifier(tok: Token) -> bool:
@@ -122,7 +131,7 @@ def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner):
      if t.type is TokenType.RPAREN or t.type is TokenType.RBRACKET or t.type is TokenType.RBRACE:
          analyze_attribute_value(ctx, scanner)
 
-def analyze_range(ctx: ParseCtx, scanner: TokenScanner) -> Range:
+def analyze_range(ctx: ParseCtx, scanner: TokenScanner) -> Union[Range, int, float]:
     t = scanner.peek()
     floating: bool = False
     start: Optional[Union[int, float]]
@@ -138,34 +147,41 @@ def analyze_range(ctx: ParseCtx, scanner: TokenScanner) -> Range:
     
     start_exclusive = False
     if scanner.match(TokenType.LCHEVRON):
-        if not start:
+        if start is None:
             raise SyntaxError(f"Range start cannot be exclusive when there is no lower bound!", scanner.peek())
         start_exclusive = True
 
-    scanner.expect(TokenType.RANGE)
+    if not scanner.match(TokenType.RANGE):
+        return start
 
     end_exclusive = False
     if scanner.match(TokenType.LCHEVRON):
         end_exclusive = True
     
-    end: Optional[Union[float, int]]
-    t = scanner.peek()
-    match t.type:
-        case TokenType.FLOAT | TokenType.INTEGER:
-            if floating != (t.type is TokenType.FLOAT):
-                raise SyntaxError(f"Mismatched range bound types: expected {TokenType.FLOAT if floating else TokenType.INTEGER} got {t.type}", t)
-            scanner.next()
-            end = t.value
-        case _:
-            if end_exclusive:
-                raise SyntaxError(f"Range end cannot be exclusive when there is no upper bound!", t)
-            end = None
-
-    end = t.value
+    end: Optional[Union[float, int]] = None
+    if (t := scanner.peek()) is not None:
+        match t.type:
+            case TokenType.FLOAT:
+                if not floating:
+                    floating = True
+                    start = float(start)
+                scanner.next()
+                end = t.value
+            case TokenType.INTEGER:
+                scanner.next()
+                if floating:
+                    end = float(t.value)
+                else:
+                    end = t.value
+            case _:
+                if end_exclusive:
+                    raise SyntaxError(f"Range end cannot be exclusive when there is no upper bound!", t)
+                end = None
+        end = t.value
 
     return Range(floating, start, end, start_exclusive, end_exclusive)
 
-def analyze_ranged_type(ctx: ParseCtx, scanner: TokenScanner) -> Range:
+def analyze_ranged_type(ctx: ParseCtx, scanner: TokenScanner) -> Optional[Union[Range, int, float]]:
     if scanner.match(TokenType.AT):
         return analyze_range(ctx, scanner)
     return None
@@ -177,7 +193,7 @@ def analyze_array_type(ctx: ParseCtx, scanner: TokenScanner) -> Tuple[Optional[b
 
         if scanner.match(TokenType.AT):
             array_size_range = analyze_range(ctx, scanner)
-            if not array_size_range or array_size_range.floating:
+            if not is_valid_list_range(array_size_range):
                 raise SyntaxError("Array range must be an int range.")
         return (True, array_size_range)
     else:
@@ -228,7 +244,7 @@ def analyze_enum(ctx: ParseCtx, scanner: TokenScanner) -> Optional[UnattrComposi
     scanner.expect(TokenType.RPAREN)
 
     id: Optional[Identifier] = None
-    if can_be_identifier(t):
+    if can_be_identifier(scanner.peek()):
         id = analyze_identifier(ctx, scanner)
 
     scanner.expect(TokenType.LBRACE)
@@ -246,6 +262,8 @@ def analyze_enum(ctx: ParseCtx, scanner: TokenScanner) -> Optional[UnattrComposi
     return UnattrEnumTypeNode(TypeKind.ENUM, name=id, value_kind=kind, fields=fields)
         
 def analyze_union(ctx: ParseCtx, scanner:TokenScanner) -> UnattrCompositeTypeNode:
+    if scanner.match(TokenType.RPAREN):
+        return UnattrCompositeTypeNode(TypeKind.UNION, elements=[])
     elems = [analyze_type(ctx, scanner)]
     while (t := scanner.peek()) and t.type == TokenType.PIPE:
         scanner.next()
@@ -270,6 +288,9 @@ def analyze_list_or_tuple(ctx: ParseCtx, scanner:TokenScanner) -> Union[UnattrLi
     if len(elems) == 1 and not trailing_comma:
         # List !
         size_range = analyze_ranged_type(ctx, scanner)
+
+        if size_range is not None and not is_valid_list_range(size_range):
+            raise SyntaxError("List must be an int range.")
         return UnattrListTypeNode(TypeKind.LIST, elem_type=elems[0], size_range=size_range)
     return UnattrCompositeTypeNode(TypeKind.TUPLE, elements=elems)
 
@@ -374,7 +395,7 @@ def analyze_type_indices(ctx: ParseCtx, scanner: TokenScanner) -> List[TypeIndex
 def analyze_type_args(ctx: ParseCtx, scanner: TokenScanner) -> List[McdocTypeNode]:
     scanner.expect(TokenType.LCHEVRON);
 
-    args = [analyze_type_index(ctx, scanner)]
+    args = [analyze_type(ctx, scanner)]
 
     while (t := scanner.peek()) and t.type is TokenType.COMMA:
         scanner.next()
@@ -448,21 +469,19 @@ def analyze_use(ctx: ParseCtx, scanner: TokenScanner) -> UseStatement:
         
 def analyze_named_or_plain_value(ctx: ParseCtx, scanner: TokenScanner) -> AttributeValueNode:
     t = scanner.peek()
-    match t.type:
-        case TokenType.IDENTIFIER | TokenType.STRING:
-            t2 = scanner.peek(1)
-            if t2 and t2.type == TokenType.EQ:
-                scanner.next()
-                scanner.next()
-                val = analyze_attribute_value(ctx, scanner)
-                # Make sure named attribute values can also have multiple values.
-                # This removes a level of nesting of attributes making it
-                # easier to traverse the line
-                return AttributeValueNode(val.value, name=Identifier(t.value))
-            else:
-                return analyze_attribute_value(ctx, scanner)
-        case _:
-            return analyze_attribute_value(ctx, scanner)
+    if can_be_identifier(t):
+        t2 = scanner.peek(1)
+        if t2 and t2.type == TokenType.EQ:
+            name = analyze_identifier(ctx, scanner)
+            scanner.next()
+            val = analyze_attribute_value(ctx, scanner)
+            # Make sure named attribute values can also have multiple values.
+            # This removes a level of nesting of attributes making it
+            # easier to traverse the line
+            return AttributeValueNode(val.value, name=name)
+        return analyze_attribute_value(ctx, scanner)
+
+    return analyze_attribute_value(ctx, scanner)
 
 
 def analyze_attribute_composite_value(ctx: ParseCtx, scanner: TokenScanner, delimiter: TokenType) -> AttributeValueNode:
@@ -642,4 +661,4 @@ def analyze(ctx: ParseCtx):
             case _:
                 raise SyntaxError(f"Unexpected token '{t}'", t)
 
-    return McdocFile(things)
+    return McdocFileNode(things)

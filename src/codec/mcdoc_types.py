@@ -119,6 +119,7 @@ class StructField:
     attributes: List[Attribute]
     name: Optional[str] = None
     key_type: Optional[McdocType] = None
+    spread: bool = False
     # attributes
 
     def get_name(self) -> str:
@@ -170,6 +171,7 @@ class EnumType(McdocType):
 class TypeAlias(McdocType):
     source: McdocType
     name: str
+    # TODO: Handle type params!
 
     def get_name(self) -> str:
         return self.name
@@ -185,7 +187,7 @@ class TupleType(McdocType):
 @dataclass
 class ListType(McdocType):
     elem_type: McdocType
-    size_range: Optional[Range] = None
+    size_range: Optional[Union[Range, int]] = None
 
     def __str__(self):
         return f"[{self.elem_type}]{f" @ {self.size_range}" if self.size_range else ''}"
@@ -196,7 +198,7 @@ class ListType(McdocType):
 @dataclass
 class ArrayType(McdocType):
     elem_type: BuiltinType
-    size_range: Optional[Range] = None
+    size_range: Optional[Union[Range, int]] = None
 
 @dataclass
 class TypeRef(McdocType):

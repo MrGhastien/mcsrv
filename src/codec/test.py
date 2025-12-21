@@ -2,9 +2,12 @@
 
 import sys
 from mcdoc_common import *
-from mcdoc_ast import analyze
+from mcdoc_ast import analyze, SyntaxError
 from mcdoc_ast_traversal import traverse
-from mcdoc_binding import bind_bind
+from mcdoc_binding import bind_file, McdocFile
+
+import argparse
+import os
 
 def lex_number(ctx: ParseCtx, input: Scanner):
     decimal_dot: bool = False
@@ -37,6 +40,12 @@ def lex_number(ctx: ParseCtx, input: Scanner):
         input.next_char()
 
     string: str = ctx.lexeme()
+    type_char = input.peek()
+    typed = TokenType.FLOAT if decimal_dot or exponent else TokenType.INTEGER
+    match type_char:
+        case 'b' | 'B' | 's' | 'S' | 'l' | 'L' | 'f' | 'F' | 'd' | 'D':
+         input.next_char()
+    
     try:
         if decimal_dot or exponent:
             ctx.add_generic_token(TokenType.FLOAT, float(string))
@@ -155,23 +164,52 @@ def lex_tokens(ctx: ParseCtx, input: Scanner):
         lex_token(ctx, input)
 
 
-def parse(filename: str):
+def parse(filename: str, fail_on_error: bool) -> McdocFile:
+    print(f"Parsing '{filename}'...")
 
     scanner = Scanner(filename)
     ctx = ParseCtx(scanner)
     lex_tokens(ctx, scanner)
 
-    prev_line = 1
-    for t in ctx.tokens:
-        if t.line > prev_line:
-            print()
-            prev_line = t.line
-        print(t, end=' ')
+    # prev_line = 1
+    # for t in ctx.tokens:
+    #     if t.line > prev_line:
+    #         print()
+    #         prev_line = t.line
+    #     print(t, end=' ')
 
-    print('')
-    tree = analyze(ctx)
-    traverse(tree)
-    bind_bind(tree)
+    # print('')
+    if fail_on_error:
+        tree = analyze(ctx)
+        #traverse(tree)
+        return bind_file(tree)
+
+    try:
+        tree = analyze(ctx)
+        #traverse(tree)
+        return bind_file(tree)
+    except SyntaxError as e:
+        print(f"Error while parsing '{filename}': {e}")
 
 
-parse(sys.argv[1])
+def main(args):
+    parsed_files = []
+    if os.path.isfile(args.directory):
+        parsed_files.append(parse(args.directory, not args.keep_going))
+    else:
+        for root, dirs, files in os.walk(args.directory):
+            for f in files:
+                if not f.endswith('.mcdoc'):
+                    continue
+                parsed_files.append(parse(os.path.join(root, f), not args.keep_going))
+    print(parsed_files)
+
+    
+if __name__ == '__main__':
+    arg_parser = argparse.ArgumentParser(
+        prog='Mcdoc codec generator'
+    )
+
+    arg_parser.add_argument('-k', '--keep-going', action='store_true', help='Continue even if a file raises parsing errors')
+    arg_parser.add_argument('directory')
+    main(arg_parser.parse_args())

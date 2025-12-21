@@ -19,7 +19,7 @@ def _traverse_internal(root: ASTNode, indent: int):
     typ = type(root)
     print(typ, end='')
     match root:
-        case McdocFile(things=things):
+        case McdocFileNode(things=things):
             for t in things:
                 _traverse_internal(t, indent + 1)
         case Identifier(name=name):
