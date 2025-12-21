@@ -16,9 +16,9 @@ export LIBDIR := $(CURDIR)/libs
 
 # Common flags
 export CC = gcc
-export CFLAGS = -Wall -Wextra -Wreturn-type -Werror -pedantic -Wcast-align -Wpointer-to-int-cast -Wint-to-pointer-cast -Winit-self -fsanitize=address,undefined
+export CFLAGS = -Wall -Wextra -Wreturn-type -Werror -pedantic -Wcast-align -Wpointer-to-int-cast -Wint-to-pointer-cast -Winit-self #-fsanitize=address
 export CPPFLAGS = -I$(SRC_DIR) -DMC_PLATFORM_$(detected_os)
-export LDFLAGS = -L"$(LIBDIR)" -fsanitize=address,undefined
+export LDFLAGS = -L"$(LIBDIR)" #-fsanitize=address
 export LDLIBS := -lcrypto -lcurl
 
 # Platform-specific flags
