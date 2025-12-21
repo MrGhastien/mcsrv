@@ -48,7 +48,7 @@ void event_system_init(void) {
     ctx.arena = arena_create(1L << 20, BLK_TAG_EVENT, INVALID_CHAIN);
 
     dict_init_fixed(
-        &ctx.event_registry, NULL, &ctx.arena, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
+        &ctx.event_registry, NULL, MAX_EVENT_COUNT, sizeof(u32), sizeof(EventEntry));
     ctx.queue = rqueue_create(MAX_TRIGGERED_EVENTS, sizeof(TriggeredEvent), &ctx.arena);
 
     mcmutex_create(&ctx.mutex);

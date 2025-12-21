@@ -21,8 +21,11 @@
 #ifndef DICT_H
 #define DICT_H
 
+#include "containers/vector.h"
 #include "definitions.h"
 #include "memory/allocators/arena.h"
+#include "memory/allocators/buddy.h"
+#include "memory/allocators/pool.h"
 #include "utils/hash.h"
 
 /**
@@ -39,11 +42,20 @@ struct node {
 
 typedef u64 (*hash_function)(const void* key);
 
+typedef struct entry {
+    u64 hash;
+    void* key;
+    void* value;
+} Entry;
+
 /**
  * Structure representing a dictionary.
  */
 typedef struct Dict {
-    void* base; /**< Memory region containing elements of the dictionnary. */
+    PoolAllocator values;
+    PoolAllocator keys;
+    BuddyAllocator entries;
+    Entry* base;
     const Comparator*
         comparator; /**< Comparison and hashing functions used to search and add key-value pairs. */
     u64 capacity;   /**< maximum number of elements that can be stored in the dict. */
@@ -78,7 +90,7 @@ void dict_init(Dict* map, const Comparator* cmp, u64 key_stride, u64 value_strid
  * @param value_stride The size in bytes of values.
  */
 void dict_init_fixed(
-    Dict* map, const Comparator* cmp, Arena* arena, u64 capacity, u64 key_stride, u64 value_stride);
+    Dict* map, const Comparator* cmp, u64 capacity, u64 key_stride, u64 value_stride);
 
 /**
  * Inserts a mapping between a key and a value inside a dictionary.

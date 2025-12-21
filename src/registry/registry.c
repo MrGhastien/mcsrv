@@ -105,7 +105,7 @@ static void register_game_elements(void) {
 void registry_system_init(void) {
     arena     = arena_create(REGISTRY_ARENA_SIZE, BLK_TAG_REGISTRY, INVALID_CHAIN);
     root.name = resid_default_cstr("root");
-    dict_init_fixed(&root.entries, &CMP_RESID, &arena, 64, sizeof(ResourceID), sizeof(Registry));
+    dict_init_fixed(&root.entries, &CMP_RESID, 64, sizeof(ResourceID), sizeof(Registry));
 
     log_debug("Registry subsystem initialized.");
 
