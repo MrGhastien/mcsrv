@@ -30,5 +30,9 @@ u64 cmp_hash(const Comparator* comparator, const void* data, u64 size) {
 u64 cmp_compare(const Comparator* comparator, const void* lhs, const void* rhs, u64 size) {
     if (!comparator)
         return default_cmp(lhs, rhs, size);
+    if (!lhs)
+        return rhs ? -1 : 0;
+    if (!rhs)
+        return 1;
     return comparator->comp(lhs, rhs);
 }
