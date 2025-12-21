@@ -36,10 +36,9 @@ static void add_node_to_free_list(PoolAllocator* pool, struct obj_node* node) {
     node->allocated = FALSE;
     if (!pool->head)
         pool->head = node;
-    if (pool->tail)
+    else if (pool->tail)
         pool->tail->next = node;
     pool->tail = node;
-    pool->size--;
 }
 
 static void prepare_block(PoolAllocator* pool, const memory_block block) {
@@ -128,7 +127,9 @@ static bool ensure_capacity(PoolAllocator* pool, u64 size) {
 
     prepare_block(pool, blk);
 
-    pool->capacity += block_capacity(blk);
+    i64 total_stride = pool->stride + NODE_HEADER_SIZE;
+
+    pool->capacity += block_capacity(blk) / total_stride;
     return TRUE;
 }
 

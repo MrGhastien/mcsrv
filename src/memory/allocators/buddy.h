@@ -10,13 +10,14 @@
 #define BUDDY_H
 
 #include "memory/_memory_internal.h"
+#include "memory/allocators/pool.h"
 
-struct BuddyBlock;
+typedef struct BuddyBlock BuddyBlock;
 
 typedef struct BuddyAllocator {
+    PoolAllocator metas;
     memory_chain chain;
-    struct BuddyBlock* head;
-    struct BuddyBlock* tail;
+    BuddyBlock* head;
 } BuddyAllocator;
 
 /**
