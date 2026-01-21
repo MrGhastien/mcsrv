@@ -27,8 +27,8 @@
  * - [in] `packet`: The received packet to handle.
  * - `bytes`: The connection trough which the packet was received.
  *
- * Handling functions return @ref TRUE when the packet was successfully handled,
- * @ref FALSE othwerwise.
+ * Handling functions return @ref true when the packet was successfully handled,
+ * @ref false othwerwise.
  *
  * @param name The name of the handler. Should be somewhat similar to the type of handled packets.
  */

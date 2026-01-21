@@ -9,46 +9,46 @@
 
 bool mcmutex_create(MCMutex* mutex) {
     pthread_mutex_init(mutex, NULL);
-    return TRUE;
+    return true;
 }
 
 bool mcmutex_destroy(MCMutex* mutex) {
     i32 res = pthread_mutex_destroy(mutex);
     if (res) {
         log_errorf("Failed to destroy mutex: %s.", strerror(res));
-        return FALSE;
+        return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 bool mcmutex_lock(MCMutex* mutex) {
     i32 res = pthread_mutex_lock(mutex);
     if (res) {
         log_errorf("Unable to aqcuire MutEx lock: %s.", strerror(res));
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 bool mcmutex_trylock(MCMutex* mutex) {
     i32 res = pthread_mutex_trylock(mutex);
     if (res == EBUSY)
-        return FALSE;
+        return false;
     if (res) {
         log_errorf("Unable to aqcuire MutEx lock: %s.", strerror(res));
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 bool mcmutex_unlock(MCMutex* mutex) {
     i32 res = pthread_mutex_unlock(mutex);
     if (res) {
         log_errorf("Failed to release MutEx lock: %s", strerror(res));
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 #endif

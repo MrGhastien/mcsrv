@@ -33,11 +33,11 @@ get_block_from_index(struct data_block* start, u64 index, u64* out_blk_local_ind
 
 static bool ensure_capacity(Vector* vector, u64 size) {
     if (size <= vector->capacity)
-        return TRUE;
+        return true;
 
     if (!vect_is_dynamic(vector)) {
         log_error("Cannot resize a static vector !");
-        return FALSE;
+        return false;
     }
 
     struct data_block* blk = alloc_data_block(
@@ -47,7 +47,7 @@ static bool ensure_capacity(Vector* vector, u64 size) {
     vector->end       = blk;
     vector->capacity += blk->capacity;
 
-    return TRUE;
+    return true;
 }
 
 static void register_addition(Vector* vector) {
@@ -171,17 +171,17 @@ bool vect_add(Vector* vector, const void* element) {
     u64 stride = vector->stride;
 
     if (!ensure_capacity(vector, vector->size + 1))
-        return FALSE;
+        return false;
 
     void* dst = offset(vector->current->data, vector->next_insert_index * stride);
     memcpy(dst, element, stride);
     register_addition(vector);
-    return TRUE;
+    return true;
 }
 bool vect_insert(Vector* vector, const void* element, u64 idx) {
 
     if (!ensure_capacity(vector, vector->size + 1))
-        return FALSE;
+        return false;
 
     u64 stride = vector->stride;
     u64 local_index;
@@ -192,7 +192,7 @@ bool vect_insert(Vector* vector, const void* element, u64 idx) {
     memcpy(target_addr, element, stride);
 
     register_addition(vector);
-    return TRUE;
+    return true;
 }
 
 void* vect_reserve(Vector* vector) {
@@ -209,7 +209,7 @@ void* vect_reserve(Vector* vector) {
 bool vect_remove(Vector* vector, u64 idx, void* out) {
     u64 size = vector->size;
     if (idx >= size)
-        return FALSE;
+        return false;
 
     u64 stride = vector->stride;
 
@@ -225,7 +225,7 @@ bool vect_remove(Vector* vector, u64 idx, void* out) {
 
     register_removal(vector);
 
-    return TRUE;
+    return true;
 }
 
 bool vect_pop(Vector* vector, void* out) {
@@ -237,7 +237,7 @@ bool vect_pop(Vector* vector, void* out) {
 
 bool vect_peek(const Vector* vector, void* out) {
     if (vect_size(vector) == 0)
-        return FALSE;
+        return false;
     u64 stride = vect_stride(vector);
     void* src;
     if (vector->next_insert_index == 0) {
@@ -248,7 +248,7 @@ bool vect_peek(const Vector* vector, void* out) {
 
     if (out)
         memcpy(out, src, stride);
-    return TRUE;
+    return true;
 }
 
 bool vect_get(const Vector* vector, u64 index, void* out) {

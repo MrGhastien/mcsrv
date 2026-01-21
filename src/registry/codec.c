@@ -92,7 +92,7 @@ int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena)
     enum JSONType json_type = json_get_type(json);
     if (json_type == JSON_INT) {
         return (IntOrProvider) {
-            .is_provider   = FALSE,
+            .is_provider   = false,
             .data.constant = json_get_int(json),
         };
     }
@@ -104,7 +104,7 @@ int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena)
     enum IntProviderType type = int_provider_parse_type(type_name, scratch_arena);
     if (type == INT_PROVIDER_INVALID) {
         return (IntOrProvider) {
-            .is_provider = TRUE,
+            .is_provider = true,
         };
     }
 
@@ -162,7 +162,7 @@ int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena)
         break;
     }
 
-    IntOrProvider ret = {.is_provider = TRUE, .data.provider = provider};
+    IntOrProvider ret = {.is_provider = true, .data.provider = provider};
 
     return ret;
 }

@@ -126,7 +126,7 @@ conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string
  * process where it was stopped.
  *
  * @param[in] conn The connection to check the reading process of.
- * @return @ref TRUE if the previous read was interrupted, @ref FALSE otherwise.
+ * @return @ref true if the previous read was interrupted, @ref false otherwise.
  */
 bool conn_is_resuming_read(const Connection* conn);
 
@@ -134,7 +134,7 @@ bool conn_is_resuming_read(const Connection* conn);
  * Indicates whether a connection is closed or open.
  *
  * @param[in] conn The connection to check.
- * @return @ref TRUE if the connection is closed, @ref FALSE otherwise.
+ * @return @ref true if the connection is closed, @ref false otherwise.
  */
 bool conn_is_closed(const Connection* conn);
 

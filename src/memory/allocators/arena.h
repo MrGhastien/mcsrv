@@ -133,7 +133,7 @@ void arena_free_ptr(Arena* arena, void* ptr);
  *
  * @param[in] a The first arena.
  * @param[in] b The second arena.
- * @return @ref TRUE if both arenas share the same memory block, @ref FALSE otherwise.
+ * @return @ref true if both arenas share the same memory block, @ref false otherwise.
  */
 static inline bool arena_is_mem_shared(const Arena* a, const Arena* b) {
     return a->chain == b->chain;

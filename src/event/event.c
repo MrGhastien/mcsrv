@@ -56,7 +56,7 @@ void event_system_init(void) {
 
     register_builtin_events();
 
-    ctx.running = TRUE;
+    ctx.running = true;
     log_debug("Event subsystem initialized.");
 }
 
@@ -146,7 +146,7 @@ void event_trigger(u32 event, EventInfo info) {
 }
 
 static bool process_event_queue(void) {
-    bool stop_event = FALSE;
+    bool stop_event = false;
     while (ctx.queue.length > 0) {
         const TriggeredEvent* e = rqueue_peek(&ctx.queue);
 
@@ -157,7 +157,7 @@ static bool process_event_queue(void) {
         }
 
         if (e->code == BEVENT_STOP)
-            stop_event = TRUE;
+            stop_event = true;
 
         EventEntry* entry = dict_ref(&ctx.event_registry, idx);
 

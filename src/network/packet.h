@@ -211,8 +211,8 @@ typedef struct {
     u8* pkey;              /**< Public key of the server. */
     i32 verify_tok_length; /**< Length of the verification token. */
     u8* verify_tok;        /**< Arbitrary bytes used to verify the protocol encryption. */
-    bool authenticate;     /**< @ref TRUE if the client should authenticate through MC servers,
-                          @ref FALSE otherwise.*/
+    bool authenticate;     /**< @ref true if the client should authenticate through MC servers,
+                          @ref false otherwise.*/
 } PacketCryptRequest;
 
 /**

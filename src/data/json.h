@@ -202,8 +202,8 @@ enum JSONStatus json_write_file(const JSON* json, const string* path);
  *
  * @param[in] json The JSON tree to save.
  * @param[in] multiplexer An IO multiplexer used to write to the output stream.
- * @param[in] network @ref TRUE if the JSON shall be serialized to be sent through the network, @ref
- * FALSE otherwise.
+ * @param[in] network @ref true if the JSON shall be serialized to be sent through the network, @ref
+ * false otherwise.
  */
 enum JSONStatus json_write(const JSON* json, IOMux multiplexer);
 
@@ -220,7 +220,7 @@ enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str);
  * @param[in] multiplexer An IO multiplexer used to read from the input stream.
  * @param[in] arena The arena used to allocate memory for the tree.
  * @param[out] out_json A pointer to an uninitialized JSON tree.
- * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
+ * @return @ref true if the parsing completed successfully, @ref false if an error occurred.
  */
 enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json);
 
@@ -233,7 +233,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json);
  * @param[in] path The path of the file to parse.
  * @param[in] arena The arena used to allocate memory for the tree.
  * @param[out] out_json A pointer to an uninitialized JSON tree.
- * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
+ * @return @ref true if the parsing completed successfully, @ref false if an error occurred.
  * @see json_parse()
  */
 enum JSONStatus json_from_file(string path, Arena* arena, JSON* out_json);

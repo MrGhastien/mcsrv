@@ -52,13 +52,6 @@ typedef int64_t i64;
 typedef float f32;
 typedef double f64;
 
-/** Basic boolean type. */
-typedef u8 bool;
-
-/** Boolean `false` constant. */
-#define FALSE (bool) 0
-/** Boolean `true` constant. */
-#define TRUE (bool) 1
 #define FAIL (size_t) -1
 
 #if defined __GNUC__ || defined __clang__
@@ -82,8 +75,6 @@ CHECK_TYPE_SIZE(i64, 8);
 
 CHECK_TYPE_SIZE(f32, 4);
 CHECK_TYPE_SIZE(f64, 8);
-
-CHECK_TYPE_SIZE(bool, 1);
 
 STATIC_ASSERT(sizeof(i32) <= sizeof(intptr_t), "Cannot store i32 in a intptr_t !");
 STATIC_ASSERT(sizeof(u32) <= sizeof(uintptr_t), "Cannot store u32 in a uintptr_t !");

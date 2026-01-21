@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 static MCThread thread;
-static bool running = FALSE;
+static bool running = false;
 
 static void* simulate(void* unused) {
     UNUSED(unused);
@@ -29,11 +29,11 @@ static void* simulate(void* unused) {
 }
 
 void sim_start(void) {
-    running = TRUE;
+    running = true;
     mcthread_create(&thread, &simulate, NULL);
 }
 
 void sim_stop(void) {
-    running = FALSE;
+    running = false;
     mcthread_join(&thread, NULL);
 }

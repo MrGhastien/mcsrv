@@ -36,7 +36,7 @@ bool rqueue_enqueue(RingQueue* queue, const void* value) {
     u32 end    = queue->end;
     if (length == queue->capacity) {
         log_fatal("Attempt to enqueue something to a full ring queue.");
-        return FALSE;
+        return false;
     }
 
     void* dest = offset(queue->block, queue->stride * end);
@@ -46,7 +46,7 @@ bool rqueue_enqueue(RingQueue* queue, const void* value) {
 
     queue->length = length + 1;
 
-    return TRUE;
+    return true;
 }
 
 bool rqueue_dequeue(RingQueue* queue, void* out_value) {
@@ -54,7 +54,7 @@ bool rqueue_dequeue(RingQueue* queue, void* out_value) {
     u32 start  = queue->start;
     if (queue->length == 0) {
         log_warn("Attempt to dequeue an empty ring queue.");
-        return FALSE;
+        return false;
     }
 
     if (out_value) {
@@ -64,7 +64,7 @@ bool rqueue_dequeue(RingQueue* queue, void* out_value) {
     queue->start  = (start + 1) % queue->capacity;
     queue->length = length - 1;
 
-    return TRUE;
+    return true;
 }
 
 const void* rqueue_peek(const RingQueue* queue) {

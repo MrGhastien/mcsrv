@@ -9,12 +9,12 @@
 
 bool mcvar_create(MCCondVar* cond_var) {
     InitializeConditionVariable(cond_var);
-    return TRUE;
+    return true;
 }
 bool mcvar_destroy(MCCondVar* cond_var) {
     UNUSED(cond_var);
     // No Win32 function to destroy condition variables ??
-    return TRUE;
+    return true;
 }
 
 void mcvar_wait(MCCondVar* cond_var, MCMutex* mutex) {

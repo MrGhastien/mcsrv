@@ -28,7 +28,7 @@ void dict_init_fixed(Dict* map,
     map->value_stride = value_stride;
     map->capacity     = capacity;
     map->size         = 0;
-    map->fixed        = TRUE;
+    map->fixed        = true;
 }
 
 void dict_init(Dict* map, const Comparator* cmp, u64 key_stride, u64 value_stride) {
@@ -38,7 +38,7 @@ void dict_init(Dict* map, const Comparator* cmp, u64 key_stride, u64 value_strid
     map->value_stride = value_stride;
     map->capacity     = DEFAULT_CAP;
     map->size         = 0;
-    map->fixed        = FALSE;
+    map->fixed        = false;
 }
 
 void dict_destroy(Dict* map) {

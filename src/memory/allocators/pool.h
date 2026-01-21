@@ -92,7 +92,7 @@ bool pool_free(PoolAllocator* pool, void* ptr);
  * @param[inout] pool The pool to remove an element from.
  * @param[in] idx The index of the element to remove, as returned when adding the element with @ref
  * pool_add.
- * @return @ref TRUE if the element exists and has been removed, @ref FALSE otherwise.
+ * @return @ref true if the element exists and has been removed, @ref false otherwise.
  */
 bool pool_free_idx(PoolAllocator* pool, i64 idx);
 

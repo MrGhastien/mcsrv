@@ -37,7 +37,7 @@ typedef struct {
  * it in DER format.
  *
  * @param[out] ctx The context structure to initialize.
- * @return @ref TRUE if the encryption context was initialized successfully, or @ref FALSE if
+ * @return @ref true if the encryption context was initialized successfully, or @ref false if
  * errors occurred.
  */
 bool encryption_init(EncryptionContext* ctx);
@@ -80,7 +80,7 @@ u8* encryption_decrypt(EncryptionContext* ctx, Arena* arena, u64* out_size, u8* 
  * @param ctx The encryption context to initialize. Must be non-null.
  * @param arena The arena used to allocate the shared secret buffer.
  * @param[in] shared_secret A buffer containing the shared secret to use as the ciphers' key.
- * @return @ref TRUE if initialization is successful, @ref FALSE otherwise.
+ * @return @ref true if initialization is successful, @ref false otherwise.
  */
 bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_secret);
 /**

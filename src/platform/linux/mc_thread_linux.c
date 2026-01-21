@@ -40,18 +40,18 @@ bool mcthread_create_attachment(MCThreadKey* out_key) {
     i32 res = pthread_key_create(out_key, NULL);
     if (res) {
         log_fatalf("Failed to create thread attachment: %s.", strerror(res));
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 bool mcthread_delete_attachment(MCThreadKey key) {
     i32 res = pthread_key_delete(key);
     if (res) {
         log_fatalf("Failed to destroy thread attachment: %s.", strerror(res));
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 void mcthread_attach_data(MCThreadKey key, void* data) {
@@ -78,15 +78,15 @@ bool mcthread_join(MCThread* thread, void** out_return) {
     switch (res) {
     case EDEADLK:
         log_error("Unable to join thread: A deadlock has been detected.");
-        return FALSE;
+        return false;
     case ESRCH:
         log_error("Could not join an unknown thread.");
-        return FALSE;
+        return false;
     case EINVAL:
         log_error("Unable to join thread: the thread is already joining or is not joinable.");
-        return FALSE;
+        return false;
     default:
-        return TRUE;
+        return true;
     }
 }
 

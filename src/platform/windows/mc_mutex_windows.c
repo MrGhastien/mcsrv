@@ -12,20 +12,20 @@
 
 bool mcmutex_create(MCMutex* mutex) {
     if (!mutex)
-        return FALSE;
+        return false;
 
     InitializeCriticalSection(mutex);
 
-    return TRUE;
+    return true;
 }
 bool mcmutex_destroy(MCMutex* mutex) {
     DeleteCriticalSection(mutex);
-    return TRUE;
+    return true;
 }
 
 bool mcmutex_lock(MCMutex* mutex) {
     EnterCriticalSection(mutex);
-    return TRUE;
+    return true;
 }
 
 bool mcmutex_trylock(MCMutex* mutex) {
@@ -34,7 +34,7 @@ bool mcmutex_trylock(MCMutex* mutex) {
 }
 bool mcmutex_unlock(MCMutex* mutex) {
     LeaveCriticalSection(mutex);
-    return TRUE;
+    return true;
 }
 
 #endif

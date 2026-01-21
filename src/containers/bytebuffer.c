@@ -62,13 +62,13 @@ static bool peek_byte(const ByteBuffer* buffer, u64 index, u8* out_byte) {
     if (buffer->size == 0)
         return 0;
     if (index >= buffer->size)
-        return FALSE;
+        return false;
 
     if (out_byte)
         *out_byte =
             *(u8*) offsetu(buffer->buf, is_fixed(buffer) ? buffer->read_head + index : index);
 
-    return TRUE;
+    return true;
 }
 
 static void write_at_position(ByteBuffer* buffer, const void* data, i64 position, u64 size) {
@@ -373,7 +373,7 @@ i64 bytebuf_read_varint(ByteBuffer* buffer, i32* out) {
     u64 position = 0;
     i64 i        = 0;
     u8 byte;
-    while (TRUE) {
+    while (true) {
         if (!peek_byte(buffer, i, &byte)) {
             return 0;
         }
@@ -413,13 +413,13 @@ u64 bytebuf_get_read_regions(const ByteBuffer* buffer,
                              BufferRegion* out_regions,
                              u64* out_count,
                              i64 start_offset) {
-    return get_regions(buffer, out_regions, out_count, FALSE, start_offset);
+    return get_regions(buffer, out_regions, out_count, false, start_offset);
 }
 u64 bytebuf_get_write_regions(const ByteBuffer* buffer,
                               BufferRegion* out_regions,
                               u64* out_count,
                               i64 start_offset) {
-    return get_regions(buffer, out_regions, out_count, TRUE, start_offset);
+    return get_regions(buffer, out_regions, out_count, true, start_offset);
 }
 
 void bytebuf_unwrite(ByteBuffer* buffer, u64 size) {

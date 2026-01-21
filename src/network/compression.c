@@ -41,16 +41,16 @@ bool compression_init(CompressionContext* ctx, Arena* arena) {
     if (code != Z_OK) {
         log_errorf("ZLib: %s.", ctx->deflate_stream.msg);
         log_error("Failed to initialize the compression context.");
-        return FALSE;
+        return false;
     }
     code = inflateInit(&ctx->inflate_stream);
     if (code != Z_OK) {
         log_errorf("ZLib: %s.", ctx->inflate_stream.msg);
         log_error("Failed to initialize the decompression context.");
-        return FALSE;
+        return false;
     }
     ctx->threshold = COMPRESS_THRESHOLD;
-    return TRUE;
+    return true;
 }
 
 void compression_cleanup(CompressionContext* ctx) {

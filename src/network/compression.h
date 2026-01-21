@@ -40,7 +40,7 @@ typedef struct {
  *
  * @param[out] ctx The compression context to initialize.
  * @param[in] arena The arena to use as a memory allocator for ZLib.
- * @return @ref TRUE if the context was initialized successfully, @ref FALSE otherwise.
+ * @return @ref true if the context was initialized successfully, @ref false otherwise.
  */
 bool compression_init(CompressionContext* ctx, Arena* arena);
 /**

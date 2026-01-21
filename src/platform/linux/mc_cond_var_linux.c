@@ -8,7 +8,7 @@
 
 bool mcvar_create(MCCondVar* cond_var) {
     pthread_cond_init(cond_var, NULL);
-    return TRUE;
+    return true;
 }
 
 bool mcvar_destroy(MCCondVar* cond_var) {
@@ -17,9 +17,9 @@ bool mcvar_destroy(MCCondVar* cond_var) {
     case EBUSY:
         log_error(
             "Could not destroy condition variable, other threads are currently waiting on it.");
-        return FALSE;
+        return false;
     default:
-        return TRUE;
+        return true;
     }
 }
 

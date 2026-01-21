@@ -24,7 +24,7 @@ void _buddy_init(BuddyAllocator* alloc, u64 size, enum MemoryChainTag tag, const
     memory_block blk        = alloc_block(size, alloc->chain, MEM_ADVICE_RANDOM);
     alloc->head             = block_memory(blk);
     alloc->head->power_size = u64_log2(size) - MIN_BLOCK_SIZE;
-    alloc->head->free       = TRUE;
+    alloc->head->free       = true;
     alloc->tail             = buddy_block_next(alloc->head);
 }
 void buddy_destroy(BuddyAllocator* alloc) {
@@ -41,7 +41,7 @@ static BuddyBlock* block_split(BuddyBlock* block, u64 requested_size) {
         block->power_size = split_size;
         BuddyBlock* next  = buddy_block_next(block);
         next->power_size  = split_size;
-        next->free        = TRUE;
+        next->free        = true;
     }
 
     return block;
@@ -83,7 +83,7 @@ void* buddy_alloc(BuddyAllocator* alloc, u64 size) {
 
 void buddy_free(BuddyAllocator* alloc, void* ptr) {
     BuddyBlock* blk = offset(ptr, -sizeof(BuddyBlock));
-    blk->free       = TRUE;
+    blk->free       = true;
 
     block_merge(alloc, blk);
 }

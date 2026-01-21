@@ -40,11 +40,11 @@ static bool write_nbt(const NBT* nbt, ByteBuffer* buffer) {
     IOMux iomux = iomux_wrap_buffer(buffer);
     if (iomux == -1) {
         log_error("Failed to write packet NBT.");
-        return FALSE;
+        return false;
     }
-    nbt_write(nbt, iomux, TRUE);
+    nbt_write(nbt, iomux, true);
     iomux_close(iomux);
-    return TRUE;
+    return true;
 }
 
 /*
@@ -58,7 +58,7 @@ static bool write_vec3i(const Vec3i* v, ByteBuffer* buffer) {
     u64 encoded = ((v->x & 0x3ffffff) << 38) | ((v->z & 0x3ffffff) << 12) | (v->y & 0xfff);
     encoded = uhton64(encoded);
     bytebuf_write(buffer, &encoded, sizeof encoded);
-    return TRUE;
+    return true;
 }
 
 DEF_PKT_ENCODER(dummy) {
@@ -167,7 +167,7 @@ DEF_PKT_ENCODER(cfg_registry_data) {
                            get_last_error());
                 return;
             }
-            if (nbt_write(&entry->data, iomux, TRUE) != NBTE_OK) {
+            if (nbt_write(&entry->data, iomux, true) != NBTE_OK) {
                 log_errorf("Failed to encode packet: Unable to serialize NBT: %s",
                            iomux_error(iomux, NULL));
                 return;
@@ -221,7 +221,7 @@ DEF_PKT_ENCODER(cfg_disconnect) {
         log_error("Failed to write packet NBT.");
         return;
     }
-    nbt_write(&payload->reason, iomux, TRUE);
+    nbt_write(&payload->reason, iomux, true);
     iomux_close(iomux);
 }
 

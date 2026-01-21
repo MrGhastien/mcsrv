@@ -90,7 +90,7 @@ static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* ou
     if (ioc != IOC_OK)
         return ioc;
 
-    log_debugf("Packet IN: %s", get_pkt_name(out_pkt, conn, FALSE));
+    log_debugf("Packet IN: %s", get_pkt_name(out_pkt, conn, false));
 
     pkt_decoder decoder = get_pkt_decoder(out_pkt, conn);
     if (!decoder) {
@@ -116,7 +116,7 @@ static enum IOCode decode_packet(ByteBuffer* bytes, Connection* conn, Packet* ou
 static bool handle_packet(const Packet* pkt, Connection* conn) {
     pkt_acceptor handler = get_pkt_handler(pkt, conn);
     if (!handler)
-        return FALSE;
+        return false;
     return handler(pkt, conn);
 }
 

@@ -65,7 +65,7 @@ static bool sockaddr_from_acceptex(void* acceptex_buffer, SocketAddress* out_add
     out_address->length = peer_len;
     memcpy(&out_address->data.storage, peer, peer_len);
 
-    return TRUE;
+    return true;
 }
 void sockaddr_init(SocketAddress* addr, u16 family) {
     memset(&addr->data, 0, sizeof(addr->data));
@@ -89,13 +89,13 @@ bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
     i32 res = getaddrinfo(host, port_str, NULL, &info);
     if (res != 0) {
         log_error("Could not parse server address.");
-        return FALSE;
+        return false;
     }
 
     memcpy(&addr->data.storage, info->ai_addr, info->ai_addrlen);
     addr->length = info->ai_addrlen;
 
-    return TRUE;
+    return true;
 }
 string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
     char host[NI_MAXHOST];
@@ -198,10 +198,10 @@ bool sock_get_peer_address(socketfd socket, SocketAddress* out_address) {
 
     int buf_size = sizeof(out_address->data.storage);
     if (getpeername(socket, &out_address->data.sa, &buf_size) != 0)
-        return FALSE;
+        return false;
 
     out_address->length = buf_size;
-    return TRUE;
+    return true;
 }
 void sock_close(socketfd socket) {
     closesocket(socket);
@@ -325,7 +325,7 @@ enum IOCode fill_buffer(Connection* conn) {
         if (code < res)
             res = code;
         if (code == IOC_PENDING)
-            conn->pending_recv = TRUE;
+            conn->pending_recv = true;
     }
 
     return res;
@@ -343,7 +343,7 @@ enum IOCode empty_buffer(Connection* conn) {
         if (code < res)
             res = code;
         if (code == IOC_PENDING)
-            conn->pending_send = TRUE;
+            conn->pending_send = true;
     }
     return res;
 }
@@ -368,14 +368,14 @@ handle_connection_io(Connection* conn, WSAOVERLAPPED* overlapped, u64 transferre
     // Resume processing the data
     if (overlapped == &pconn->read_overlapped && conn->pending_recv) {
         // READ complete
-        conn->pending_recv = FALSE;
+        conn->pending_recv = false;
         bytebuf_register_write(&conn->recv_buffer, transferred);
 
         code = initiate_read(conn);
 
     } else if (overlapped == &pconn->write_overlapped && conn->pending_send) {
         // WRITE complete
-        conn->pending_send = FALSE;
+        conn->pending_send = false;
         bytebuf_register_read(&conn->send_buffer, transferred);
 
         code = empty_buffer(conn);
@@ -411,7 +411,7 @@ static void handle_completion(NetworkContext* ctx, CompletionInfo* info, bool su
             log_errorf("Failed to accept connection: %s", get_last_error());
         break;
     case COMPL_KEY_STOP:
-        ctx->should_continue = FALSE;
+        ctx->should_continue = false;
         break;
     default:
         Connection* conn = (Connection*) info->key;
@@ -451,7 +451,7 @@ void* network_handle(void* params) {
                     network_clean_connections(ctx);
             } else {
                 log_fatalf("Error in network event loop: %s", get_error_from_code(code));
-                ctx->should_continue = FALSE;
+                ctx->should_continue = false;
                 event_trigger(BEVENT_STOP, (EventInfo) {.sender = NULL});
             }
         }

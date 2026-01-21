@@ -32,21 +32,21 @@ bool encryption_init(EncryptionContext* ctx) {
     EVP_PKEY_CTX* keygen_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
     if (!keygen_ctx) {
         log_fatal("Failed to create the RSA key context.");
-        return FALSE;
+        return false;
     }
 
     if (EVP_PKEY_keygen_init(keygen_ctx) <= 0) {
         log_fatal("Failed to initialize the RSA key context for key generation.");
-        return FALSE;
+        return false;
     }
     if (EVP_PKEY_CTX_set_rsa_keygen_bits(keygen_ctx, 1024) <= 0) {
         log_fatal("Failed to set the RSA key length to 1024 bits.");
-        return FALSE;
+        return false;
     }
 
     if (EVP_PKEY_keygen(keygen_ctx, &ctx->key_pair) <= 0) {
         log_fatal("Failed to generate the RSA key pair.");
-        return FALSE;
+        return false;
     }
 
     OSSL_ENCODER_CTX* encoder_ctx = OSSL_ENCODER_CTX_new_for_pkey(
@@ -58,12 +58,12 @@ bool encryption_init(EncryptionContext* ctx) {
 
     if (!encoder_ctx) {
         log_fatal("Could not create an OpenSSL encoder context: No suitable encoder found.");
-        return FALSE;
+        return false;
     }
 
     if (OSSL_ENCODER_to_data(encoder_ctx, &ctx->encoded_key, &ctx->encoded_key_size) <= 0) {
         log_fatal("Could not encode the generated RSA key pair to DER.");
-        return FALSE;
+        return false;
     }
 
     EVP_PKEY_CTX_free(keygen_ctx);
@@ -71,18 +71,18 @@ bool encryption_init(EncryptionContext* ctx) {
 
     ctx->key_ctx = EVP_PKEY_CTX_new(ctx->key_pair, NULL);
     if (!ctx->key_ctx) {
-        return FALSE;
+        return false;
     }
 
     if (EVP_PKEY_decrypt_init(ctx->key_ctx) <= 0) {
-        return FALSE;
+        return false;
     }
 
     if (EVP_PKEY_CTX_set_rsa_padding(ctx->key_ctx, RSA_PKCS1_PADDING) <= 0) {
-        return FALSE;
+        return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 void encryption_cleanup(EncryptionContext* ctx) {
@@ -123,11 +123,11 @@ bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_s
         0) {
         encryption_get_errors();
         log_error("Failed to initialize symmetric encryption context.");
-        return FALSE;
+        return false;
     }
     if (EVP_CIPHER_CTX_set_key_length(ctx->cipher_ctx, 16) <= 0) {
         encryption_get_errors();
-        return FALSE;
+        return false;
     }
 
     if (EVP_DecryptInit_ex(
@@ -135,14 +135,14 @@ bool encryption_init_peer(PeerEncryptionContext* ctx, Arena* arena, u8* shared_s
         0) {
         encryption_get_errors();
         log_error("Failed to initialize symmetric decryption context.");
-        return FALSE;
+        return false;
     }
     if (EVP_CIPHER_CTX_set_key_length(ctx->decipher_ctx, 16) <= 0) {
         encryption_get_errors();
-        return FALSE;
+        return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 void encryption_cleanup_peer(PeerEncryptionContext* ctx) {
@@ -162,7 +162,7 @@ bool encryption_cipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 offse
         if (!EVP_EncryptUpdate(ctx->cipher_ctx, reg->start, &reg_new_size, reg->start, reg->size)) {
             encryption_get_errors();
             log_error("Could not encrypt data.");
-            return FALSE;
+            return false;
         }
         if ((u64) reg_new_size != reg->size) {
             log_fatalf("Encryption buffer size mismatch: %zu -> %i", reg->size, reg_new_size);
@@ -170,7 +170,7 @@ bool encryption_cipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 offse
         }
     }
 
-    return TRUE;
+    return true;
 }
 
 bool encryption_decipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 offset) {
@@ -186,7 +186,7 @@ bool encryption_decipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 off
                 ctx->decipher_ctx, reg->start, &reg_new_size, reg->start, reg->size)) {
             encryption_get_errors();
             log_error("Could not decrypt data.");
-            return FALSE;
+            return false;
         }
         if ((u64) reg_new_size != reg->size) {
             log_fatalf("Encryption buffer size mismatch: %zu -> %i", reg->size, reg_new_size);
@@ -194,7 +194,7 @@ bool encryption_decipher(PeerEncryptionContext* ctx, ByteBuffer* buffer, u64 off
         }
     }
 
-    return TRUE;
+    return true;
 }
 
 static void hash_to_string(u8* hash, u32 hash_size, Arena* arena, string* out) {
@@ -279,7 +279,7 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
     CURL* curl = curl_easy_init();
     if (!curl) {
         log_error("Failed to initialize libcurl.");
-        return FALSE;
+        return false;
     }
 
     ByteBuffer buffer = bytebuf_create_fixed(8192, &conn->scratch_arena);
@@ -312,14 +312,14 @@ bool encryption_authenticate_player(Connection* conn, JSON* json) {
 
     if (res_code != 200) {
         log_errorf("Failed request to sessionserver.mojang.com: %li", res_code);
-        return FALSE;
+        return false;
     }
 
     bytebuf_write_varint(&buffer, 0);
 
     IOMux mux = iomux_wrap_buffer(&buffer);
     if (json_parse(mux, &conn->scratch_arena, json) != JSONE_OK)
-        return FALSE;
+        return false;
 
 #ifdef TRACE
     string str;

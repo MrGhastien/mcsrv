@@ -32,18 +32,18 @@ static i32 init(char* host, i32 port, u64 max_connections) {
 
     if (code != 0) {
         log_fatal("Failed to initialize the server.");
-        server_ctx.running = FALSE;
+        server_ctx.running = false;
         return code;
     }
 
     sim_start();
-    server_ctx.running = TRUE;
+    server_ctx.running = true;
 
     return code;
 }
 
 static void cleanup(void) {
-    server_ctx.running = FALSE;
+    server_ctx.running = false;
 
     sim_stop();
 

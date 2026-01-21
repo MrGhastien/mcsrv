@@ -81,8 +81,8 @@ void logger_system_init(void) {
     mcthread_create(&ctx.thread, &logger_handle, NULL);
     mcvar_create(&ctx.cond_var);
 
-    ctx.had_messages = FALSE;
-    ctx.running      = TRUE;
+    ctx.had_messages = false;
+    ctx.running      = true;
 }
 
 static RingQueue* get_entry_queue(void) {
@@ -134,13 +134,13 @@ static void* logger_handle(void* param) {
     while (ctx.running) {
         if (!ctx.had_messages)
             mcvar_wait(&ctx.cond_var, &mutex);
-        while (TRUE) {
+        while (true) {
             RingQueue* queue = get_entry_queue();
             if (!queue)
                 break;
             flush_entry(queue);
         }
-        ctx.had_messages = FALSE;
+        ctx.had_messages = false;
     }
     mcmutex_unlock(&mutex);
     mcmutex_destroy(&mutex);
@@ -148,7 +148,7 @@ static void* logger_handle(void* param) {
 }
 
 void logger_system_cleanup(void) {
-    ctx.running = FALSE;
+    ctx.running = false;
     mcvar_broadcast(&ctx.cond_var);
     mcthread_join(&ctx.thread, NULL);
     arena_destroy(&ctx.arena);
@@ -169,7 +169,7 @@ static void add_log_entry(enum LogLevel lvl, ByteBuffer* buffer) {
     };
 
     rqueue_enqueue(q, &e);
-    ctx.had_messages = TRUE;
+    ctx.had_messages = true;
     mcvar_signal(&ctx.cond_var);
 }
 

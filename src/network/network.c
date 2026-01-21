@@ -75,7 +75,7 @@ i32 network_init(char* host, i32 port, u64 max_connections) {
     if (!encryption_init(&ctx.enc_ctx))
         return 3;
 
-    ctx.should_continue = TRUE;
+    ctx.should_continue = true;
     log_debug("Network subsystem initialized.");
 
     mcthread_create(&ctx.thread, &network_handle, &ctx);

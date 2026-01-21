@@ -59,7 +59,7 @@ void vect_clear(Vector* vector);
  * @param[inout] vector The vector to add an element to.
  * @param[in] element A pointer to the element to add. There must be at least as much bytes readable
  * as the stride passed to the @ref vect_init call.
- * @return @ref TRUE if the element was successfully added to the vector, @ref FALSE otherwise.
+ * @return @ref true if the element was successfully added to the vector, @ref false otherwise.
  */
 bool vect_add(Vector* vector, const void* element);
 /**
@@ -71,7 +71,7 @@ bool vect_add(Vector* vector, const void* element);
  * @param[in] element A pointer to the element to insert. There must be at least as many bytes
  * readable as the stride passed to the @ref vect_init call.
  * @param[in] idx The index in the vector at which to insert the element.
- * @return @ref TRUE if the insertion is successful, @ref FALSE otherwise.
+ * @return @ref true if the insertion is successful, @ref false otherwise.
  */
 bool vect_insert(Vector* vector, const void* element, u64 idx);
 
@@ -91,7 +91,7 @@ void* vect_reserve(Vector* vector);
  * @param[inout] vector The vector to remove an element from.
  * @param[in] idx The index inside the vector at which to remove the element.
  * @param[out] out The removed element is copied at this location. Can be `NULL`.
- * @return @ref TRUE if the element was successfully removed, @ref FALSE otherwise.
+ * @return @ref true if the element was successfully removed, @ref false otherwise.
  */
 bool vect_remove(Vector* vector, u64 idx, void* out);
 /**
@@ -108,7 +108,7 @@ bool vect_remove(Vector* vector, u64 idx, void* out);
  *
  * @param[inout] vector The vector to remove an element from.
  * @paran[out] out The removed element is copied at this location. Can be `NULL`.
- * @return @ref TRUE if the element was successfully removed, @ref FALSE otherwise.
+ * @return @ref true if the element was successfully removed, @ref false otherwise.
  */
 bool vect_pop(Vector* vector, void* out);
 
@@ -119,7 +119,7 @@ bool vect_pop(Vector* vector, void* out);
  *
  * @param[inout] vector The vector to query.
  * @param[out] out A pointer to a memory region where the queried element will be copied.
- * @return @ref TRUE if the last element was successfully retrieved, @ref FALSE otherwise.
+ * @return @ref true if the last element was successfully retrieved, @ref false otherwise.
  */
 bool vect_peek(const Vector* vector, void* out);
 /**
@@ -128,7 +128,7 @@ bool vect_peek(const Vector* vector, void* out);
  * @param[inout] vector The vector to query.
  * @param[in] index The index inside a vector of the element to retrieve.
  * @param[out] out A pointer to a memory region where the queried element will be copied.
- * @return @ref TRUE if the element was successfully retrieved, @ref FALSE otherwise.
+ * @return @ref true if the element was successfully retrieved, @ref false otherwise.
  */
 bool vect_get(const Vector* vector, u64 index, void* out);
 /**

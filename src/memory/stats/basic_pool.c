@@ -43,7 +43,7 @@ void basic_pool_init(struct basic_pool* pool, u32 capacity, enum PoolNodeType ty
     for (u64 i = 0; i < cap64; i++) {
         struct node* n = &pool->blocks[i];
         n->data.next   = i + 1;
-        n->allocated   = FALSE;
+        n->allocated   = false;
     }
     pool->head                        = &pool->blocks[0];
     pool->tail                        = &pool->blocks[cap64 - 1];
@@ -70,7 +70,7 @@ static void grow(struct basic_pool* pool) {
     for (i64 i = pool->capacity; i < new_cap - 1; i++) {
         struct node* n = &new_array[i];
         n->data.next   = i + 1;
-        n->allocated   = FALSE;
+        n->allocated   = false;
     }
     new_array[new_cap - 1].data.next = -1;
 
@@ -95,7 +95,7 @@ void* basic_pool_alloc(struct basic_pool* pool, i32* out_idx) {
     } else
         pool->head = &pool->blocks[next];
 
-    target->allocated = TRUE;
+    target->allocated = true;
     switch (pool->type) {
     case POOL_BLOCK:
         target->data.block = (struct memory_block) {0};
@@ -125,7 +125,7 @@ void basic_pool_free(struct basic_pool* pool, void* ptr) {
     platform_assert(index < pool->capacity && index >= 0,
                     "Index of node to free is out of bounds !");
 
-    node->allocated = FALSE;
+    node->allocated = false;
     node->data.next = -1;
     if (pool->tail)
         pool->tail->data.next = index;

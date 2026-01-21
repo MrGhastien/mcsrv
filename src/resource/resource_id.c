@@ -37,13 +37,13 @@ ResourceID resid_create(const string* namespace, const string* path, Arena* aren
 bool resid_parse(const string* id, Arena* arena, ResourceID* out_parsed) {
     i64 idx = str_find_char(id, ':');
     if (idx == -1)
-        return FALSE;
+        return false;
 
     *out_parsed = (ResourceID) {
         .namespace = str_copy_substring(id, 0, idx, arena),
         .path      = str_copy_substring(id, idx + 1, -1, arena),
     };
-    return TRUE;
+    return true;
 }
 
 ResourceID resid_default(const string* path, Arena* arena) {
@@ -75,7 +75,7 @@ bool resid_is_cstr(const ResourceID* id, const char* name) {
     string name_view = str_view(name);
     i64 idx          = str_find_char(&name_view, ':');
     if (idx == -1)
-        return FALSE;
+        return false;
 
     string namespace = str_substring(&name_view, 0, idx);
     string path      = str_substring(&name_view, idx + 1, -1);

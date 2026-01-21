@@ -48,7 +48,7 @@ static i64 get_elem(const Dict* map, const void* key, struct node* out_node) {
         if (n.hash != 0)
             count++;
         if (count == map->size)
-            return FALSE;
+            return false;
         idx = idx_iter(map->capacity, idx);
         n   = get_node(map, idx);
     }
@@ -64,7 +64,7 @@ static void rehash_nodes(Dict* map, void* old_base, void* new_base, u64 new_capa
             continue;
 
         u64 ni = n.hash % new_capacity;
-        while (TRUE) {
+        while (true) {
             struct node new = get_node_base(map, i, new_base, new_capacity);
             if (new.hash == 0) {
                 memcpy(new.hashp, n.hashp, total_stride);

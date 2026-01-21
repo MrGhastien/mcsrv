@@ -18,7 +18,7 @@
  * @param ctx Context information of the network sub-system.
  * @param[in] pkt The packet to handle.
  * @param[in] conn The connection the packet was received on.
- * @return @ref TRUE if the packet was handled successfully, @ref FALSE otherwise.
+ * @return @ref true if the packet was handled successfully, @ref false otherwise.
  */
 typedef bool (*pkt_acceptor)(const Packet* pkt, Connection* conn);
 /**
@@ -85,7 +85,7 @@ pkt_encoder get_pkt_encoder(const Packet* pkt, Connection* conn);
  *
  * @param[in] pkt The packet.
  * @param[in] conn The connection.
- * @param[in] clientbound @ref TRUE if the client-bound name should be returned, @ref FALSE if the
+ * @param[in] clientbound @ref true if the client-bound name should be returned, @ref false if the
  *                        server-bound name should be taken.
  * @return The name of the packet's type, or NULL if no name was registered
  * for this packet - connection combination.

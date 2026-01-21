@@ -154,10 +154,10 @@ bool registry_create(ResourceID name, u64 stride) {
     i64 idx = dict_put(&root.entries, &name, &reg);
     if (idx < 0) {
         log_errorf("Failed to create registry " RESID_FORMAT ".", RESID_UNWRAP(name));
-        return FALSE;
+        return false;
     }
     log_debugf("Successfully created registry " RESID_FORMAT ".", RESID_UNWRAP(name));
-    return TRUE;
+    return true;
 }
 
 void registry_register(ResourceID registry_name, ResourceID id, void* instance) {
@@ -230,7 +230,7 @@ void registry_tag_add(ResourceID registry_name, i64 tag_idx, ResourceID object_n
     if (!tag_contents)
         platform_abort();
 
-    TagElement elem = {.name = object_name, .is_tag = FALSE};
+    TagElement elem = {.name = object_name, .is_tag = false};
     vect_add(tag_contents, &elem);
 }
 void registry_tag_inherit(ResourceID registry_name, i64 tag_idx, ResourceID inherit_tag_name) {
@@ -242,7 +242,7 @@ void registry_tag_inherit(ResourceID registry_name, i64 tag_idx, ResourceID inhe
     if (!tag_contents)
         platform_abort();
 
-    TagElement elem = {.name = inherit_tag_name, .is_tag = TRUE};
+    TagElement elem = {.name = inherit_tag_name, .is_tag = true};
     vect_add(tag_contents, &elem);
 }
 
@@ -254,9 +254,9 @@ bool registry_is_in_tag(ResourceID registry_name, i64 tag_idx, ResourceID object
     for (i64 i = 0; i < vect_size(tag_contents); i++) {
         TagElement* elem_ref = vect_ref(tag_contents, i);
         if (!elem_ref->is_tag && resid_is(&elem_ref->name, &object_name))
-            return TRUE;
+            return true;
     }
-    return FALSE;
+    return false;
 }
 
 struct reg_wrapper_data {

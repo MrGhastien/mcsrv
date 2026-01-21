@@ -28,9 +28,9 @@ static bool validate_property_name(const string* name) {
             continue;
         if (c == '_')
             continue;
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 i64 register_bool_state_property(string name) {
     i64 index = -1;
@@ -72,7 +72,7 @@ i64 register_enum_state_property(string name, string* values, u64 value_count) {
 
     if (!validate_property_name(&name)) {
         log_errorf("Invalid state property name '%s'", cstr(&name));
-        return FALSE;
+        return false;
     }
 
     StateProperty* property = pool_alloc(&property_pool, &index);
@@ -92,7 +92,7 @@ i64 register_enum_state_property(string name, string* values, u64 value_count) {
         if (!validate_property_name(ptr)) {
             log_errorf("Possible value of enumeration state property has an invalid name '%s'",
                        cstr(ptr));
-            return FALSE;
+            return false;
         }
     }
     return index;

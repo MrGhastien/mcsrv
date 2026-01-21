@@ -23,7 +23,7 @@ i64 varint_length(i32 n);
  * @param[in] str The string to parse.
  * @param[out] out The output buffer that will contain the parsed UUID.
  * Should be at least 16 bytes long.
- * @return @ref TRUE if a UUID was successfully parsed from the string, @ref FALSE otherwise.
+ * @return @ref true if a UUID was successfully parsed from the string, @ref false otherwise.
  */
 bool parse_uuid(const string* str, u64* out);
 

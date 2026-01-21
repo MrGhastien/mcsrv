@@ -38,7 +38,7 @@ static inline void create_send_packet(enum PacketType type, void* packet_payload
 DEF_PKT_HANDLER(dummy) {
     UNUSED(pkt);
     UNUSED(conn);
-    return TRUE;
+    return true;
 }
 
 DEF_PKT_HANDLER(handshake) {
@@ -58,9 +58,9 @@ DEF_PKT_HANDLER(handshake) {
         break;
     default:
         log_errorf("Invalid state of connection %i", shake->next_state);
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 
 DEF_PKT_HANDLER(status) {
@@ -87,9 +87,9 @@ DEF_PKT_HANDLER(status) {
 
     json_move_to_parent(&json);
     json_cstr_put_simple(
-        &json, "enforcesSecureChat", JSON_BOOL, (union JSONSimpleValue) {.boolean = FALSE});
+        &json, "enforcesSecureChat", JSON_BOOL, (union JSONSimpleValue) {.boolean = false});
     json_cstr_put_simple(
-        &json, "previewsChat", JSON_BOOL, (union JSONSimpleValue) {.boolean = FALSE});
+        &json, "previewsChat", JSON_BOOL, (union JSONSimpleValue) {.boolean = false});
 
     json_cstr_put(&json, "description", JSON_OBJECT);
     json_move_to_cstr(&json, "description");
@@ -99,18 +99,18 @@ DEF_PKT_HANDLER(status) {
     enum JSONStatus json_status = json_to_string(&json, &arena, &response.data);
     if (json_status != JSONE_OK) {
         log_errorf("JSON Error: %i", json_status);
-        return FALSE;
+        return false;
     }
 
     log_tracef("Status response: %s", response.data.base);
     create_send_packet(PKT_STATUS, &response, conn);
-    return TRUE;
+    return true;
 }
 DEF_PKT_HANDLER(ping) {
     PacketPing* ping = pkt->payload;
     PacketPing pong  = {.num = ping->num};
     create_send_packet(PKT_STATUS_PING, &pong, conn);
-    return TRUE;
+    return true;
 }
 
 DEF_PKT_HANDLER(login_start) {
@@ -127,7 +127,7 @@ DEF_PKT_HANDLER(login_start) {
         .pkey              = conn->global_enc_ctx->encoded_key,
         .verify_tok_length = 4,
         .verify_tok        = arena_allocate(&conn->scratch_arena, 4 /* , ALLOC_TAG_UNKNOWN */),
-        .authenticate      = TRUE,
+        .authenticate      = true,
     };
     memset(req.verify_tok, 78, req.verify_tok_length);
     conn->verify_token =
@@ -137,7 +137,7 @@ DEF_PKT_HANDLER(login_start) {
 
     create_send_packet(PKT_LOGIN_CRYPT_REQUEST, &req, conn);
 
-    return TRUE;
+    return true;
 }
 static bool enable_compression(Connection* conn) {
 
@@ -148,12 +148,12 @@ static bool enable_compression(Connection* conn) {
     create_send_packet(PKT_LOGIN_COMPRESS, &payload, conn);
 
     if (!compression_init(&conn->cmprss_ctx, &conn->persistent_arena))
-        return FALSE;
+        return false;
 
-    conn->compression = TRUE;
+    conn->compression = true;
     log_infof("Protocol compression successfully initialized for connection %i.",
               conn->peer_socket);
-    return TRUE;
+    return true;
 }
 static bool send_login_success(Connection* conn, JSON* json) {
 #ifdef DEBUG
@@ -167,24 +167,24 @@ static bool send_login_success(Connection* conn, JSON* json) {
 #endif
 
     if (json_move_to_cstr(json, "name") != JSONE_OK)
-        return FALSE;
+        return false;
     string* name = json_get_string(json);
 
     PacketLoginSuccess login_success = {
         .username      = str_create_copy(name, &conn->scratch_arena),
-        .strict_errors = TRUE,
+        .strict_errors = true,
     };
     json_move_to_parent(json);
     json_move_to_cstr(json, "id");
     string* uuid = json_get_string(json);
     if (!parse_uuid(uuid, login_success.uuid))
-        return FALSE;
+        return false;
 
     json_move_to_parent(json);
     json_move_to_cstr(json, "properties");
     i64 property_count = json_get_length(json);
     if (property_count == -1)
-        return FALSE;
+        return false;
 
     vect_init(
         &login_success.properties, &conn->scratch_arena, property_count, sizeof(PlayerProperty));
@@ -204,14 +204,14 @@ static bool send_login_success(Connection* conn, JSON* json) {
         if (json_move_to_cstr(json, "signature") == JSONE_OK) {
             string* prop_sig    = json_get_string(json);
             property->signature = *prop_sig;
-            property->is_signed = TRUE;
+            property->is_signed = true;
         } else
-            property->is_signed = FALSE;
+            property->is_signed = false;
     }
 
     create_send_packet(PKT_LOGIN_SUCCESS, &login_success, conn);
 
-    return TRUE;
+    return true;
 }
 DEF_PKT_HANDLER(crypt_response) {
     PacketCryptResponse* payload = pkt->payload;
@@ -231,11 +231,11 @@ DEF_PKT_HANDLER(crypt_response) {
                                        payload->verify_token_length);
 
     if (!decrypted_ss || !verif_tok)
-        return FALSE;
+        return false;
 
     if (verif_size != conn->verify_token_size) {
         log_error("Failed encryption: the received verify token has a different length.");
-        return FALSE;
+        return false;
     }
 
     if (memcmp(verif_tok, conn->verify_token, conn->verify_token_size) != 0) {
@@ -244,14 +244,14 @@ DEF_PKT_HANDLER(crypt_response) {
         for (u32 i = 0; i < conn->verify_token_size; i++) {
             log_debugf("%hhx - %hhx", verif_tok[i], conn->verify_token[i]);
         }
-        return FALSE;
+        return false;
     }
 
     arena_free_ptr(&conn->persistent_arena, conn->verify_token);
     if (!encryption_init_peer(&conn->peer_enc_ctx, &conn->persistent_arena, decrypted_ss))
-        return FALSE;
+        return false;
 
-    conn->encryption = TRUE;
+    conn->encryption = true;
 
     log_infof("Protocol encryption successfully initialized for connection %i.", conn->peer_socket);
 
@@ -259,12 +259,12 @@ DEF_PKT_HANDLER(crypt_response) {
     bool res = encryption_authenticate_player(conn, &json);
     if (!res) {
         log_error("Failed to authenticate player against Mojang's servers!");
-        return FALSE;
+        return false;
     }
 
     res = enable_compression(conn);
     if (!res)
-        return FALSE;
+        return false;
 
     res = send_login_success(conn, &json);
 
@@ -304,7 +304,7 @@ DEF_PKT_HANDLER(login_ack) {
 
     create_send_packet(PKT_CFG_KNOWN_DATAPACKS_CLIENT, &known_datapacks, conn);
 
-    return TRUE;
+    return true;
 }
 
 /* === CONFIGURATION === */
@@ -320,7 +320,7 @@ DEF_PKT_HANDLER(cfg_custom) {
                   cstr(&payload->channel.namespace),
                   cstr(&payload->channel.path));
 
-    return TRUE;
+    return true;
 }
 
 DEF_PKT_HANDLER(cfg_client_info) {
@@ -330,7 +330,7 @@ DEF_PKT_HANDLER(cfg_client_info) {
     UNUSED(payload);
     log_warn("Client settings are ignored for now TODO");
 
-    return TRUE;
+    return true;
 }
 
 struct registry_data_serialize_data {
@@ -388,7 +388,7 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
     // TODO: Work with registry data
     create_send_packet(PKT_CFG_FINISH, NULL, conn);
 
-    return TRUE;
+    return true;
 }
 
 DEF_PKT_HANDLER(cfg_finish_config_ack) {
@@ -402,29 +402,29 @@ DEF_PKT_HANDLER(cfg_finish_config_ack) {
 
     PacketLoginPlay play = {
         .player_entity_id      = conn->player_entity_id,
-        .hardcore              = FALSE,
+        .hardcore              = false,
         .max_players           = 69, // TODO
         .view_distance         = 12,
         .simulation_distance   = 15,
-        .reduced_debug_info    = FALSE,
-        .enable_respawn_screen = TRUE,
-        .limited_crafting      = FALSE,
+        .reduced_debug_info    = false,
+        .enable_respawn_screen = true,
+        .limited_crafting      = false,
         .spawn_dimension_type  = 0,
         .spawn_dimension_id    = resid_default_cstr("overworld"),
         .hashed_seed           = default_hash("12345", 5),
         .gamemode              = 0,
         .previous_game_mode    = -1,
-        .debug_world           = FALSE,
-        .flat_world            = FALSE,
-        .has_death_location    = FALSE,
+        .debug_world           = false,
+        .flat_world            = false,
+        .has_death_location    = false,
         .portal_cooldown       = 0,
         .sea_level             = 64,
-        .enforce_secure_chat = FALSE,
+        .enforce_secure_chat = false,
     };
 
     create_send_packet(PKT_PLAY_LOGIN, &play, conn);
 
-    return TRUE;
+    return true;
 }
 DEF_PKT_HANDLER(cfg_keep_alive) {
     UNUSED(pkt);
@@ -434,16 +434,16 @@ DEF_PKT_HANDLER(cfg_keep_alive) {
     struct timespec now;
     if (!timestamp(&now)) {
         log_warnf("Failed to register keep alive: %s", get_last_error());
-        return FALSE;
+        return false;
     }
     conn->last_keep_alive = now;
-    return TRUE;
+    return true;
 }
 DEF_PKT_HANDLER(cfg_pong) {
     PacketPing* payload = pkt->payload;
 
     conn->ping = payload->num;
-    return TRUE;
+    return true;
 }
 DEF_PKT_HANDLER(cfg_respack_response) {
     UNUSED(conn);
@@ -454,5 +454,5 @@ DEF_PKT_HANDLER(cfg_respack_response) {
                payload->result);
     UNUSED(payload);
     // TODO: Handle resource packs
-    return TRUE;
+    return true;
 }

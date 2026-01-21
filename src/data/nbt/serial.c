@@ -54,10 +54,10 @@ static bool ensure_read(IOMux fd, void* buf, u64 size) {
     while (size > 0) {
         i32 res = iomux_read(fd, buf, size);
         if (res <= 0)
-            return FALSE;
+            return false;
         size -= res;
     }
-    return TRUE;
+    return true;
 }
 
 static enum NBTTagType parse_type(IOMux fd, NBTReadContext* ctx) {
@@ -124,10 +124,10 @@ static bool update_parent_lengths(NBTReadContext* ctx, i64 limit) {
         default:
             log_errorf("Invalid parent tag of type %i", parent_meta->type);
             ctx->status = NBTE_INVALID_PARENT;
-            return FALSE;
+            return false;
         }
     }
-    return TRUE;
+    return true;
 }
 
 static bool finish_tag(NBTReadContext* ctx, enum NBTTagType type) {
@@ -148,12 +148,12 @@ static bool finish_tag(NBTReadContext* ctx, enum NBTTagType type) {
      - The progress value reaches the list size (stored in the NBT tag).
      */
     do {
-        finish_parent               = FALSE;
+        finish_parent               = false;
         NBTTagMetadata* parent_meta = vect_ref(&ctx->stack, i);
         switch (parent_meta->type) {
         case NBT_COMPOUND:
             if (type == NBT_END) {
-                finish_parent = TRUE;
+                finish_parent = true;
                 type          = parent_meta->type;
                 vect_pop(&ctx->stack, NULL);
                 break;
@@ -167,7 +167,7 @@ static bool finish_tag(NBTReadContext* ctx, enum NBTTagType type) {
             parent_meta->progress++;
             NBTTag* parent = vect_ref(&ctx->nbt->tags, parent_meta->idx);
             if (parent_meta->progress == parent->data.array_size) {
-                finish_parent = TRUE;
+                finish_parent = true;
                 type          = parent_meta->type;
                 vect_pop(&ctx->stack, NULL);
             }
@@ -177,24 +177,24 @@ static bool finish_tag(NBTReadContext* ctx, enum NBTTagType type) {
         }
         i--;
     } while (finish_parent && vect_size(&ctx->stack) > 0);
-    return TRUE;
+    return true;
 }
 
 static bool read_string(Arena* arena, IOMux fd, string* out_str) {
     u16 name_length;
     if (!ensure_read(fd, &name_length, sizeof name_length))
-        return FALSE;
+        return false;
     name_length = untoh16(name_length);
     if (name_length == 0) {
         *out_str = STR_EMPTY;
-        return TRUE;
+        return true;
     }
 
     *out_str = str_alloc(name_length + 1, arena);
     if (!ensure_read(fd, out_str->base, name_length))
-        return FALSE;
+        return false;
     out_str->length = name_length;
-    return TRUE;
+    return true;
 }
 
 static void write_string(const string* str, IOMux fd) {
@@ -308,7 +308,7 @@ enum NBTStatus nbt_write_file(const NBT* nbt, const string* path) {
         return NBTE_IO;
     }
 
-    nbt_write(nbt, fd, FALSE);
+    nbt_write(nbt, fd, false);
 
     iomux_close(fd);
     return NBTE_OK;

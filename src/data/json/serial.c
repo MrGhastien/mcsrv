@@ -235,22 +235,22 @@ static bool lex_string(IOMux multiplexer, LexUnitValue* value, Arena scratch, Ar
         }
     }
     if (c != '"')
-        return FALSE;
+        return false;
 
     value->str = strbuild_to_string(&builder, arena);
 
-    return TRUE;
+    return true;
 }
 
 static enum JSONLexUnit
 lex_number(IOMux multiplexer, char first, LexUnitValue* value, Arena scratch) {
-    bool frac     = FALSE;
-    bool exponent = FALSE;
+    bool frac     = false;
+    bool exponent = false;
 
     StringBuilder builder = strbuild_create(&scratch);
     strbuild_appendc(&builder, first);
     char c;
-    bool stop = FALSE;
+    bool stop = false;
     while (!stop && !iomux_eof(multiplexer)) {
         do {
             if (iomux_read(multiplexer, &c, 1) <= 0)
@@ -262,16 +262,16 @@ lex_number(IOMux multiplexer, char first, LexUnitValue* value, Arena scratch) {
         case '.':
             if (frac)
                 return TOK_ERROR;
-            frac = TRUE;
+            frac = true;
             break;
         case 'e':
         case 'E':
             if (exponent)
                 return TOK_ERROR;
-            exponent = TRUE;
+            exponent = true;
             break;
         default:
-            stop = TRUE;
+            stop = true;
             break;
         }
     }
@@ -296,24 +296,24 @@ static bool lex_boolean(IOMux multiplexer, LexUnitValue* value, bool expected) {
     u8 tmp[5];
     if (expected) {
         if (iomux_read(multiplexer, tmp, 3) != 3)
-            return FALSE;
+            return false;
         if (memcmp(tmp, "rue", 3) != 0)
-            return FALSE;
-        value->boolean = TRUE;
+            return false;
+        value->boolean = true;
     } else {
         if (iomux_read(multiplexer, tmp, 4) != 4)
-            return FALSE;
+            return false;
         if (memcmp(tmp, "alse", 4) != 0)
-            return FALSE;
-        value->boolean = FALSE;
+            return false;
+        value->boolean = false;
     }
-    return TRUE;
+    return true;
 }
 
 static bool lex_null(IOMux multiplexer) {
     u8 tmp[3];
     if (iomux_read(multiplexer, tmp, sizeof(tmp)) != 3)
-        return FALSE;
+        return false;
     return memcmp(tmp, "ull", 3) == 0;
 }
 
@@ -344,12 +344,12 @@ lex_token(IOMux multiplexer, LexUnitValue* value, Arena* scratch, Arena* arena) 
         else
             return TOK_ERROR;
     case 't':
-        if (lex_boolean(multiplexer, value, TRUE))
+        if (lex_boolean(multiplexer, value, true))
             return TOK_BOOL;
         else
             return TOK_ERROR;
     case 'f':
-        if (lex_boolean(multiplexer, value, FALSE))
+        if (lex_boolean(multiplexer, value, false))
             return TOK_BOOL;
         else
             return TOK_ERROR;

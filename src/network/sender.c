@@ -22,7 +22,7 @@ void send_packet(const Packet* pkt, Connection* conn) {
     bytebuf_write_varint(&scratch_buffer, pkt->id);
     encoder(pkt, &scratch_buffer);
 
-    log_debugf("Packet OUT: %s", get_pkt_name(pkt, conn, TRUE));
+    log_debugf("Packet OUT: %s", get_pkt_name(pkt, conn, true));
 
     if (conn->compression) {
         if (scratch_buffer.size >= conn->cmprss_ctx.threshold) {
@@ -52,7 +52,7 @@ void send_packet(const Packet* pkt, Connection* conn) {
             code = empty_buffer(conn);
         } while (code == IOC_OK && conn->send_buffer.size > 0);
         if (code == IOC_PENDING || code == IOC_AGAIN)
-            conn->pending_send = TRUE;
+            conn->pending_send = true;
     }
 
 cleanup:

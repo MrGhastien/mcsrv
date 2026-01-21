@@ -14,18 +14,18 @@ bool timestamp(struct timespec* out_timestamp) {
     LARGE_INTEGER ticks;
 
     if (frequency.QuadPart == 0 && !QueryPerformanceFrequency(&frequency)) {
-        return FALSE;
+        return false;
     }
 
     if (!QueryPerformanceCounter(&ticks)) {
-        return FALSE;
+        return false;
     }
 
     out_timestamp->tv_sec = (time_t) ticks.QuadPart / frequency.QuadPart;
     out_timestamp->tv_nsec =
         (long) ((ticks.QuadPart % frequency.QuadPart) * NS_PER_SECOND) / frequency.QuadPart;
 
-    return TRUE;
+    return true;
 }
 
 void milli_sleep(u64 millis) {

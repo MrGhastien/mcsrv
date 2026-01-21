@@ -35,7 +35,7 @@ static struct obj_node* get_node_from_idx(PoolAllocator* pool, i64 index) {
 
 static void add_node_to_free_list(PoolAllocator* pool, struct obj_node* node) {
     node->next      = NULL;
-    node->allocated = FALSE;
+    node->allocated = false;
     if (!pool->head)
         pool->head = node;
     if (pool->tail)
@@ -94,7 +94,7 @@ void _pool_init(PoolAllocator* pool,
                 const char* name,
                 memory_chain prev) {
     pool_init_common(pool, capacity, stride, tag, name, prev);
-    pool->dynamic = FALSE;
+    pool->dynamic = false;
 }
 
 void _pool_init_dynamic(PoolAllocator* pool,
@@ -104,13 +104,13 @@ void _pool_init_dynamic(PoolAllocator* pool,
                         const char* name,
                         memory_chain prev) {
     pool_init_common(pool, initial_capacity, stride, tag, name, prev);
-    pool->dynamic = TRUE;
+    pool->dynamic = true;
 }
 
 void pool_init_static(PoolAllocator* pool, u32 capacity, u32 stride, memory_chain chain) {
     pool->mem      = chain;
     pool->capacity = capacity;
-    pool->dynamic  = FALSE;
+    pool->dynamic  = false;
     pool->stride   = stride;
     init_free_list(pool);
 }
@@ -121,17 +121,17 @@ void pool_destroy(PoolAllocator* pool) {
         .mem     = INVALID_CHAIN,
         .head    = NULL,
         .tail    = NULL,
-        .dynamic = FALSE,
+        .dynamic = false,
     };
 }
 
 static bool ensure_capacity(PoolAllocator* pool, u64 size) {
     if (size <= pool->capacity)
-        return TRUE;
+        return true;
 
     if (!pool_is_dynamic(pool)) {
         log_error("Cannot resize a static pool allocator !");
-        return FALSE;
+        return false;
     }
 
     memory_block blk = alloc_block(
@@ -142,7 +142,7 @@ static bool ensure_capacity(PoolAllocator* pool, u64 size) {
     prepare_block(pool, blk);
 
     pool->capacity += block_capacity(blk);
-    return TRUE;
+    return true;
 }
 
 void pool_clear(PoolAllocator* pool) {
@@ -186,19 +186,19 @@ void* pool_alloc(PoolAllocator* pool, i64* out_index) {
     }
     block_set_used(node->blk, block_used(node->blk) + pool->stride);
     pool->size++;
-    node->allocated = TRUE;
+    node->allocated = true;
     node->next      = NULL;
     return ptr;
 }
 
 static bool free_node(PoolAllocator* pool, struct obj_node* node) {
     if (!node->allocated)
-        return FALSE;
+        return false;
 
     block_set_used(node->blk, block_used(node->blk) - pool->stride);
 
     add_node_to_free_list(pool, node);
-    return TRUE;
+    return true;
 }
 
 bool pool_free(PoolAllocator* pool, void* ptr) {
@@ -209,11 +209,11 @@ bool pool_free(PoolAllocator* pool, void* ptr) {
 
 bool pool_free_idx(PoolAllocator* pool, i64 idx) {
     if (idx < 0 || idx >= pool->capacity)
-        return FALSE;
+        return false;
 
     struct obj_node* node = get_node_from_idx(pool, idx);
     if (!node->allocated)
-        return FALSE;
+        return false;
 
     return free_node(pool, node);
 }

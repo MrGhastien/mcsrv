@@ -60,7 +60,7 @@ static const char* BLK_TAG_NAMES[] = {
 static struct basic_pool block_pool;
 static struct basic_pool chain_pool;
 
-static bool tracker_initialized = FALSE;
+static bool tracker_initialized = false;
 static MCMutex stats_mutex;
 
 memory_chain create_chain(enum MemoryChainTag tag, const char* name, memory_chain prev) {
@@ -258,7 +258,7 @@ string get_blk_tag_name(enum MemoryChainTag tag) {
 void memory_init(void) {
     if (tracker_initialized)
         return;
-    tracker_initialized = TRUE;
+    tracker_initialized = true;
     mcmutex_create(&stats_mutex);
 
     basic_pool_init(&chain_pool, 8, POOL_CHAIN);
@@ -277,7 +277,7 @@ static void check_leaks(void) {
 
 void memory_cleanup(void) {
     check_leaks();
-    tracker_initialized = FALSE;
+    tracker_initialized = false;
     basic_pool_cleanup(&chain_pool);
     basic_pool_cleanup(&block_pool);
 
@@ -304,18 +304,18 @@ void memory_cleanup(void) {
 static bool check_alloc_overlap(struct alloc_track* new_alloc, i64 block_index) {
     UNUSED(new_alloc);
     UNUSED(block_index);
-    return TRUE;
+    return true;
 
     for (u64 i = 0; i < current_allocs->size; i++) {
         struct alloc_track* tmp_alloc = vect_ref(current_allocs, i);
 
         if (new_alloc->start >= tmp_alloc->start && new_alloc->start < tmp_alloc->end)
-            return FALSE;
+            return false;
 
         if (tmp_alloc->start >= new_alloc->start && tmp_alloc->start < new_alloc->end)
-            return FALSE;
+            return false;
     }
-    return TRUE;
+    return true;
 
 }
 

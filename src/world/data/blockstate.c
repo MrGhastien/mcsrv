@@ -32,7 +32,7 @@ static union StatePropertyValue get_value(const StateProperty* property, u32 ind
     union StatePropertyValue val = {0};
     switch (property->type) {
     case BLOCK_PROP_BOOL:
-        val.boolean = index == 1 ? TRUE : FALSE;
+        val.boolean = index == 1 ? true : false;
         break;
     case BLOCK_PROP_INTEGER:
         val.integer = index + property->info.integer.min;
@@ -51,7 +51,7 @@ bool create_state_definition(const Block* block,
                              Arena* arena,
                              StateDefinition* out_definition) {
     if (!out_definition || !block || !arena)
-        return FALSE;
+        return false;
 
     u32 property_count = properties ? vect_size(properties) : 0;
     if (property_count == 0) {
@@ -63,7 +63,7 @@ bool create_state_definition(const Block* block,
             .definition = out_definition,
             .values     = NULL,
         };
-        return TRUE;
+        return true;
     }
 
     const StateProperty** property_array =
@@ -85,7 +85,7 @@ bool create_state_definition(const Block* block,
                            cstr(&block->id.namespace),
                            cstr(&block->id.path));
                 arena_free_ptr(arena, property_array);
-                return FALSE;
+                return false;
             }
         }
 
@@ -120,7 +120,7 @@ bool create_state_definition(const Block* block,
         .states         = states,
     };
 
-    return TRUE;
+    return true;
 }
 
 BlockProperties default_block_properties(void) {
@@ -128,10 +128,10 @@ BlockProperties default_block_properties(void) {
         .slipperiness             = 0.6f,
         .speed_multiplier         = 1.0f,
         .jump_multiplier          = 1.0f,
-        .opaque                   = TRUE,
-        .spawn_brushing_particles = TRUE,
+        .opaque                   = true,
+        .spawn_brushing_particles = true,
         .piston_behavior          = PISTON_BEHAVIOR_NORMAL,
-        .requires_correct_tools   = TRUE,
+        .requires_correct_tools   = true,
         .destroy_time             = 1.5f,
         .explosion_resistance     = 6.0f,
     };
@@ -145,23 +145,23 @@ const BlockState* state_with_value(const BlockState* state,
 bool selector_init(StateSelectionContext* out_ctx, Arena* arena, ResourceID block_id) {
     const Block* block = registry_get(REGISTRY_BLOCK_KEY, block_id);
     if (!block)
-        return FALSE;
+        return false;
     out_ctx->block = block;
     if (block->state_definition.property_count == 0)
-        return TRUE;
+        return true;
 
     out_ctx->value_indices =
         arena_allocate(arena,
                        sizeof *out_ctx->value_indices * block->state_definition.property_count/* ,
                        ALLOC_TAG_WORLD */);
     if (!out_ctx->value_indices)
-        return FALSE;
+        return false;
 
     for (u32 i = 0; i < block->state_definition.property_count; i++) {
         out_ctx->value_indices[i] = -1;
     }
 
-    return TRUE;
+    return true;
 }
 void selector_set(StateSelectionContext* ctx,
                   const StateProperty* property,
@@ -214,9 +214,9 @@ union StatePropertyValue parse_state_property_value(string value, const StatePro
     switch (prop->type) {
     case BLOCK_PROP_BOOL:
         if (str_compare_cstr(&value, "true") == 0)
-            res.boolean = TRUE;
+            res.boolean = true;
         else if (str_compare_cstr(&value, "false") == 0)
-            res.boolean = FALSE;
+            res.boolean = false;
         else
             abort();
         break;

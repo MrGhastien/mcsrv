@@ -478,7 +478,7 @@ i32 iomux_write_str(IOMux multiplexer, const string* str) {
 bool iomux_eof(IOMux multiplexer) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux)
-        return TRUE;
+        return true;
 
     switch (mux->type) {
     case IO_FILE:
@@ -493,7 +493,7 @@ bool iomux_eof(IOMux multiplexer) {
         return mux->backend.zlib.max_in == 0 && mux->backend.zlib.inflate_buffer.size == 0;
     default:
         abort();
-        return TRUE;
+        return true;
     }
 }
 string iomux_error(IOMux multiplexer, i32* out_code) {

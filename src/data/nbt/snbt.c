@@ -128,7 +128,7 @@ enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
     Arena scratch = arena_create(1 << 18, BLK_TAG_UNKNOWN, INVALID_CHAIN);
 
     SNBTContext ctx = {
-        .pretty_print      = TRUE,
+        .pretty_print      = true,
         .spaces_per_indent = 4,
     };
     vect_init(&ctx.stack, &scratch, 512, sizeof(SNBTMetadata));

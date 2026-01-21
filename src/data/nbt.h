@@ -305,7 +305,7 @@ enum NBTStatus nbt_set_byte(NBT* nbt, i32 value);
 /**
  * Convenience function to set the current byte tag to a boolean value.
  *
- * The byte tag is set to `1` if @p value is @ref TRUE, otherwise it is set to `0`.
+ * The byte tag is set to `1` if @p value is @ref true, otherwise it is set to `0`.
  *
  * @param[in] nbt The NBT tree containing the tag to set.
  * @param[in] value The value to set the tag to.
@@ -364,8 +364,8 @@ enum NBTStatus nbt_write_file(const NBT* nbt, const string* path);
  *
  * @param[in] nbt The NBT tree to save.
  * @param[in] multiplexer An IO multiplexer used to write to the output stream.
- * @param[in] network @ref TRUE if the NBT shall be serialized to be sent through the network, @ref
- * FALSE otherwise.
+ * @param[in] network @ref true if the NBT shall be serialized to be sent through the network, @ref
+ * false otherwise.
  */
 enum NBTStatus nbt_write(const NBT* nbt, IOMux multiplexer, bool network);
 
@@ -385,7 +385,7 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, IOMux input, NBT* ou
  * @param[in] max_token_count The maximum amount of tags to parse.
  * @param[in] path The path to the file to read.
  * @param[out] out_nbt A pointer to an uninitialized NBT tree.
- * @return @ref TRUE if the parsing completed successfully, @ref FALSE if an error occurred.
+ * @return @ref true if the parsing completed successfully, @ref false if an error occurred.
  */
 enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
 

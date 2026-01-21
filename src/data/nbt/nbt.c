@@ -157,7 +157,7 @@ enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleVa
         .data.simple = value,
     };
     append_tag(nbt, &new_tag);
-    return TRUE;
+    return true;
 }
 enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
     NBTTag* tag = get_current_tag(nbt);

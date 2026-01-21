@@ -28,7 +28,7 @@ static Arena arena;
 static ObjectPool threads;
 static MCMutex internal_array_mutex;
 
-static bool initialized = FALSE;
+static bool initialized = false;
 
 void mcthread_init(void) {
     arena = arena_create_silent(MAX_THREADS * (sizeof(struct ThreadInternal) + sizeof(bool)),
@@ -38,13 +38,13 @@ void mcthread_init(void) {
         log_fatal("Failed to prepare the platform layer for threading.");
         abort();
     }
-    initialized = TRUE;
+    initialized = true;
 }
 
 void mcthread_cleanup(void) {
     mcmutex_destroy(&internal_array_mutex);
     arena_destroy(&arena);
-    initialized = FALSE;
+    initialized = false;
 }
 
 static unsigned long routine_wrapper(void* arg) {
@@ -102,27 +102,27 @@ void mcthread_destroy(MCThread* thread) {
 bool mcthread_set_name(const char* name) {
     UNUSED(name);
     // TODO
-    return FALSE;
+    return false;
 }
 
 bool mcthread_create_attachment(MCThreadKey* out_key) {
     i64 key = TlsAlloc();
     if (key == TLS_OUT_OF_INDEXES) {
         log_fatalf("Failed to create thread attachment: %s.", get_last_error());
-        return FALSE;
+        return false;
     }
 
     *out_key = key;
-    return TRUE;
+    return true;
 }
 
 bool mcthread_destroy_attachment(MCThreadKey key) {
     bool res = TlsFree(key);
     if (!res) {
         log_fatalf("Failed to destroy thread attachment: %s.", get_last_error());
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }
 void mcthread_attach_data(MCThreadKey key, void* data) {
     if (!TlsSetValue(key, data))
@@ -147,7 +147,7 @@ MCThread* mcthread_self(void) {
 bool mcthread_equals(MCThread* thread) {
     UNUSED(thread);
 
-    return FALSE;
+    return false;
 }
 bool mcthread_is_running(MCThread* thread) {
     return thread->internal != NULL;
@@ -157,18 +157,18 @@ bool mcthread_join(MCThread* thread, void** out_return) {
     struct ThreadInternal* internal = thread->internal;
     DWORD code                      = WaitForSingleObject(internal->handle, INFINITE);
     if (code != WAIT_OBJECT_0)
-        return FALSE;
+        return false;
 
     unsigned long res;
     if (!GetExitCodeThread(internal->handle, &res))
-        return FALSE;
+        return false;
 
     mcthread_destroy(thread);
 
     if (out_return)
         *out_return = internal->res;
 
-    return TRUE;
+    return true;
 }
 
 #endif

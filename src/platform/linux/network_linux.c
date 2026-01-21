@@ -60,7 +60,7 @@ bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
     i32 res = getaddrinfo(host, port_str, NULL, &info);
     if (res != 0) {
         log_errorf("Could not parse address : %s", gai_strerror(res));
-        return FALSE;
+        return false;
     }
 
     memcpy(&addr->data.storage, info->ai_addr, info->ai_addrlen);
@@ -68,7 +68,7 @@ bool sockaddr_parse(SocketAddress* addr, char* host, i32 port) {
 
     freeaddrinfo(info);
 
-    return TRUE;
+    return true;
 }
 string sockaddr_to_string(SocketAddress* addr, Arena* arena, u32* out_port) {
     char host[NI_MAXHOST];
@@ -273,8 +273,8 @@ static enum IOCode accept_connection(NetworkContext* ctx) {
     string peer_host = sockaddr_to_string(&peer_address, &arena, &peer_port);
 
     *conn              = conn_create(peer_socket, index, &ctx->enc_ctx, peer_host, peer_port);
-    conn->pending_recv = TRUE;
-    conn->pending_send = TRUE;
+    conn->pending_recv = true;
+    conn->pending_send = true;
 
     log_infof("Accepted connection from [%s:%i].", peer_host.base, peer_port);
     return IOC_OK;
@@ -291,7 +291,7 @@ enum IOCode fill_buffer(Connection* conn) {
         if (code < res)
             res = code;
         if (code == IOC_AGAIN)
-            conn->pending_recv = TRUE;
+            conn->pending_recv = true;
     }
 
     if (conn->encryption) {
@@ -322,14 +322,14 @@ enum IOCode empty_buffer(Connection* conn) {
         u64 size;
         code = sock_send_buf(conn->peer_socket, &conn->send_buffer, &size);
         if (code == IOC_AGAIN)
-            conn->pending_send = TRUE;
+            conn->pending_send = true;
     }
     return code;
 }
 static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i32 events) {
     enum IOCode io_code = IOC_OK;
     if (events & EPOLLIN && conn->pending_recv) {
-        conn->pending_recv = FALSE;
+        conn->pending_recv = false;
         io_code            = fill_buffer(conn);
         while (io_code == IOC_OK) {
             io_code = receive_packet(conn);
@@ -351,7 +351,7 @@ static enum IOCode handle_connection_io(NetworkContext* ctx, Connection* conn, i
     }
 
     if (events & EPOLLOUT && conn->pending_send) {
-        conn->pending_send = FALSE;
+        conn->pending_send = false;
         io_code            = empty_buffer(conn);
         switch (io_code) {
         case IOC_CLOSED:
@@ -416,7 +416,7 @@ void* network_handle(void* params) {
             if (e->data.fd == -1) // server socket
                 accept_connection(ctx);
             else if (e->data.fd == -2) // eventfd
-                ctx->should_continue = FALSE;
+                ctx->should_continue = false;
             else {
                 Connection* conn = pool_get(&ctx->connections, e->data.u64);
                 platform_assert(conn != NULL, "Invalid connection index returned by epoll");
