@@ -2,6 +2,8 @@ from enum import Enum, auto
 from dataclasses import dataclass
 from typing import Optional, Union, List, TextIO
 
+from pathlib import Path
+
 class TokenType(Enum):
     NONE = None
     INTEGER = 1
@@ -123,8 +125,8 @@ class Token:
         return self.__str__()
 
 class Scanner:
-    def __init__(self, filename: str):
-        with open(filename, 'r', encoding='utf-8') as f:
+    def __init__(self, path: Path):
+        with open(path, 'r', encoding='utf-8') as f:
             self.text = f.read()
         self.pos = 0
         self.__line = 1

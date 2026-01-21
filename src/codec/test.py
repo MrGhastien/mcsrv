@@ -5,9 +5,12 @@ from mcdoc_common import *
 from mcdoc_ast import analyze, SyntaxError
 from mcdoc_ast_traversal import traverse
 from mcdoc_binding import bind_file, McdocFile
+from mcdoc_resolv import FileRegistry, resolve_refs
+from mcdoc_generator import generate_codecs
 
 import argparse
 import os
+from pathlib import Path
 
 def lex_number(ctx: ParseCtx, input: Scanner):
     decimal_dot: bool = False
@@ -142,9 +145,8 @@ def lex_token(ctx: ParseCtx, input: Scanner):
             if input.match('['):
                 ctx.add_token(TokenType.ATTR_BEGIN)
             else:
-                ctx.ha_error = True
+                ctx.has_error = True
                 print(f"Unexpected character at {ctx.input.line}:{ctx.start}: {c}")
-                
                 
         case ' ' | '\t' | '\r' | '\n':
             return
@@ -164,10 +166,10 @@ def lex_tokens(ctx: ParseCtx, input: Scanner):
         lex_token(ctx, input)
 
 
-def parse(filename: str, fail_on_error: bool) -> McdocFile:
-    print(f"Parsing '{filename}'...")
+def parse(path: Path, fail_on_error: bool) -> McdocFile:
+    print(f"Parsing '{path}'...")
 
-    scanner = Scanner(filename)
+    scanner = Scanner(path)
     ctx = ParseCtx(scanner)
     lex_tokens(ctx, scanner)
 
@@ -182,27 +184,32 @@ def parse(filename: str, fail_on_error: bool) -> McdocFile:
     if fail_on_error:
         tree = analyze(ctx)
         #traverse(tree)
-        return bind_file(tree)
+        return bind_file(tree, path)
 
     try:
         tree = analyze(ctx)
         #traverse(tree)
-        return bind_file(tree)
+        return bind_file(tree, path)
     except SyntaxError as e:
-        print(f"Error while parsing '{filename}': {e}")
+        print(f"Error while parsing '{path}': {e}")
 
 
 def main(args):
-    parsed_files = []
+    registry = FileRegistry(Path(args.directory))
     if os.path.isfile(args.directory):
-        parsed_files.append(parse(args.directory, not args.keep_going))
+        registry.add_file(parse(Path(args.directory).resolve(), not args.keep_going))
     else:
         for root, dirs, files in os.walk(args.directory):
             for f in files:
                 if not f.endswith('.mcdoc'):
                     continue
-                parsed_files.append(parse(os.path.join(root, f), not args.keep_going))
-    print(parsed_files)
+                abs_path = Path(os.path.join(root, f)).resolve()
+                registry.add_file(parse(abs_path, not args.keep_going))
+
+    resolve_refs(registry)
+    print(' done!')
+
+    generate_codecs(registry)
 
     
 if __name__ == '__main__':

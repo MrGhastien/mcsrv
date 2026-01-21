@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional, Union
 
 from mcdoc_common import *
-from mcdoc_types import TypeKind, Range
+from mcdoc_types import TypeKind, Range, TypeIndex
 
 class ASTNode(ABC):
     pass
@@ -17,8 +17,8 @@ class Identifier:
         return self.name
 
 @dataclass
-class Path:
-    segments: List[Union[Identifier, TokenType]]
+class McdocPath:
+    segments: List[str]
     absolute: bool = False
 
     def __str__(self) -> str:
@@ -30,6 +30,18 @@ class Path:
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            return McdocPath(
+                segments=self.segments[key],
+                absolute=self.absolute
+            )
+        else:
+            return self.segments[key]
+    
+    def __len__(self):
+        return len(self.segments)
     
 @dataclass
 class AttributeValueNode(ASTNode):
@@ -47,11 +59,6 @@ class UnattrTypeNode(ASTNode, ABC):
     kind: TypeKind
 
 @dataclass
-class TypeIndex:
-    key: List
-    dynamic: bool = False
-
-@dataclass
 class McdocTypeNode(ASTNode):
     unattr_type: UnattrTypeNode
     attributes: List[AttributeNode] = None
@@ -63,7 +70,7 @@ class McdocTypeNode(ASTNode):
     
 @dataclass
 class UnattrTypeRefNode(UnattrTypeNode):
-    path: Path
+    path: McdocPath
 
     def __str__(self) -> str:
         return str(self.path)            
@@ -122,8 +129,10 @@ class UnattrStructTypeNode(UnattrTypeNode):
         res += '{'
 
         for f in self.fields:
-            res += str(field)
+            res += str(f)
         res += '}'
+
+        return res
     
 
 @dataclass
@@ -132,7 +141,7 @@ class McdocFileNode(ASTNode):
 
 @dataclass
 class UseStatement(ASTNode):
-    path: Path
+    path: McdocPath
     alias: Optional[Identifier] = None
 
 @dataclass

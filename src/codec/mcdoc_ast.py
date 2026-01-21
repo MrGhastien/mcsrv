@@ -36,7 +36,7 @@ class TokenScanner:
         return self.tokens[peek_pos]
 
     def match(self, expected: TokenType, value=None) -> bool:
-        t:Token = self.peek()
+        t:Optional[Token] = self.peek()
         if t is not None and t.type == expected and t.value == value:
             self.next()
             return True;
@@ -44,15 +44,16 @@ class TokenScanner:
             return False
 
     def match_peek(self, expected: TokenType, offset: int = 0) -> bool:
-        t:Token = self.peek(offset)
-        return t.type == expected
+        t:Optional[Token] = self.peek(offset)
+        return t is not None and t.type == expected
 
     def expect(self, expected: TokenType) -> Token:
-        t:Token = self.peek()
+        t:Optional[Token] = self.peek()
         if t is None:
-            SyntaxError(f"Expected {expected}, got EOF")
+            raise SyntaxError(f"Expected {expected}, got EOF")
         if t.type == expected:
-            return self.next()
+            self.next()
+            return t
         else:
             msg: str
             if t.value is not None:
@@ -96,6 +97,8 @@ def can_be_identifier(tok: Token) -> bool:
 
 def analyze_identifier(ctx: ParseCtx, scanner: TokenScanner) -> Identifier:
     t = scanner.next()
+    if t is None:
+        raise SyntaxError("Reached end of file while parsing Identifier.")
     match t.type:
         case TokenType.IDENTIFIER | TokenType.KW_STRING:
             return Identifier(t.value)
@@ -105,25 +108,25 @@ def analyze_identifier(ctx: ParseCtx, scanner: TokenScanner) -> Identifier:
         case _:
             raise SyntaxError(f"Token {t} ({t.type}) is not an identifier", t)
 
-def analyze_path(ctx: ParseCtx, scanner: TokenScanner) -> Path:
+def analyze_path(ctx: ParseCtx, scanner: TokenScanner) -> McdocPath:
     absolute = scanner.match(TokenType.DOUBLE_COLON)
     segments = []
     t = scanner.peek()
     if t.type is TokenType.KW_SUPER:
         scanner.next()
-        segments.append(TokenType.KW_SUPER)
+        segments.append('super')
     else:
-        segments.append(analyze_identifier(ctx, scanner))
+        segments.append(str(analyze_identifier(ctx, scanner)))
 
     while (t := scanner.peek()) and t.type == TokenType.DOUBLE_COLON:
         scanner.next()
         t = scanner.peek()
         if t.type is TokenType.KW_SUPER:
             scanner.next()
-            segments.append(TokenType.KW_SUPER)
+            segments.append('super')
         else:
-            segments.append(analyze_identifier(ctx, scanner))
-    return Path(segments, absolute=absolute)
+            segments.append(str(analyze_identifier(ctx, scanner)))
+    return McdocPath(segments, absolute=absolute)
     
 
 def analyze_attribute_value(ctx: ParseCtx, scanner: TokenScanner):
@@ -311,7 +314,7 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
             value_range = analyze_ranged_type(ctx, scanner)
             return UnattrSimpleTypeNode(kind, value_range=value_range)
         case TokenType.KW_ANY | TokenType.KW_BOOLEAN:
-            return UnattrArrayTypeNode(TypeKind.ARRAY, kind)
+            return UnattrSimpleTypeNode(kind=kind)
         case TokenType.LPAREN:
             return analyze_union(ctx, scanner)
         case TokenType.LBRACKET:
@@ -321,7 +324,7 @@ def analyze_unattributed_type(ctx: ParseCtx, scanner:TokenScanner) -> Optional[U
             return UnattrTypeRefNode(TypeKind.ANY, path=analyze_path(ctx, scanner))
         case TokenType.RESID:
             source = t.value
-            indices = analyze_type_indices(ctx, scanner)
+            indices = analyze_type_indices(ctx, scanner, False)
             return UnattrDispatcherTypeNode(TypeKind.DISPATCHER, source=source, indices=indices)
         case TokenType.KW_ENUM:
             scanner.prev()
@@ -362,7 +365,7 @@ def analyze_dynamic_type_index(ctx: ParseCtx, scanner: TokenScanner):
     scanner.expect(TokenType.RBRACKET)
     return TypeIndex(accessor_segments, dynamic=True)
     
-def analyze_type_index(ctx: ParseCtx, scanner: TokenScanner) -> TypeIndex:
+def analyze_type_index(ctx: ParseCtx, scanner: TokenScanner, dispatch_statement: bool) -> TypeIndex:
     t = scanner.peek()
     match t.type:
         case TokenType.KW_FALLBACK | TokenType.KW_NONE | TokenType.KW_UNKNOWN:
@@ -372,21 +375,23 @@ def analyze_type_index(ctx: ParseCtx, scanner: TokenScanner) -> TypeIndex:
             scanner.next()
             return TypeIndex(key = [t.value])
         case TokenType.LBRACKET:
+            if dispatch_statement:
+                raise SyntaxError("Cannot dispatch a type with a dynamic index!")
             return analyze_dynamic_type_index(ctx, scanner)
         case _:
             raise SyntaxError(f"Unexpected token {t} while parsing type index", t)
 
-def analyze_type_indices(ctx: ParseCtx, scanner: TokenScanner) -> List[TypeIndex]:
+def analyze_type_indices(ctx: ParseCtx, scanner: TokenScanner, dispatch_statement: bool) -> List[TypeIndex]:
     scanner.expect(TokenType.LBRACKET);
 
-    indices = [analyze_type_index(ctx, scanner)]
+    indices = [analyze_type_index(ctx, scanner, dispatch_statement)]
 
     while (t := scanner.peek()) and t.type is TokenType.COMMA:
         scanner.next()
         if (u := scanner.peek()) and u.type is TokenType.RBRACKET:
             break
 
-        indices.append(analyze_type_index(ctx, scanner))
+        indices.append(analyze_type_index(ctx, scanner, dispatch_statement))
 
     scanner.expect(TokenType.RBRACKET);
 
@@ -419,15 +424,15 @@ def analyze_type(ctx: ParseCtx, scanner: TokenScanner):
             new_args = analyze_type_args(ctx, scanner)
             args.extend(new_args)
         else:
-            new_indices = analyze_type_indices(ctx, scanner)
+            new_indices = analyze_type_indices(ctx, scanner, False)
             indices.extend(new_indices)
 
-    return McdocTypeNode(unattr, attributes=attrs)
+    return McdocTypeNode(unattr, attributes=attrs, args=args, indices=indices)
 
 def analyze_type_params(ctx: ParseCtx, scanner: TokenScanner) -> List[Identifier]:
     scanner.expect(TokenType.LCHEVRON);
 
-    params = [analyze_type_index(ctx, scanner)]
+    params = [scanner.expect(TokenType.IDENTIFIER).value]
 
     while (t := scanner.peek()) and t.type is TokenType.COMMA:
         scanner.next()
@@ -626,7 +631,7 @@ def analyze_dispatch(ctx: ParseCtx, scanner: TokenScanner) -> DispatchStatement:
     scanner.expect(TokenType.KW_DISPATCH)
 
     source = scanner.expect(TokenType.RESID).value
-    indices = analyze_type_indices(ctx, scanner)
+    indices = analyze_type_indices(ctx, scanner, True)
 
     params = []
     if scanner.match_peek(TokenType.LCHEVRON):

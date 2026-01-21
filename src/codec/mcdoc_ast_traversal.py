@@ -24,7 +24,7 @@ def _traverse_internal(root: ASTNode, indent: int):
                 _traverse_internal(t, indent + 1)
         case Identifier(name=name):
             print(name)
-        case Path() as path:
+        case McdocPath() as path:
             print(f" {path}")
         case AttributeNode() as a:
             print(f"Attribute {a.name}", end='')
