@@ -67,7 +67,7 @@ class DependencyGraph:
                     if dep == t:
                         print(f"Dependency cycle of {t.get_name()}")
                     elif dep not in visited:
-                        visit(dep)
+                       visit(dep)
 
                 match t:
                     case TypeAlias() as alias:
@@ -83,7 +83,7 @@ class DependencyGraph:
 
         return res
 
-    def print_dot(self):
+    def print_dot(self, filepath: str):
 
         def safe_get_name(t: McdocType):
             tname = t.get_name()
@@ -93,11 +93,12 @@ class DependencyGraph:
                 tname = t.__name__
             return tname
 
-        print('digraph types {')
-        for k,v in self.graph.items():
-            for t in v:
-                print(f"  \"{k.get_unique_name()}\" -> \"{t.get_unique_name()}\";")
-        print('}')
+        with open(filepath, 'w') as fd:
+            fd.write('digraph types {\n')
+            for k,v in self.graph.items():
+                for t in v:
+                    fd.write(f"  \"{k.get_unique_name()}\" -> \"{t.get_unique_name()}\";\n")
+            fd.write('}\n')
 
 class FileRegistry:
     def __init__(self, root_path: Path):
@@ -173,6 +174,20 @@ def resolve_type_ref(registry: FileRegistry, file: McdocFile, type: McdocType, l
         #     assert len(locals) == 0
         #     resolve_ref(registry, file, alias.source, alias.params)
         #     return alias.source
+
+        case GenericTypeInstance() as inst:
+            prev_name = inst.source.get_name()
+            source = resolve_type_ref(registry, file, inst.source, locals)
+            assert source.get_name() == prev_name
+            # If a typeref has type arguments, but the type alias has no parameters,
+            # do not bother with a generic instance.
+            if not source.params:
+                return inst.source
+
+            inst.source = source
+            resolve_ref(registry, file, inst, locals)
+            return type
+
         case StructType() | EnumType():
             if type.get_name() is not None and not locals: # Named inline definition !
                 file.register_type(type)
@@ -226,10 +241,6 @@ def resolve_ref(registry: FileRegistry, file: McdocFile, typ: McdocType, locals:
         case ParamType():
             pass
         case GenericTypeInstance() as inst:
-            print(inst.get_name())
-            prev_name = inst.source.get_name()
-            inst.source = resolve_type_ref(registry, file, inst.source, locals)
-            assert inst.source.get_name() == prev_name
             for i in range(len(inst.args)):
                 arg = inst.args[i]
                 resolved = resolve_type_ref(registry, file, arg, locals)
