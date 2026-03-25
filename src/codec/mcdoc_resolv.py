@@ -182,7 +182,8 @@ def resolve_type_ref(registry: FileRegistry, file: McdocFile, type: McdocType, l
             # If a typeref has type arguments, but the type alias has no parameters,
             # do not bother with a generic instance.
             if not source.params:
-                return inst.source
+                print(f"Unused args: {source}")
+                return source
 
             inst.source = source
             resolve_ref(registry, file, inst, locals)
@@ -246,7 +247,6 @@ def resolve_ref(registry: FileRegistry, file: McdocFile, typ: McdocType, locals:
                 resolved = resolve_type_ref(registry, file, arg, locals)
                 inst.args[i] = resolved
                 registry.dep_graph.mark_dependency(inst, resolved)
-            #print(inst.get_name())
             #print(inst)
             file.register_generic_instance(inst)
         case _:
