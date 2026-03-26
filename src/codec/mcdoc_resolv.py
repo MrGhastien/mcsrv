@@ -147,8 +147,8 @@ class FileRegistry:
             raise BindingError(f"Unbound reference to {use_path}.")
         return typ
 
-    def get_all_types(self) -> List[McdocType]:
-        res = []
+    def get_all_types(self) -> Dict[str, McdocType]:
+        res = {}
         really_all_types = self.dep_graph.sort_types()
 
         def is_toplevel_type(typ: McdocType):
@@ -160,8 +160,13 @@ class FileRegistry:
             return False
 
         for t in really_all_types:
-            if is_toplevel_type(t):
-                res.append(t)
+            if not is_toplevel_type(t):
+                continue
+
+            name = t.get_name()
+            #assert name not in res or res[name] == t
+                
+            res[name] = t
 
         return res
             

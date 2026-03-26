@@ -173,6 +173,7 @@ def generate_struct(struct: StructType, writer: CCodeWriter, type_param_bindings
 union_names = [c for c in 'abcdefghijklmnopqrstuvwxyz']
 
 def generate_codec_single(typ: McdocType, writer: CCodeWriter, type_param_bindings: Dict[ParamType, McdocType]):
+    print(f"{typ.get_name()}: {type(typ)}")
     match typ:
         case StructType() as struct:
             name = struct.get_name()
@@ -206,6 +207,7 @@ def generate_codec_single(typ: McdocType, writer: CCodeWriter, type_param_bindin
             writer.write(f"struct {name}", newline=False)
         case GenericTypeInstance() as inst:
             writer.write(typ.get_c_name(), newline=False)
+            #print(inst.args)
         case DispatcherType():
             pass
         case ArrayType() as arr:
@@ -215,6 +217,10 @@ def generate_codec_single(typ: McdocType, writer: CCodeWriter, type_param_bindin
             writer.write(f" /* Literal: {literal.value} */", newline=False)
         case TypeAlias() as alias:
             writer.write(alias.get_name(), newline=False)
+        case ParamType(name=name):
+            resolved = type_param_bindings[name]
+            assert not isinstance(resolved, ParamType)
+            return writer.write(resolved.get_name(), newline=False)
         # Handle:
         # - Type dispatching (static with lookup in python code, dynamic with union of structs)
         # - Spreading fields (Composition of struct)
@@ -223,6 +229,7 @@ def generate_codec_single(typ: McdocType, writer: CCodeWriter, type_param_bindin
         # - Better names for union and tuple member fields
         case _:
             raise GeneratorError(f"Unhandled type codec for {typ} is {type(typ)}")
+    print('.')
 
 
 def alias_name_with_bindings(alias: TypeAlias, type_param_bindings: Dict[str, McdocType]) -> str:
@@ -233,6 +240,7 @@ def alias_name_with_bindings(alias: TypeAlias, type_param_bindings: Dict[str, Mc
     return res
         
 def generate_codec_single_top_level(typ: McdocType, writer: CCodeWriter, type_param_bindings: Dict[str, McdocType]):
+    print(f"{typ.get_name()}: {type(typ)}")
     match typ:
         case StructType() as struct:
             generate_struct(struct, writer, type_param_bindings)
@@ -241,6 +249,7 @@ def generate_codec_single_top_level(typ: McdocType, writer: CCodeWriter, type_pa
             generate_enum(enumm, writer)
             writer.write(';')
         case TypeAlias() as alias:
+            print(alias.params)
             if len(alias.params) == len(type_param_bindings):
                 writer.write(f"typedef ", newline=False)
                 generate_codec_single(alias.source, writer, type_param_bindings)
@@ -250,7 +259,15 @@ def generate_codec_single_top_level(typ: McdocType, writer: CCodeWriter, type_pa
             for i in range(len(gen.args)):
                 arg = gen.args[i]
                 param = gen.source.params[i]
-                new_bindings[param.get_name()] = arg
+
+                nb = None
+                if isinstance(arg, ParamType) and arg.get_name() in type_param_bindings:
+                    nb = type_param_bindings[arg.get_name()]
+                else:
+                    nb = arg
+                if isinstance(nb, ParamType):
+                    return
+                new_bindings[param.get_name()] = nb
 
             generate_codec_single_top_level(gen.source, writer, new_bindings)
         # case BuiltinType() | LiteralType() | ListType() | ArrayType() | UnionType() | TupleType():
@@ -270,6 +287,6 @@ def generate_codecs(registry: FileRegistry):
 
     registry.dep_graph.print_dot('types.dot')
 
-    for t in registry.get_all_types():
+    for n, t in registry.get_all_types().items():
         generate_codec_single_top_level(t, writer, {})
     writer.save(Path('out_codec.c'))

@@ -238,7 +238,7 @@ class ParamType(McdocType):
     name: str
 
     def __str__(self) -> str:
-        return f"<{self.name}>"
+        return f"ParamType('{self.name}')"
 
     def __repr__(self):
         return str(self)
@@ -260,7 +260,7 @@ class TypeAlias(McdocType):
     # TODO: Handle type params!
 
     def __str__(self) -> str:
-        return f"{self.name} -> {self.source}"
+        return f"{self.name}<{self.params}> -> {self.source}"
 
     def __repr__(self) -> str:
         return str(self)
