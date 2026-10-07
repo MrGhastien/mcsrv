@@ -1,6 +1,7 @@
 #include <unity.h>
 #include "containers/bytebuffer.h"
 #include "logger.h"
+#include "memory/allocators/arena.h"
 #include "memory/memory.h"
 #include "data/json.h"
 #include "unity_internals.h"
@@ -18,18 +19,22 @@ void setUp(void) {
     memory_init();
 
     logger_system_init();
+    iomux_system_init();
 }
 
 void tearDown(void) {
     memory_dump_stats();
+
+    iomux_system_cleanup();
     logger_system_cleanup();
+    memory_cleanup();
 }
 
 static bool str_ends_with(const char* str, const char* substr) {
     u64 length = strlen(str);
     u64 sublength = strlen(substr);
     if (sublength > length)
-        return FALSE;
+        return false;
 
     u64 i = 0;
     while (i < sublength && str[length - i] == substr[sublength - i]) {
@@ -84,7 +89,9 @@ static void test_dir(const char* path, bool error_test) {
         strbuild_appends(&builder, path);
         strbuild_appendc(&builder, '/');
         strbuild_appends(&builder, element->d_name);
-        string str_path = strbuild_to_string(&builder, &arena);
+
+        char* buffer = arena_allocate(&arena, builder.chars.size + 1);
+        string str_path = strbuild_to_string_buffer(&builder, buffer, builder.chars.size + 1);
         log_debugf("JSON: Parsing %s...", str_path.base);
 
         i32 res = parse_json(str_path.base);
@@ -106,14 +113,16 @@ static void test_dir(const char* path, bool error_test) {
         else
             log_info("JSON: All tests passed.");
     }
+
+    arena_destroy(&arena);
 }
 
 void test_good_dir(void) {
-    test_dir("good", FALSE);
+    test_dir("good", false);
 }
 
 void test_bad_dir(void) {
-    test_dir("bad", TRUE);
+    test_dir("bad", true);
 }
 
 int main(void) {

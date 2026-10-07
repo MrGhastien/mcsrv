@@ -1,6 +1,7 @@
 #include "logger.h"
 #include "memory/memory.h"
 #include "data/nbt.h"
+#include "utils/iomux.h"
 #include "utils/string.h"
 
 #include <dirent.h>
@@ -142,6 +143,7 @@ int main(void) {
 
     memory_init();
     logger_system_init();
+    iomux_system_init();
 
     test_write1("out1.nbt.gz");
     test_write2("out2.nbt.gz");
@@ -151,7 +153,9 @@ int main(void) {
 
     memory_dump_stats();
 
+    iomux_system_init();
     logger_system_cleanup();
+    memory_cleanup();
 
     return 0;
 }

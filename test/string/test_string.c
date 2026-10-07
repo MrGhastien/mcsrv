@@ -23,7 +23,8 @@ int main(void) {
 
     strbuild_appendf(&builder, "%s:%i", __FILE__, __LINE__);
 
-    tmp = strbuild_to_string(&builder, &arena);
+    Arena arena2 = arena_create(builder.chars.size + 1, BLK_TAG_UNKNOWN, INVALID_CHAIN);
+    tmp = strbuild_to_string(&builder, &arena2);
     log_infof("%s", cstr(&tmp));
 
     string cpy = str_alloc(50, &arena);
@@ -37,6 +38,7 @@ int main(void) {
     assert(cpy.base[30] == 0);
     assert(cpy.base[35] == 0);
 
+    arena_destroy(&arena2);
     arena_destroy(&arena);
     logger_system_cleanup();
 
