@@ -11,9 +11,9 @@
 
 struct data_block* alloc_data_block(Arena* arena, u64 capacity, u64 stride /* , i32 mem_tag */) {
     struct data_block* blk = arena_callocate(arena, sizeof *blk /* , mem_tag */);
-    *blk                   = (struct data_block) {
-                          .capacity = capacity,
-                          .data     = arena_callocate(arena, stride * capacity /* , mem_tag */),
+    *blk                   = (struct data_block){
+        .capacity = capacity,
+        .data     = arena_callocate(arena, stride * capacity /* , mem_tag */),
     };
     return blk;
 }
@@ -62,14 +62,18 @@ static void register_addition(Vector* vector) {
 }
 
 static void register_removal(Vector* vector) {
-    vector->size--;
 
     if (vector->next_insert_index == 0) {
-        vector->current           = vector->current->prev;
+        if (vector->size == vector->capacity) {
+            vector->current = vector->end;
+        } else {
+            vector->current = vector->current->prev;
+        }
         vector->next_insert_index = vector->current->capacity;
     }
 
     vector->next_insert_index--;
+    vector->size--;
 }
 
 static void
@@ -241,8 +245,12 @@ bool vect_peek(const Vector* vector, void* out) {
     u64 stride = vect_stride(vector);
     void* src;
     if (vector->next_insert_index == 0) {
-        struct data_block* blk = vector->current->prev;
-        src                    = offset(blk->data, (blk->capacity - 1) * stride);
+        struct data_block* blk;
+        if (vector->size == vector->capacity)
+            blk = vector->end;
+        else
+            blk = vector->current->prev;
+        src = offset(blk->data, (blk->capacity - 1) * stride);
     } else
         src = offset(vector->current->data, (vector->next_insert_index - 1) * stride);
 

@@ -5,8 +5,6 @@
 #include "_memory_internal.h"
 #include "mem_tags.h"
 
-#include "allocators/pool.h"
-#include "containers/vector.h"
 #include "definitions.h"
 #include "logger.h"
 #include "memory/allocators/arena.h"
@@ -16,8 +14,6 @@
 #include "platform/platform.h"
 #include "utils/ansi_codes.h"
 #include "utils/string.h"
-
-#include "allocators/pool.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -69,7 +65,7 @@ memory_chain create_chain(enum MemoryChainTag tag, const char* name, memory_chai
     struct memory_chain* new_chain = basic_pool_alloc(&chain_pool, &idx);
 
     mcmutex_unlock(&stats_mutex);
-    *new_chain = (struct memory_chain) {
+    *new_chain = (struct memory_chain){
         .tag        = tag,
         .prev_chain = prev,
         .next_chain = INVALID_CHAIN,
@@ -126,35 +122,55 @@ void destroy_chain(memory_chain chain) {
     mcmutex_unlock(&stats_mutex);
 }
 
-memory_block alloc_block(u64 capacity, memory_chain chain, enum MemoryAdvice advice) {
-    void* memory = platform_alloc(&capacity, advice);
-    assert(memory != NULL);
-
+static memory_block add_block(struct memory_block block_data, memory_chain chain) {
     i32 index;
 
     mcmutex_lock(&stats_mutex);
-    struct memory_block* block = basic_pool_alloc(&block_pool, &index);
+    struct memory_block* block     = basic_pool_alloc(&block_pool, &index);
     struct memory_chain* chain_ptr = basic_pool_query(&chain_pool, chain);
     mcmutex_unlock(&stats_mutex);
 
-    *block = (struct memory_block) {
-        .capacity = capacity,
-        .next     = INVALID_BLOCK,
-        .start    = memory,
-        .type     = ALLOC_TYPE_DYNAMIC,
-    };
+    *block = block_data;
 
     if (chain_ptr->tail >= 0) {
         struct memory_block* tail_ptr = basic_pool_query(&block_pool, chain_ptr->tail);
         tail_ptr->next                = index;
-    } else
+    } else {
         chain_ptr->head = index;
+    }
 
-    block->prev = chain_ptr->tail;
+    block->prev     = chain_ptr->tail;
     chain_ptr->tail = index;
     chain_ptr->block_count++;
 
     return index;
+}
+
+memory_block alloc_block(u64 capacity, memory_chain chain, enum MemoryAdvice advice) {
+    void* memory = platform_alloc(&capacity, advice);
+    assert(memory != NULL);
+
+    return add_block(
+        (struct memory_block){
+            .capacity = capacity,
+            .next     = INVALID_BLOCK,
+            .start    = memory,
+            .type     = ALLOC_TYPE_DYNAMIC,
+        },
+        chain);
+}
+
+memory_block declare_static_block(void* memory, u64 capacity, memory_chain chain) {
+    assert(memory != NULL);
+
+    return add_block(
+        (struct memory_block){
+            .capacity = capacity,
+            .next     = INVALID_BLOCK,
+            .start    = memory,
+            .type     = ALLOC_TYPE_STATIC,
+        },
+        chain);
 }
 
 void advise_block(memory_block block, enum MemoryAdvice advice) {
@@ -229,7 +245,6 @@ u64 block_used(memory_block block) {
     const struct memory_block* block_ptr = basic_pool_query(&block_pool, block);
     if (block_ptr == NULL)
         return 0ull;
-
     return block_ptr->used;
 }
 
@@ -284,130 +299,44 @@ void memory_cleanup(void) {
     mcmutex_destroy(&stats_mutex);
 }
 
-/*
-
-  A: [---------]
-  B:      [---------]
-
-  A:      [---------]
-  B: [---------]
-
-  A: [--------------]
-  B:      [----]
-
-  A:      [----]
-  B: [--------------]
- */
-
-/*
-
-static bool check_alloc_overlap(struct alloc_track* new_alloc, i64 block_index) {
-    UNUSED(new_alloc);
-    UNUSED(block_index);
-    return true;
-
-    for (u64 i = 0; i < current_allocs->size; i++) {
-        struct alloc_track* tmp_alloc = vect_ref(current_allocs, i);
-
-        if (new_alloc->start >= tmp_alloc->start && new_alloc->start < tmp_alloc->end)
-            return false;
-
-        if (tmp_alloc->start >= new_alloc->start && tmp_alloc->start < new_alloc->end)
-            return false;
-    }
-    return true;
-
-}
-
-void register_alloc(const memory_block* block, u64 start, u64 end, enum AllocTag tag) {
-    if(block == &allocation_block)
-        return;
-    if (start >= end) {
-        log_error("Memory: The start offset of an allocation must be strictly less than its end !");
-        return;
-    }
-
-    struct alloc_track alloc = {
-        .start = start,
-        .end = end,
-        .tag = tag,
-        .block_index = block->tracking_index,
-    };
-
-    mcmutex_lock(&stats_mutex);
-    if(!pool_get(&block_pool, block->tracking_index))
-        abort();
-
-    if (!check_alloc_overlap(&alloc, block->tracking_index)) {
-        log_fatal("New allocation is overlapping other allocations !");
-        abort();
-    }
-
-    i64 index;
-    struct alloc_track* new_alloc = pool_alloc(&allocation_pool, &index);
-    alloc.tracking_index = index;
-    *new_alloc = alloc;
-
-    mcmutex_unlock(&stats_mutex);
-}
-
-struct alloc_search_data {
-    u64 start;
-    i64 index;
-    i64 block_index;
-};
-
-static void unregister_single_alloc(void* ptr, i64 idx, void* data) {
-    struct alloc_track* alloc = ptr;
-    struct alloc_search_data* search_data = data;
-
-    if(search_data->start == alloc->start && alloc->block_index == search_data->block_index)
-        search_data->index = idx;
-}
-
-void unregister_alloc(const memory_block* block, u64 start) {
-    if(!pool_get(&block_pool, block->tracking_index))
-        abort();
-
-    struct alloc_search_data data = {.start = start, .index = -1};
-    pool_foreach(&allocation_pool, &unregister_single_alloc, &data);
-    if(data.index == -1)
-        abort();
-
-    pool_free_idx(&allocation_pool, data.index);
-
-    log_warn("Tried to unregister unknown memory allocation");
-}
-
-*/
 struct stat_dump_data {
     u64 total_allocated;
     u64 total_used;
 };
 
-static void print_usage_bar(u64 used, u64 capacity, i32 bar_width) {
+static void print_usage_bar(u64 used, u64 capacity, i32 bar_width, enum AllocationType type) {
     i32 filled = (i32) (used * bar_width) / capacity;
     printf("[");
+    const char* used_color;
+    switch (type) {
+    case ALLOC_TYPE_DYNAMIC:
+        used_color = ANSI_BLUE;
+        break;
+    case ALLOC_TYPE_STATIC:
+        used_color = ANSI_YELLOW;
+        break;
+    }
+
     if (used >= capacity || used == 0) {
-        printf(used == 0 ? ANSI_BLACK : ANSI_BLUE);
+        printf("%s", used == 0 ? ANSI_BLACK : used_color);
         for (i32 i = 0; i < bar_width; i++) {
             printf("━");
         }
     } else {
-        printf(ANSI_BLUE);
+        printf("%s", used_color);
         i32 i;
         for (i = 0; i < filled; i++) {
             printf("━");
         }
-        if(i - 1 >= 0) {
+        if (i - 1 >= 0) {
             printf("╸");
             i++;
         }
-        if(i < bar_width) {
+        if (i < bar_width) {
             printf(ANSI_BLACK "╺");
             i++;
         }
-        for (;i < bar_width; i++) {
+        for (; i < bar_width; i++) {
             printf("━");
         }
     }
@@ -428,7 +357,7 @@ static void
 dump_block_stats(const struct memory_block* block, memory_block idx, struct stat_dump_data* data) {
     UNUSED(data);
     printf("  Block " ANSI_MAGENTA "%-5i" ANSI_RESET ": ", idx);
-    print_usage_bar(block->used, block->capacity, 30);
+    print_usage_bar(block->used, block->capacity, 30, block->type);
     printf("%5.1f%% (", (100.0 * block->used) / block->capacity);
     print_size(block->used);
     printf(" / ");

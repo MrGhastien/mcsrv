@@ -36,9 +36,6 @@ struct memory_chain {
 #define INVALID_CHAIN ((memory_chain) - 1)
 #define INVALID_BLOCK ((memory_block) - 1)
 
-void register_alloc(const memory_block block, u64 start, u64 end, enum AllocTag tag);
-void unregister_alloc(const memory_block block, u64 start);
-
 /**
  * Creates a new memory block chain, possibly linked to another one.
  *
@@ -69,6 +66,7 @@ void destroy_chain(memory_chain chain);
  * @return A pointer to the allocated memory, or @ref NULL if the allocation failed.
  */
 memory_block alloc_block(u64 capacity, memory_chain chain, enum MemoryAdvice advice);
+memory_block declare_static_block(void* memory, u64 capacity, memory_chain chain);
 void advise_block(memory_block block, enum MemoryAdvice advice);
 void delete_block(memory_block blk);
 

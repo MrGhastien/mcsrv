@@ -10,6 +10,8 @@
 #include "memory/_memory_internal.h"
 #include "memory/mem_tags.h"
 
+enum ArenaPolicy { ARENA_GROW, ARENA_FIXED };
+
 /**
    Simple linear allocator.
 
@@ -17,11 +19,19 @@
  */
 typedef struct arena {
     memory_chain chain;
-    memory_block current;
+    memory_block current_block;
+    void* cursor;
+    void* block_end;
     u64 capacity;
-    u64 length;
-    void* static_mem;
+    enum ArenaPolicy policy;
 } Arena;
+
+typedef struct {
+    Arena* arena;
+    memory_block current_block;
+    void* cursor;
+    void* block_end;
+} ArenaCheckpoint;
 
 /**
  * Creates an arena allocator of the specified size.
@@ -93,42 +103,6 @@ void arena_clear(Arena* arena);
 void arena_free_ptr(Arena* arena, void* ptr);
 
 /**
- * Saves the current pointer to available memory.
- *
- * If another pointer is saved, it is discarded and replaced by the current one.
- *
- * @param arena The arena of which to save the current pointer.
- */
-//void arena_save(Arena* arena);
-/**
- * Restores the available memory pointer that was previously saved.
- *
- * Note that calling this function before saving any available memory pointer simply
- * restores the pointer to the start of the underlying memory, i.e. frees all memory.
- *
- * @param arena The arena of which to restore the available memory pointer.
- */
-//void arena_restore(Arena* arena);
-
-/**
- * Returns the number of bytes saved.
- *
- * After restoring the saved pointer, the arena will have the same amount
- * of allocated bytes as the number returned by this function.
- *
- * @param arena The arena from which to get the saved pointer.
- * @return The amount of saved bytes.
- */
-//u64 arena_recent_length(Arena* arena);
-/**
- * Returns the saved available memory pointer.
- *
- * @param arena The arena from which to get the saved pointer.
- * @return The saved pointer.
- */
-//void* arena_recent_pos(Arena* arena);
-
-/**
  * Indicates whether two arenas share the same memory block or not.
  *
  * @param[in] a The first arena.
@@ -142,5 +116,11 @@ static inline bool arena_is_mem_shared(const Arena* a, const Arena* b) {
 void memory_dump_stats(void);
 
 #define arena_create(size, tag, parent) _arena_create(size, tag, (__FILE__ ":" MACRO_STRINGIZE(__LINE__)), parent) 
+
+ArenaCheckpoint arena_create_checkpoint(Arena* arena);
+void arena_restore_checkpoint(ArenaCheckpoint point);
+
+#define ARENA_SCOPE(a) \
+    for (ArenaCheckpoint _t = arena_create_checkpoint(a), *_o = &_t; _o; arena_restore_checkpoint(_t), _o = NULL)
 
 #endif /* ! ARENA_H */
