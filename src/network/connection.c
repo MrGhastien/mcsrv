@@ -2,13 +2,11 @@
 #include "decoders.h"
 #include "encoders.h"
 #include "handlers.h"
-#include "network/compression.h"
 #include "packet.h"
 #include "packet_codec.h"
 #include "security.h"
 
 #include "logger.h"
-#include "memory/memory.h"
 
 #include "platform/mc_mutex.h"
 #include "platform/socket.h"
@@ -287,7 +285,7 @@ conn_create(socketfd sockfd, i64 table_index, EncryptionContext* enc_ctx, string
         .send_buffer = bytebuf_create_fixed(CONN_BYTEBUF_SIZE, &conn.persistent_arena),
         .packet_cache = NULL,
         .table_index = table_index,
-        .peer_addr = str_create_copy(&addr, &conn.persistent_arena),
+        .peer_addr = str_create_copy(addr, &conn.persistent_arena),
         .peer_port = port,
     };
     mcmutex_create(&conn.mutex);

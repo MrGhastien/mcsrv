@@ -118,7 +118,7 @@ static void write_snbt_tag(const NBTTag* tag, IOMux fd, SNBTContext* ctx) {
     }
 }
 
-enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path) {
+enum NBTStatus nbt_write_snbt(const NBT* nbt, const string path) {
     IOMux fd = iomux_open(path, "w");
     if (fd == -1) {
         log_errorf("NBT: IO Error: %s", strerror(errno));

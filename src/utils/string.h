@@ -29,6 +29,7 @@
 #define STR_EMPTY ((string) {0})
 #define STR_INVALID ((string) {.base = NULL, .length = -1})
 
+#define STR_LITERAL(cstr) ((string) STR_STATIC(cstr))
 #define STR_STATIC(cstr) {.base = (cstr), .length = sizeof(cstr) - 1}
 
 /**
@@ -73,7 +74,7 @@ string str_view(const char* cstr);
  * @param[in] arena The arena used to allocate the new string's buffer.
  * @return A copy of the passed-in string.
  */
-string str_create_copy(const string* str, Arena* arena);
+string str_create_copy(const string str, Arena* arena);
 
 /**
  * Creates a string from a character buffer.
@@ -113,7 +114,7 @@ string str_alloc(u64 length, Arena* arena);
  * @param[in] arena The arena to use to allocate the returned string.
  * @return A substring of @p str.
  */
-string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena);
+string str_copy_substring(const string str, u64 begin, u64 end, Arena* arena);
 /**
  * Creates a string view of a subset of another string.
  *
@@ -125,7 +126,7 @@ string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena);
  * @param[in] end The index of the last character to get (excluded).
  * @return A substring view of @p str.
  */
-string str_substring(const string* str, u64 begin, u64 end);
+string str_substring(const string str, u64 begin, u64 end);
 
 /**
  * Finds the first occurrence of any character inside the string.
@@ -134,7 +135,7 @@ string str_substring(const string* str, u64 begin, u64 end);
  * @param[in] c The character to find.
  * @return The index of the character if it is found, `-1` otherwise.
  */
-i64 str_find_char(const string* str, char c);
+i64 str_find_char(const string str, char c);
 
 /**
  * Sets the contents of a string.
@@ -161,7 +162,7 @@ void str_set(string* str, const char* cstr);
  * @param[inout] dst The string to copy characters to.
  * @param[in] src The string to copy characters from.
  */
-void str_copy(string* dst, const string* src);
+void str_copy(string* dst, const string src);
 
 /**
  * Creates a new string by concatenating two other strings.
@@ -174,7 +175,7 @@ void str_copy(string* dst, const string* src);
  * @param[in] arena The arena to use to allocate the resulting string.
  * @return A new string containing the concatenation of the two given strings.
  */
-string str_concat(string* lhs, const string* rhs, Arena* arena);
+string str_concat(const string lhs, const string rhs, Arena* arena);
 /**
  * Retrieves a (null-terminated) printable C string  from the specified string.
  *
@@ -207,8 +208,8 @@ u64 str_hash(const void* str);
  * @return `0` if the strings are equal, a negative number if @p lhs is less than @p rhs, and a
  * positive number otherwise.
  */
-i32 str_compare(const string* lhs, const string* rhs);
-i32 str_compare_cstr(const string* lhs, const char* rhs);
+i32 str_compare(const string lhs, const string rhs);
+i32 str_compare_cstr(const string lhs, const char* rhs);
 
 /**
  * Small utility function to allocate a sufficiently sized buffer and to format a string.

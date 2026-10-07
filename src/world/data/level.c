@@ -32,7 +32,7 @@ typedef struct region {
 
 void level_init(Level* level, string path) {
     level->arena = arena_create(1 << 10, BLK_TAG_LEVEL, -1);
-    level->path  = str_create_copy(&path, &level->arena);
+    level->path  = str_create_copy(path, &level->arena);
 
     dict_init(&level->region_dict, &CMP_VEC2I, sizeof(RegionPos), sizeof(i64));
     dict_init(&level->chunk_dict, &CMP_VEC2I, sizeof(ChunkPos), sizeof(i64));
@@ -64,7 +64,7 @@ static void read_palette(NBT* nbt, Arena arena, ChunkSection* out_section) {
         string* name = nbt_get_string(nbt);
         log_tracef("    Palette: %s", cstr(name));
         ResourceID id;
-        assert(resid_parse(name, &arena, &id));
+        assert(resid_parse(*name, &arena, &id));
 
         StateSelectionContext selector;
         assert(selector_init(&selector, &arena, id));
@@ -270,14 +270,14 @@ void level_load_chunk(Level* level, ChunkPos pos) {
 
         Arena scratch         = level->arena;
         StringBuilder builder = strbuild_create(&scratch);
-        strbuild_append(&builder, &level->path);
+        strbuild_append(&builder, level->path);
         strbuild_appends(&builder, "/region/r.");
         strbuild_appendf(&builder, "%lli.%lli.mca", region_pos.x, region_pos.y);
         string region_path = strbuild_to_string_buffer(&builder, region_path_buf, PATH_MAX);
 
         log_tracef("Opening region file %s...", cstr(&region_path));
         Region* new_region = pool_alloc(&level->regions, &region_idx);
-        new_region->mux    = iomux_open(&region_path, "r+b");
+        new_region->mux    = iomux_open(region_path, "r+b");
         new_region->pos    = region_pos;
         dict_put(&level->region_dict, &region_pos, &region_idx);
     }

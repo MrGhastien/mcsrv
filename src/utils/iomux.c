@@ -113,14 +113,14 @@ IOMux iomux_wrap_zlib(IOMux compressed_stream, i64 size, Arena* arena) {
     return new_mux;
 }
 
-IOMux iomux_open(const string* path, const char* mode) {
-    FILE* file = fopen(path->base, mode);
+IOMux iomux_open(const string path, const char* mode) {
+    FILE* file = fopen(path.base, mode);
     if (!file)
         return -1;
     return iomux_create(IO_FILE, (union IOBackend) {.file = file});
 }
-IOMux iomux_gz_open(const string* path, const char* mode) {
-    gzFile file = gzopen(path->base, mode);
+IOMux iomux_gz_open(const string path, const char* mode) {
+    gzFile file = gzopen(path.base, mode);
     if (!file)
         return -1;
 
@@ -437,7 +437,7 @@ i32 iomux_writes(IOMux multiplexer, const char* cstr) {
     }
     return res == 0;
 }
-i32 iomux_write_str(IOMux multiplexer, const string* str) {
+i32 iomux_write_str(IOMux multiplexer, const string str) {
     IOMux_t* mux = iomux_get(multiplexer);
     if (!mux)
         return -1;
@@ -446,23 +446,23 @@ i32 iomux_write_str(IOMux multiplexer, const string* str) {
 
     switch (mux->type) {
     case IO_FILE:
-        res = fputs(cstr(str), mux->backend.file);
+        res = fputs(str.base, mux->backend.file);
         if (res == EOF)
             mux->error = errno;
         break;
     case IO_GZFILE:
-        res = gzputs(mux->backend.gzFile, cstr(str));
+        res = gzputs(mux->backend.gzFile, str.base);
         if (res < 0)
             mux->error = errno;
         break;
     case IO_BUFFER: {
-        bytebuf_write(mux->backend.buffer, str->base, str->length * sizeof *str->base);
-        res = str->length;
+        bytebuf_write(mux->backend.buffer, str.base, str.length * sizeof *str.base);
+        res = str.length;
         break;
     }
     case IO_STRING:
         strbuild_append(&mux->backend.string_backend.builder, str);
-        res = str->length;
+        res = str.length;
         break;
     case IO_ZLIB:
         log_fatal(" TODO: iomux_write_str for zlib");

@@ -7,6 +7,7 @@
 #include "utils/string.h"
 
 enum JSONType {
+    JSON_INVALID,
     JSON_STRING,
     JSON_INT,
     JSON_FLOAT,
@@ -86,7 +87,7 @@ enum JSONStatus json_push_simple(JSON* json, enum JSONType type, union JSONSimpl
  * @param[in] json The JSON tree containing the list to push into.
  * @param[in] str The string to push.
  */
-enum JSONStatus json_push_str(JSON* json, const string* str);
+enum JSONStatus json_push_str(JSON* json, const string str);
 /**
  * Adds a token to the current JSON list, and selects it.
  *
@@ -110,7 +111,7 @@ enum JSONStatus json_push(JSON* json, enum JSONType type);
  * @ref JSON_FLOAT or @ref JSON_BOOL.
  */
 enum JSONStatus
-json_put_simple(JSON* json, const string* name, enum JSONType type, union JSONSimpleValue value);
+json_put_simple(JSON* json, const string name, enum JSONType type, union JSONSimpleValue value);
 /**
  * Adds a string token to the current JSON object, and selects it.
  *
@@ -120,7 +121,7 @@ json_put_simple(JSON* json, const string* name, enum JSONType type, union JSONSi
  * @param[in] name The name of the token to put into the current object.
  * @param[in] str The string value of the token.
  */
-enum JSONStatus json_put_str(JSON* json, const string* name, const string* str);
+enum JSONStatus json_put_str(JSON* json, const string name, const string str);
 /**
  * Adds a token to the current JSON object, and selects it.
  *
@@ -130,7 +131,7 @@ enum JSONStatus json_put_str(JSON* json, const string* name, const string* str);
  * @param[in] name The name of the token to put into the current object.
  * @param[in] type The type of the token.
  */
-enum JSONStatus json_put(JSON* json, const string* name, enum JSONType type);
+enum JSONStatus json_put(JSON* json, const string name, enum JSONType type);
 
 /**
  * Adds a simple value token to the current JSON object, and selects it.
@@ -154,7 +155,7 @@ json_cstr_put_simple(JSON* json, const char* name, enum JSONType type, union JSO
  * @param[in] name The name of the token to put into the current object.
  * @param[in] str The string value of the token.
  */
-enum JSONStatus json_cstr_put_str(JSON* json, const char* name, const string* str);
+enum JSONStatus json_cstr_put_str(JSON* json, const char* name, const string str);
 /**
  * Adds a token to the current JSON object, and selects it.
  *
@@ -196,7 +197,7 @@ enum JSONStatus json_set_float(JSON* json, f64 value);
  * @param[in] json The JSON tree to save.
  * @param[in] path The path of the output file.
  */
-enum JSONStatus json_write_file(const JSON* json, const string* path);
+enum JSONStatus json_write_file(const JSON* json, const string path);
 /**
  * Writes a JSON tree to an output stream.
  *
@@ -249,7 +250,7 @@ enum JSONStatus json_move_cstr(JSON* json, const char* path);
  * @param[in] json The JSON tree.
  * @param[in] name The name of the child token to find.
  */
-enum JSONStatus json_move_to_name(JSON* json, const string* name);
+enum JSONStatus json_move_to_name(JSON* json, const string name);
 
 /**
  * Moves the current token pointer to the child token with the given name.

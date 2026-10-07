@@ -16,6 +16,7 @@ SRCS := $(SRC_DIR)/logger1.c \
 		$(SRC_DIR)/network/utils.c \
 		$(SRC_DIR)/network/receiver.c \
 		$(SRC_DIR)/network/sender.c \
+		$(SRC_DIR)/network/registry_data.c \
 		$(SRC_DIR)/memory/memory_common.c \
 		$(SRC_DIR)/memory/allocators/arena.c \
 		$(SRC_DIR)/memory/allocators/buddy.c \
@@ -35,7 +36,10 @@ SRCS := $(SRC_DIR)/logger1.c \
 		$(SRC_DIR)/containers/ring_queue.c \
 		$(SRC_DIR)/event/event.c \
 		$(SRC_DIR)/registry/blocks.c \
-		$(SRC_DIR)/registry/codec.c \
+		$(SRC_DIR)/registry/codec/damage_type.c \
+		$(SRC_DIR)/registry/codec/dimension_type.c \
+		$(SRC_DIR)/registry/codec/painting_variant.c \
+		$(SRC_DIR)/registry/codec/mob_variants.c \
 		$(SRC_DIR)/registry/registry.c \
 		$(SRC_DIR)/resource/resource_id.c \
 		$(SRC_DIR)/data/json/json.c \

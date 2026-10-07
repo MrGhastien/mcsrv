@@ -46,7 +46,7 @@ i32 strbuild_appends(StringBuilder* builder, const char* cstr);
  * @param[in] builder The string builder containing the string to append to.
  * @param[in] str The string to append.
  */
-void strbuild_append(StringBuilder* builder, const string* str);
+void strbuild_append(StringBuilder* builder, const string str);
 
 /**
  * Appends a formatted string to a string builder.
@@ -92,7 +92,7 @@ void strbuild_inserts(StringBuilder* builder, u64 index, const char* cstr);
  * @param[in] index The position at which to insert the given string.
  * @param[in] str The string to append.
  */
-void strbuild_insert(StringBuilder* builder, u64 index, const string* str);
+void strbuild_insert(StringBuilder* builder, u64 index, const string str);
 
 /**
  * Inserts a formatted string to a string builder.

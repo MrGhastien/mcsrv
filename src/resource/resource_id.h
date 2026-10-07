@@ -19,9 +19,9 @@ typedef struct resid {
 
 extern const Comparator CMP_RESID;
 
-ResourceID resid_create(const string* namespace, const string* path, Arena* arena);
-bool resid_parse(const string* id, Arena* arena, ResourceID* out_parsed);
-ResourceID resid_default(const string* path, Arena* arena);
+ResourceID resid_create(const string namespace, const string path, Arena* arena);
+bool resid_parse(const string id, Arena* arena, ResourceID* out_parsed);
+ResourceID resid_default(const string path, Arena* arena);
 ResourceID resid_default_cstr(const char* path);
 
 bool resid_is_namespace(const ResourceID* id, const char* name);

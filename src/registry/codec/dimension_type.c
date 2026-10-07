@@ -1,66 +1,12 @@
-#include "codec.h"
-#include "data/json.h"
-#include "data/nbt.h"
+#include "world/data/dimension_type.h"
 #include "definitions.h"
 #include "memory/allocators/arena.h"
 #include "platform/platform.h"
+#include "registry/codec.h"
+#include "registry/codec/internal.h"
 #include "resource/resource_id.h"
 #include "utils/string.h"
-#include "world/data/dimension_type.h"
-
-#define json_easy_get_bool(json, obj, name)                                                        \
-    {                                                                                              \
-        json_move_to_cstr(json, #name);                                                            \
-        (obj).name = json_get_bool(json);                                                          \
-        json_move_to_parent(json);                                                                 \
-    }
-
-#define json_easy_get_int(json, obj, name)                                                         \
-    {                                                                                              \
-        json_move_to_cstr(json, #name);                                                            \
-        (obj).name = json_get_int(json);                                                           \
-        json_move_to_parent(json);                                                                 \
-    }
-
-#define json_easy_get_float(json, obj, name)                                                       \
-    {                                                                                              \
-        json_move_to_cstr(json, #name);                                                            \
-        (obj).name = json_get_float(json);                                                         \
-        json_move_to_parent(json);                                                                 \
-    }
-
-#define nbt_easy_bool(nbt, obj, name)                                                              \
-    {                                                                                              \
-        string tmp_str = str_view(#name);                                                          \
-        nbt_put_simple(nbt, &tmp_str, NBT_BYTE, (union NBTSimpleValue) {.byte = ((obj)->name)});   \
-    }
-
-#define nbt_easy_int(nbt, obj, name)                                                               \
-    {                                                                                              \
-        string tmp_str = str_view(#name);                                                          \
-        nbt_put_simple(nbt, &tmp_str, NBT_INT, (union NBTSimpleValue) {.integer = ((obj)->name)}); \
-    }
-
-#define nbt_easy_long(nbt, obj, name)                                                              \
-    {                                                                                              \
-        string tmp_str = str_view(#name);                                                          \
-        nbt_put_simple(                                                                            \
-            nbt, &tmp_str, NBT_LONG, (union NBTSimpleValue) {.long_num = ((obj)->name)});          \
-    }
-
-#define nbt_easy_double(nbt, obj, name)                                                            \
-    {                                                                                              \
-        string tmp_str = str_view(#name);                                                          \
-        nbt_put_simple(                                                                            \
-            nbt, &tmp_str, NBT_DOUBLE, (union NBTSimpleValue) {.double_num = ((obj)->name)});      \
-    }
-
-#define nbt_easy_float(nbt, obj, name)                                                             \
-    {                                                                                              \
-        string tmp_str = str_view(#name);                                                          \
-        nbt_put_simple(                                                                            \
-            nbt, &tmp_str, NBT_FLOAT, (union NBTSimpleValue) {.float_num = ((obj)->name)});        \
-    }
+#include <wchar.h>
 
 static const string int_provider_type_names[] = {
     [INT_PROVIDER_CONSTANT]         = STR_STATIC("constant"),
@@ -71,12 +17,12 @@ static const string int_provider_type_names[] = {
     [INT_PROVIDER_WEIGHTED_LIST]    = STR_STATIC("weighted_list"),
 };
 
-static enum IntProviderType int_provider_parse_type(const string* str, Arena scratch_arena) {
+static enum IntProviderType int_provider_parse_type(const string str, Arena* scratch_arena) {
     static const size_t type_count =
         sizeof int_provider_type_names / sizeof(*int_provider_type_names);
 
     ResourceID id;
-    if (!resid_parse(str, &scratch_arena, &id))
+    if (!resid_parse(str, scratch_arena, &id))
         return INT_PROVIDER_INVALID;
 
     for (size_t i = 0; i < type_count; i++) {
@@ -87,11 +33,11 @@ static enum IntProviderType int_provider_parse_type(const string* str, Arena scr
 }
 
 static IntOrProvider
-int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena) {
+int_provider_from_json(JSON* json, Arena* scratch_arena, Arena* persistent_arena) {
 
     enum JSONType json_type = json_get_type(json);
     if (json_type == JSON_INT) {
-        return (IntOrProvider) {
+        return (IntOrProvider){
             .is_provider   = false,
             .data.constant = json_get_int(json),
         };
@@ -101,9 +47,9 @@ int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena)
     string* type_name = json_get_string(json);
     json_move_to_parent(json);
 
-    enum IntProviderType type = int_provider_parse_type(type_name, scratch_arena);
+    enum IntProviderType type = int_provider_parse_type(*type_name, scratch_arena);
     if (type == INT_PROVIDER_INVALID) {
-        return (IntOrProvider) {
+        return (IntOrProvider){
             .is_provider = true,
         };
     }
@@ -137,7 +83,7 @@ int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena)
         break;
     case INT_PROVIDER_WEIGHTED_LIST:
         json_move_to_cstr(json, "distribution");
-        size_t length = json_get_length(json);
+        size_t length                            = json_get_length(json);
         provider->data.weighted_list.entry_count = length;
         if (length == 0) {
             provider->data.weighted_list.entries = NULL;
@@ -167,101 +113,94 @@ int_provider_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena)
     return ret;
 }
 
-static void int_provider_to_nbt(
-    NBT* nbt, const IntOrProvider* integer, string name, Arena scratch_arena, Arena* persistent_arena) {
+static void int_provider_to_nbt(NBT* nbt,
+                                const IntOrProvider* integer,
+                                string name,
+                                Arena* scratch_arena,
+                                Arena* persistent_arena) {
 
     if (!integer->is_provider) {
         nbt_put_simple(
-            nbt, &name, NBT_INT, (union NBTSimpleValue) {.integer = integer->data.constant});
+            nbt, name, NBT_INT, (union NBTSimpleValue){.integer = integer->data.constant});
         return;
     }
 
     IntProvider* provider = integer->data.provider;
 
-    nbt_put(nbt, &name, NBT_COMPOUND);
+    nbt_put(nbt, name, NBT_COMPOUND);
 
-    string tmp_str = str_view("type");
-    nbt_put_str(nbt, &tmp_str, &int_provider_type_names[provider->type]);
+    nbt_put_str(nbt, STR_LITERAL("type"), int_provider_type_names[provider->type]);
 
     switch (provider->type) {
     case INT_PROVIDER_CONSTANT:
-        tmp_str = str_view("value");
         nbt_put_simple(nbt,
-                       &tmp_str,
+                       STR_LITERAL("value"),
                        NBT_INT,
-                       (union NBTSimpleValue) {.integer = provider->data.constant_value});
+                       (union NBTSimpleValue){.integer = provider->data.constant_value});
         break;
     case INT_PROVIDER_UNIFORM:
     case INT_PROVIDER_BIASED_TO_BOTTOM:
-        tmp_str = str_view("min_inclusive");
         nbt_put_simple(
             nbt,
-            &tmp_str,
+            STR_LITERAL("min_inclusive"),
             NBT_INT,
-            (union NBTSimpleValue) {.integer = provider->data.uniform_or_biased.min_inclusive});
-        tmp_str = str_view("max_inclusive");
+            (union NBTSimpleValue){.integer = provider->data.uniform_or_biased.min_inclusive});
         nbt_put_simple(
             nbt,
-            &tmp_str,
+            STR_LITERAL("max_inclusive"),
             NBT_INT,
-            (union NBTSimpleValue) {.integer = provider->data.uniform_or_biased.max_inclusive});
+            (union NBTSimpleValue){.integer = provider->data.uniform_or_biased.max_inclusive});
         break;
     case INT_PROVIDER_CLAMPED:
-        tmp_str = str_view("min_inclusive");
         nbt_put_simple(nbt,
-                       &tmp_str,
+                       STR_LITERAL("min_inclusive"),
                        NBT_INT,
-                       (union NBTSimpleValue) {.integer = provider->data.clamped.min_inclusive});
-        tmp_str = str_view("max_inclusive");
+                       (union NBTSimpleValue){.integer = provider->data.clamped.min_inclusive});
         nbt_put_simple(nbt,
-                       &tmp_str,
+
+                       STR_LITERAL("max_inclusive"),
                        NBT_INT,
-                       (union NBTSimpleValue) {.integer = provider->data.clamped.max_inclusive});
-        tmp_str = str_view("source");
-        int_provider_to_nbt(
-            nbt, &provider->data.clamped.source, tmp_str, scratch_arena, persistent_arena);
+                       (union NBTSimpleValue){.integer = provider->data.clamped.max_inclusive});
+        int_provider_to_nbt(nbt,
+                            &provider->data.clamped.source,
+                            STR_LITERAL("source"),
+                            scratch_arena,
+                            persistent_arena);
         break;
     case INT_PROVIDER_CLAMPED_NORMAL:
-        tmp_str = str_view("min_inclusive");
         nbt_put_simple(
             nbt,
-            &tmp_str,
+            STR_LITERAL("min_inclusive"),
             NBT_INT,
-            (union NBTSimpleValue) {.integer = provider->data.clamped_normal.min_inclusive});
-        tmp_str = str_view("max_inclusive");
+            (union NBTSimpleValue){.integer = provider->data.clamped_normal.min_inclusive});
         nbt_put_simple(
             nbt,
-            &tmp_str,
+            STR_LITERAL("max_inclusive"),
             NBT_INT,
-            (union NBTSimpleValue) {.integer = provider->data.clamped_normal.max_inclusive});
-        tmp_str = str_view("mean");
+            (union NBTSimpleValue){.integer = provider->data.clamped_normal.max_inclusive});
         nbt_put_simple(nbt,
-                       &tmp_str,
+                       STR_LITERAL("mean"),
                        NBT_FLOAT,
-                       (union NBTSimpleValue) {.float_num = provider->data.clamped_normal.mean});
-        tmp_str = str_view("deviation");
+                       (union NBTSimpleValue){.float_num = provider->data.clamped_normal.mean});
         nbt_put_simple(
             nbt,
-            &tmp_str,
+            STR_LITERAL("deviation"),
             NBT_FLOAT,
-            (union NBTSimpleValue) {.float_num = provider->data.clamped_normal.deviation});
+            (union NBTSimpleValue){.float_num = provider->data.clamped_normal.deviation});
         break;
     case INT_PROVIDER_WEIGHTED_LIST:
-        tmp_str = (string) STR_STATIC("distribution");
-        nbt_put(nbt, &tmp_str, NBT_LIST);
+        nbt_put(nbt, STR_LITERAL("distribution"), NBT_LIST);
 
         for (u64 i = 0; i < provider->data.weighted_list.entry_count; i++) {
             nbt_push(nbt, NBT_COMPOUND);
-            tmp_str = (string) STR_STATIC("weight");
             nbt_put_simple(
                 nbt,
-                &tmp_str,
+                STR_LITERAL("weight"),
                 NBT_INT,
-                (union NBTSimpleValue) {.integer = provider->data.weighted_list.entries[i].weight});
-            tmp_str = (string) STR_STATIC("data");
+                (union NBTSimpleValue){.integer = provider->data.weighted_list.entries[i].weight});
             int_provider_to_nbt(nbt,
                                 &provider->data.weighted_list.entries[i].data,
-                                (string) STR_STATIC("data"),
+                                STR_LITERAL("data"),
                                 scratch_arena,
                                 persistent_arena);
             nbt_move_to_parent(nbt);
@@ -275,7 +214,7 @@ static void int_provider_to_nbt(
     nbt_move_to_parent(nbt);
 }
 
-DimensionType dimension_type_from_json(JSON* json, Arena scratch_arena, Arena* persistent_arena) {
+DEFINE_FROM_JSON(DimensionType, dimension_type) {
     UNUSED(scratch_arena);
     DimensionType new_type;
 
@@ -301,12 +240,12 @@ DimensionType dimension_type_from_json(JSON* json, Arena scratch_arena, Arena* p
 
     json_move_to_cstr(json, "infiniburn");
     string* tmp = json_get_string(json); // Allocated with `scratch`, in json data
-    resid_parse(tmp, persistent_arena, &new_type.infiniburn);
+    resid_parse(*tmp, persistent_arena, &new_type.infiniburn);
     json_move_to_parent(json);
 
     json_move_to_cstr(json, "effects");
     tmp = json_get_string(json); // Allocated with `scratch`, in json data
-    resid_parse(tmp, persistent_arena, &new_type.effects);
+    resid_parse(*tmp, persistent_arena, &new_type.effects);
     json_move_to_parent(json);
 
     json_move_to_cstr(json, "ambient_light");
@@ -323,10 +262,7 @@ DimensionType dimension_type_from_json(JSON* json, Arena scratch_arena, Arena* p
     return new_type;
 }
 
-void dimension_type_to_nbt(const DimensionType* obj,
-                           Arena scratch_arena,
-                           Arena* persistent_arena,
-                           NBT* out_nbt) {
+DEFINE_TO_NBT(DimensionType, dimension_type) {
     UNUSED(scratch_arena);
     *out_nbt = nbt_create(persistent_arena, 32);
 
@@ -342,17 +278,16 @@ void dimension_type_to_nbt(const DimensionType* obj,
     nbt_easy_int(out_nbt, obj, min_y);
     nbt_easy_int(out_nbt, obj, height);
     nbt_easy_int(out_nbt, obj, logical_height);
-    string tmp_str   = str_view("infiniburn");
-    string tmp_value = resid_to_string(&obj->infiniburn, &scratch_arena);
-    nbt_put_str(out_nbt, &tmp_str, &tmp_value);
-
-    tmp_str   = str_view("effects");
-    tmp_value = resid_to_string(&obj->effects, &scratch_arena);
-    nbt_put_str(out_nbt, &tmp_str, &tmp_value);
+    nbt_put_str(out_nbt, STR_LITERAL("infiniburn"), resid_to_string(&obj->infiniburn, scratch_arena));
+    nbt_put_str(out_nbt, STR_LITERAL("effects"), resid_to_string(&obj->effects, scratch_arena));
 
     nbt_easy_float(out_nbt, obj, ambient_light);
     nbt_easy_bool(out_nbt, obj, piglin_safe);
     nbt_easy_bool(out_nbt, obj, has_raids);
-    int_provider_to_nbt(out_nbt, &obj->monster_spawn_light_level, str_view("monster_spawn_light_level"), scratch_arena, persistent_arena);
+    int_provider_to_nbt(out_nbt,
+                        &obj->monster_spawn_light_level,
+                        str_view("monster_spawn_light_level"),
+                        scratch_arena,
+                        persistent_arena);
     nbt_easy_int(out_nbt, obj, monster_spawn_block_light_limit);
 }

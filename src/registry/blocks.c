@@ -3,8 +3,8 @@
 #include "definitions.h"
 #include "logger.h"
 #include "memory/allocators/arena.h"
+#include "memory/allocators/pool.h"
 #include "memory/mem_tags.h"
-#include "memory/memory.h"
 #include "registries.h"
 #include "registry.h"
 #include "resource/resource_id.h"
@@ -130,17 +130,17 @@ static void register_state_properties(JSON* json) {
         string* type = json_get_string(json);
         json_move_cstr(json, "../name");
         string* name = json_get_string(json);
-        string name_cpy = str_create_copy(name, &block_persistent_arena);
+        string name_cpy = str_create_copy(*name, &block_persistent_arena);
 
         log_debugf("Registry: registring block state property %s.", cstr(name));
 
-        if (str_compare_cstr(type, "int") == 0) {
+        if (str_compare_cstr(*type, "int") == 0) {
             json_move_cstr(json, "../min");
             i32 min = json_get_int(json);
             json_move_cstr(json, "../max");
             i32 max = json_get_int(json);
             register_integer_state_property(name_cpy, min, max);
-        } else if (str_compare_cstr(type, "enum") == 0) {
+        } else if (str_compare_cstr(*type, "enum") == 0) {
             json_move_cstr(json, "../values");
             i64 len = json_get_length(json);
 
@@ -149,13 +149,13 @@ static void register_state_properties(JSON* json) {
             i64 idx = 0;
             json_move_to_index(json, 0);
             do {
-                values[idx] = str_create_copy(json_get_string(json), &block_persistent_arena);
+                values[idx] = str_create_copy(*json_get_string(json), &block_persistent_arena);
                 idx++;
             } while (json_move_to_next_sibling(json) == JSONE_OK);
             json_move_to_parent(json);
 
             register_enum_state_property(name_cpy, values, len);
-        } else if (str_compare_cstr(type, "bool") == 0) {
+        } else if (str_compare_cstr(*type, "bool") == 0) {
             register_bool_state_property(name_cpy);
         } else {
             log_fatalf("Invalid block state property type: %s.", cstr(type));
@@ -176,7 +176,7 @@ static void register_blocks_internal(JSON* json) {
 
         Block blk = {0};
 
-        if (!resid_parse(name, &block_persistent_arena, &blk.id)) {
+        if (!resid_parse(*name, &block_persistent_arena, &blk.id)) {
             log_fatalf("Invalid block name '%s'.", cstr(name));
             abort();
             return;
@@ -228,7 +228,7 @@ static void print_property(void* obj, i64 idx, void* data) {
     }
 
     strbuild_appends(&builder, " '");
-    strbuild_append(&builder, &prop->name);
+    strbuild_append(&builder, prop->name);
     strbuild_appendc(&builder, '\'');
 
     switch (prop->type) {
@@ -237,7 +237,7 @@ static void print_property(void* obj, i64 idx, void* data) {
         for (u32 i = 0; i < prop->info.enumeration.value_count; i++) {
             if (i > 0)
                 strbuild_appendc(&builder, ',');
-            string* val = &prop->info.enumeration.values[i];
+            string val = prop->info.enumeration.values[i];
             strbuild_appends(&builder, " '");
             strbuild_append(&builder, val);
             strbuild_appendc(&builder, '\'');
@@ -296,7 +296,7 @@ const StateProperty* get_state_property_by_name(const Block* block, string name)
 
     for (i32 i = 0; i < property_count; i++) {
         const StateProperty* prop = properties[i];
-        if (str_compare(&prop->name, &name) == 0)
+        if (str_compare(prop->name, name) == 0)
             return prop;
     }
 

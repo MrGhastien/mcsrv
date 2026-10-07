@@ -61,7 +61,7 @@ static void json_write_token(JSONWriteContext* ctx, IOMux fd) {
 
     if (parent && parent->type == JSON_OBJECT) {
         iomux_writec(fd, '"');
-        iomux_write_str(fd, &token->name);
+        iomux_write_str(fd, token->name);
         iomux_writes(fd, "\": ");
     }
 
@@ -94,7 +94,7 @@ static void json_write_token(JSONWriteContext* ctx, IOMux fd) {
         break;
     case JSON_STRING:
         iomux_writec(fd, '"');
-        iomux_write_str(fd, &token->data.str);
+        iomux_write_str(fd, token->data.str);
         iomux_writec(fd, '"');
         break;
     default:
@@ -136,7 +136,7 @@ enum JSONStatus json_write(const JSON* json, IOMux multiplexer) {
     return JSONE_OK;
 }
 
-enum JSONStatus json_write_file(const JSON* json, const string* path);
+enum JSONStatus json_write_file(const JSON* json, const string path);
 
 enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str) {
     Arena serializing_arena = arena_create(arena->capacity, BLK_TAG_DATA, arena->chain);
@@ -204,12 +204,12 @@ static char* names[_TOK_COUNT] = {
 };
 
 static enum JSONType types[_TOK_COUNT] = {
-    [TOK_RBRACE]   = _JSON_COUNT,
-    [TOK_RBRACKET] = _JSON_COUNT,
-    [TOK_COMMA]    = _JSON_COUNT,
-    [TOK_COLON]    = _JSON_COUNT,
-    [TOK_ERROR]    = _JSON_COUNT,
-    [TOK_EOF]      = _JSON_COUNT,
+    [TOK_RBRACE]   = JSON_INVALID,
+    [TOK_RBRACKET] = JSON_INVALID,
+    [TOK_COMMA]    = JSON_INVALID,
+    [TOK_COLON]    = JSON_INVALID,
+    [TOK_ERROR]    = JSON_INVALID,
+    [TOK_EOF]      = JSON_INVALID,
 
     [TOK_LBRACE]   = JSON_OBJECT,
     [TOK_LBRACKET] = JSON_ARRAY,
@@ -584,7 +584,7 @@ enum JSONStatus json_parse(IOMux multiplexer, Arena* arena, JSON* out_json) {
 }
 
 enum JSONStatus json_from_file(string path, Arena* arena, JSON* out_json) {
-    IOMux mux = iomux_open(&path, "r");
+    IOMux mux = iomux_open(path, "r");
     if (mux == -1) {
         log_errorf("[JSON] Could not open file '%s' for JSON parsing: %s", cstr(&path), get_last_error());
         return JSONE_IO;

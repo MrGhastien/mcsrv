@@ -1,6 +1,7 @@
 #ifndef REGISTRY_H
 #define REGISTRY_H
 
+#include "data/nbt.h"
 #include "definitions.h"
 #include "resource/resource_id.h"
 
@@ -22,5 +23,11 @@ bool registry_is_in_tag(ResourceID registry_name, i64 tag_idx, ResourceID object
 
 typedef void (*reg_entry_action)(ResourceID* id, const void* entry, void* user_data);
 void registry_foreach(ResourceID registry_name, reg_entry_action action, void* user_data);
+
+bool registry_entry_to_nbt(const void* entry,
+                           ResourceID registry_key,
+                           Arena* scratch_arena,
+                           Arena* persistent_arena,
+                           NBT* out_nbt);
 
 #endif /* ! REGISTRY_H */

@@ -79,7 +79,7 @@ bool create_state_definition(const Block* block,
         // Check if no other property has the same name
         for (u32 j = 0; j < i; j++) {
             const StateProperty* prop2 = property_array[j];
-            if (str_compare(&prop->name, &prop2->name) == 0) {
+            if (str_compare(prop->name, prop2->name) == 0) {
                 log_errorf("Property %s already exists in block %s:%s.",
                            cstr(&prop->name),
                            cstr(&block->id.namespace),
@@ -213,9 +213,9 @@ union StatePropertyValue parse_state_property_value(string value, const StatePro
     union StatePropertyValue res;
     switch (prop->type) {
     case BLOCK_PROP_BOOL:
-        if (str_compare_cstr(&value, "true") == 0)
+        if (str_compare_cstr(value, "true") == 0)
             res.boolean = true;
-        else if (str_compare_cstr(&value, "false") == 0)
+        else if (str_compare_cstr(value, "false") == 0)
             res.boolean = false;
         else
             abort();
@@ -228,8 +228,8 @@ union StatePropertyValue parse_state_property_value(string value, const StatePro
     case BLOCK_PROP_ENUM: {
         u32 i;
         for (i = 0; i < prop->info.enumeration.value_count; i++) {
-            string* possible_value = &prop->info.enumeration.values[i];
-            if (str_compare(possible_value, &value) == 0)
+            string possible_value = prop->info.enumeration.values[i];
+            if (str_compare(possible_value, value) == 0)
                 break;
         }
         res.enum_index = i;

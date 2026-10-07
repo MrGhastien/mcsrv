@@ -300,7 +300,7 @@ static void nbt_write_tag(NBTWriteContext* ctx, IOMux fd, bool network) {
     }
 }
 
-enum NBTStatus nbt_write_file(const NBT* nbt, const string* path) {
+enum NBTStatus nbt_write_file(const NBT* nbt, const string path) {
 
     IOMux fd = iomux_gz_open(path, "wb");
     if (fd == -1) {
@@ -483,7 +483,7 @@ error_end:
     arena_destroy(&parsing_arena);
     return ctx.status;
 }
-enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt) {
+enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string path, NBT* out_nbt) {
     IOMux fd = iomux_gz_open(path, "rb");
     if (fd == -1) {
         log_errorf("NBT: IO Error: %s", strerror(errno));

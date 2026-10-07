@@ -4,7 +4,6 @@
 #include "definitions.h"
 #include "logger.h"
 #include "memory/mem_tags.h"
-#include "memory/memory.h"
 #include "packet.h"
 #include "utils/bitwise.h"
 
@@ -93,7 +92,7 @@ DEF_PKT_DECODER(cfg_custom) {
     if (res <= 0)
         return;
 
-    if (!resid_parse(&channel_str, arena, &payload->channel))
+    if (!resid_parse(channel_str, arena, &payload->channel))
         return;
 
     i32 len = packet->payload_length - res;

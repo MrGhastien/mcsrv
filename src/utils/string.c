@@ -12,7 +12,16 @@
 #include <string.h>
 
 i32 str_compare_raw(const void* lhs, const void* rhs) {
-    return str_compare(lhs, rhs);
+    if (lhs == rhs)
+        return 0;
+    if (!lhs)
+        return rhs ? -1 : 0;
+    if (!rhs)
+        return -1;
+
+    const string* lhs_str = lhs;
+    const string* rhs_str = rhs;
+    return str_compare(*lhs_str, *rhs_str);
 }
 
 const Comparator CMP_STRING = {
@@ -47,8 +56,8 @@ string str_alloc(u64 length, Arena* arena) {
     };
 }
 
-string str_create_copy(const string* str, Arena* arena) {
-    string copy = str_alloc(str->length, arena);
+string str_create_copy(const string str, Arena* arena) {
+    string copy = str_alloc(str.length, arena);
     str_copy(&copy, str);
     return copy;
 }
@@ -60,40 +69,38 @@ string str_create_from_buffer(const char* buf, u64 length, Arena* arena) {
     return str;
 }
 
-string str_copy_substring(const string* str, u64 begin, u64 end, Arena* arena) {
+string str_copy_substring(const string str, u64 begin, u64 end, Arena* arena) {
     u64 size;
     if (end == ~0ull)
-        size = str->length - begin;
+        size = str.length - begin;
     else
         size = end - begin;
     string sub = str_alloc(size, arena);
-    memcpy(sub.base, &str->base[begin], size);
+    memcpy(sub.base, &str.base[begin], size);
     sub.base[size] = 0;
     return sub;
 }
 
-string str_substring(const string* str, u64 begin, u64 end) {
+string str_substring(const string str, u64 begin, u64 end) {
     u64 size;
     if (end == ~0ull)
-        size = str->length - begin;
+        size = str.length - begin;
     else
         size = end - begin;
     string sub = {
-        .base   = str->base + begin,
+        .base   = str.base + begin,
         .length = size,
     };
     return sub;
 }
 
-i64 str_find_char(const string* str, char c) {
-    if (!str)
-        return -1;
-    char* ptr = strchr(str->base, c);
+i64 str_find_char(const string str, char c) {
+    char* ptr = strchr(str.base, c);
 
     if (!ptr)
         return -1;
 
-    return ptr - str->base;
+    return ptr - str.base;
 }
 
 void str_set(string* str, const char* cstr) {
@@ -103,21 +110,21 @@ void str_set(string* str, const char* cstr) {
     memset(excess, 0, str->length - (excess - str->base) + 1);
 }
 
-void str_copy(string* dst, const string* src) {
-    u64 len = min_u64(src->length, dst->length);
+void str_copy(string* dst, const string src) {
+    u64 len = min_u64(src.length, dst->length);
 
-    memmove(dst->base, src->base, len);
+    memmove(dst->base, src.base, len);
     memset(dst->base + len, 0, dst->length - len + 1);
 }
 
-string str_concat(string* lhs, const string* rhs, Arena* arena) {
-    u32 llen = lhs->length;
-    u32 rlen = rhs->length;
+string str_concat(const string lhs, const string rhs, Arena* arena) {
+    u32 llen = lhs.length;
+    u32 rlen = rhs.length;
 
     string res = str_alloc(llen + rlen, arena);
 
-    memcpy(res.base, lhs->base, llen);
-    memcpy(res.base + llen, rhs->base, rlen);
+    memcpy(res.base, lhs.base, llen);
+    memcpy(res.base + llen, rhs.base, rlen);
     return res;
 }
 
@@ -136,22 +143,16 @@ u64 str_hash(const void* str) {
     return default_hash((u8*) cast_str->base, cast_str->length);
 }
 
-i32 str_compare(const string* lhs, const string* rhs) {
-    if (lhs == rhs)
-        return 0;
-    if (!lhs)
-        return rhs ? -1 : 0;
-    if (!rhs)
-        return -1;
-    if (lhs->length != rhs->length)
-        return lhs->length - rhs->length;
-    return memcmp(lhs->base, rhs->base, lhs->length);
+i32 str_compare(const string lhs, const string rhs) {
+    if (lhs.length != rhs.length)
+        return lhs.length - rhs.length;
+    return memcmp(lhs.base, rhs.base, lhs.length);
 }
 
-i32 str_compare_cstr(const string* lhs, const char* rhs) {
+i32 str_compare_cstr(const string lhs, const char* rhs) {
     string rhs_view = str_view(rhs);
 
-    return str_compare(lhs, &rhs_view);
+    return str_compare(lhs, rhs_view);
 }
 
 char* format_cstr(Arena* scratch, const char* format, va_list args, u64* out_size) {

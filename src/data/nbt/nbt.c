@@ -159,7 +159,7 @@ enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleVa
     append_tag(nbt, &new_tag);
     return true;
 }
-enum NBTStatus nbt_push_str(NBT* nbt, const string* str) {
+enum NBTStatus nbt_push_str(NBT* nbt, const string str) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_LIST)
         return NBTE_INVALID_PARENT;
@@ -196,7 +196,7 @@ enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type) {
 }
 
 enum NBTStatus
-nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimpleValue value) {
+nbt_put_simple(NBT* nbt, const string name, enum NBTTagType type, union NBTSimpleValue value) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_COMPOUND)
         return NBTE_INVALID_PARENT;
@@ -209,7 +209,7 @@ nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimp
     append_tag(nbt, &new_tag);
     return NBTE_OK;
 }
-enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str) {
+enum NBTStatus nbt_put_str(NBT* nbt, const string name, const string str) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_COMPOUND)
         return NBTE_INVALID_PARENT;
@@ -223,7 +223,7 @@ enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str) {
     return NBTE_OK;
 }
 
-enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type) {
+enum NBTStatus nbt_put(NBT* nbt, const string name, enum NBTTagType type) {
     NBTTag* tag = get_current_tag(nbt);
     if (tag->type != NBT_COMPOUND)
         return NBTE_INVALID_PARENT;
@@ -299,7 +299,7 @@ enum NBTStatus nbt_set_double(NBT* nbt, f64 value) {
     return NBTE_OK;
 }
 
-enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
+enum NBTStatus nbt_move_to_name(NBT* nbt, const string name) {
     NBTTag* tag = get_current_tag(nbt);
 
     if (tag->type != NBT_COMPOUND)
@@ -310,7 +310,7 @@ enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
     idx++;
     for (i32 i = 0; i < tag->data.array_size; i++) {
         NBTTag* child_tag = vect_ref(&nbt->tags, idx);
-        if (str_compare(&child_tag->name, name) == 0) {
+        if (str_compare(child_tag->name, name) == 0) {
             vect_add(&nbt->stack, &idx);
             return NBTE_OK;
         }
@@ -323,7 +323,7 @@ enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name) {
 }
 enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name) {
     string str = str_view(name);
-    return nbt_move_to_name(nbt, &str);
+    return nbt_move_to_name(nbt, str);
 }
 enum NBTStatus nbt_move_to_index(NBT* nbt, i32 index) {
     NBTTag* tag = get_current_tag(nbt);

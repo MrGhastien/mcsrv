@@ -244,7 +244,7 @@ enum NBTStatus nbt_push_simple(NBT* nbt, enum NBTTagType type, union NBTSimpleVa
  * @param[in] nbt The NBT tree containing the list to push into.
  * @param[in] str The string to push.
  */
-enum NBTStatus nbt_push_str(NBT* nbt, const string* str);
+enum NBTStatus nbt_push_str(NBT* nbt, const string str);
 /**
  * Adds a tag to the current NBT list.
  *
@@ -270,7 +270,7 @@ enum NBTStatus nbt_push(NBT* nbt, enum NBTTagType type);
  * floating point number type.
  */
 enum NBTStatus
-nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimpleValue value);
+nbt_put_simple(NBT* nbt, const string name, enum NBTTagType type, union NBTSimpleValue value);
 /**
  * Adds a string tag to the current compound NBT.
  *
@@ -280,7 +280,7 @@ nbt_put_simple(NBT* nbt, const string* name, enum NBTTagType type, union NBTSimp
  * @param[in] name The name of the tag to put into the current compound.
  * @param[in] str The string value of the tag.
  */
-enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str);
+enum NBTStatus nbt_put_str(NBT* nbt, const string name, const string str);
 /**
  * Adds a tag to the current compound NBT.
  *
@@ -292,7 +292,7 @@ enum NBTStatus nbt_put_str(NBT* nbt, const string* name, const string* str);
  * @param[in] name The name of the tag to put into the current compound.
  * @param[in] type The type of the tag.
  */
-enum NBTStatus nbt_put(NBT* nbt, const string* name, enum NBTTagType type);
+enum NBTStatus nbt_put(NBT* nbt, const string name, enum NBTTagType type);
 
 /**
  * Sets the value of the current byte tag.
@@ -358,7 +358,7 @@ enum NBTStatus nbt_set_double(NBT* nbt, f64 value);
  * @param[in] nbt The NBT tree to save.
  * @param[in] path The path of the output file.
  */
-enum NBTStatus nbt_write_file(const NBT* nbt, const string* path);
+enum NBTStatus nbt_write_file(const NBT* nbt, const string path);
 /**
  * Writes a NBT tree to an output stream.
  *
@@ -369,7 +369,7 @@ enum NBTStatus nbt_write_file(const NBT* nbt, const string* path);
  */
 enum NBTStatus nbt_write(const NBT* nbt, IOMux multiplexer, bool network);
 
-enum NBTStatus nbt_write_snbt(const NBT* nbt, const string* path);
+enum NBTStatus nbt_write_snbt(const NBT* nbt, const string path);
 enum NBTStatus nbt_to_string(const NBT* nbt, Arena* arena, string* out_str);
 
 /* === Parsing part === */
@@ -387,7 +387,7 @@ enum NBTStatus nbt_parse(Arena* arena, i64 max_token_count, IOMux input, NBT* ou
  * @param[out] out_nbt A pointer to an uninitialized NBT tree.
  * @return @ref true if the parsing completed successfully, @ref false if an error occurred.
  */
-enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string* path, NBT* out_nbt);
+enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string path, NBT* out_nbt);
 
 /**
  * Moves the current tag pointer to the child tag with the given name.
@@ -397,7 +397,7 @@ enum NBTStatus nbt_from_file(Arena* arena, i64 max_token_count, const string* pa
  * @param[in] nbt The NBT tree.
  * @param[in] name The name of the child tag to find.
  */
-enum NBTStatus nbt_move_to_name(NBT* nbt, const string* name);
+enum NBTStatus nbt_move_to_name(NBT* nbt, const string name);
 enum NBTStatus nbt_move_to_cstr(NBT* nbt, const char* name);
 /**
  * Moves the current tag pointer to the child tag at the given index.

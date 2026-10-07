@@ -6,7 +6,6 @@
 #include "logger.h"
 #include "memory/allocators/arena.h"
 #include "memory/mem_tags.h"
-#include "memory/memory.h"
 #include "platform/platform.h"
 #include "registry/codec.h"
 #include "resource/resource_id.h"
@@ -15,13 +14,47 @@
 #include "utils/string.h"
 #include "world/data/block.h"
 #include "world/data/dimension_type.h"
+#include "world/data/mob_variants.h"
+#include "world/data/painting_variant.h"
 
 #include <dirent.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define REGISTRY_ARENA_SIZE 1048576
+
+typedef void (*from_json)(JSON* json,
+                          Arena* scratch_arena,
+                          Arena* persistent_arena,
+                          void* out_data);
+typedef void (*to_nbt)(const void* data,
+                       Arena* scratch_arena,
+                       Arena* persistent_arena,
+                       NBT* out_nbt);
+
+#define TYPE_LIST(X)                                                                               \
+    X("minecraft", dimension_type, DimensionType)                                                  \
+    X("minecraft", damage_type, DamageType)                                                        \
+    X("minecraft", painting_variant, PaintingVariant) \
+    X("minecraft", wolf_variant, WolfVariant)
+
+struct registry_type_def {
+    ResourceID id;
+    from_json decoder;
+    to_nbt encoder;
+    u64 stride;
+};
+static const struct registry_type_def registry_types[] = {
+#define X(namespace, name, T)                                                                      \
+    {                                                                                              \
+        STATIC_RESID(namespace, #name),                                                            \
+        &name##_from_json_generic,                                                                 \
+        &name##_to_nbt_generic,                                                                    \
+        sizeof(T),                                                                                 \
+    },
+    TYPE_LIST(X)
+#undef X
+};
 
 typedef struct registry {
     ResourceID name;
@@ -66,6 +99,14 @@ static void initialize_registries(void) {
     registry_create(REGISTRY_JUKEBOX_SONG_KEY, sizeof(Block));
 }
 
+static const struct registry_type_def* find_def(ResourceID id) {
+    for (u64 i = 0; i < sizeof(registry_types) / sizeof(registry_types[0]); ++i) {
+        if (resid_is(&registry_types[i].id, &id))
+            return &registry_types[i];
+    }
+    return nullptr;
+}
+
 static void register_registry_elements(ResourceID reg, Arena* scratch) {
     // Stop being overkill and doing shit: Just make a new arena.
     // This is MUCH simpler than using only one arena to make everything: No memory corruption !
@@ -73,27 +114,52 @@ static void register_registry_elements(ResourceID reg, Arena* scratch) {
     string dirpath = format_str(scratch, "data/%s/%s/", reg.namespace.base, reg.path.base);
     DIR* dir       = opendir(cstr(&dirpath));
 
+    const struct registry_type_def* def = find_def(reg);
+    if (!def) {
+        log_errorf("Failed to register elements of " RESID_FORMAT, RESID_UNWRAP(reg));
+        return;
+    }
+
+    void* obj_buf = arena_allocate(scratch, def->stride);
 
     struct dirent* entry;
     while ((entry = readdir(dir))) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
         string filename = str_view(entry->d_name);
-        string filepath = str_concat(&dirpath, &filename, scratch);
+        string filepath = str_concat(dirpath, filename, scratch);
         JSON json;
         if (json_from_file(filepath, scratch, &json) != JSONE_OK)
             return;
 
-        DimensionType new_type = dimension_type_from_json(&json, *scratch, &arena);
+        ArenaCheckpoint checkpoint = arena_create_checkpoint(scratch);
+        def->decoder(&json, scratch, &arena, obj_buf);
+        arena_restore_checkpoint(checkpoint);
 
-        i64 extension_pos = str_find_char(&filename, '.');
+        i64 extension_pos = str_find_char(filename, '.');
         platform_assert(extension_pos > 0, "Invalid data file name.");
 
-        string type_path = str_substring(&filename, 0, extension_pos);
-        ResourceID id    = resid_default(&type_path, &arena);
-        registry_register(REGISTRY_DIMENSION_TYPE_KEY, id, &new_type);
+        string type_path = str_substring(filename, 0, extension_pos);
+        ResourceID id    = resid_default(type_path, &arena);
+        registry_register(reg, id, obj_buf);
+    }
+}
+
+bool registry_entry_to_nbt(const void* entry,
+                           ResourceID registry_key,
+                           Arena* scratch_arena,
+                           Arena* persistent_arena,
+                           NBT* out_nbt) {
+    const struct registry_type_def* def = find_def(registry_key);
+    if (!def) {
+        return false;
     }
 
+    ArenaCheckpoint checkpoint = arena_create_checkpoint(scratch_arena);
+    def->encoder(entry, scratch_arena, persistent_arena, out_nbt);
+    arena_restore_checkpoint(checkpoint);
+
+    return true;
 }
 
 static void register_data_elements(void) {
@@ -103,15 +169,15 @@ static void register_data_elements(void) {
     register_registry_elements(REGISTRY_CHAT_TYPE_KEY, &scratch);
     register_registry_elements(REGISTRY_TRIM_PATTERN_KEY, &scratch);
     register_registry_elements(REGISTRY_TRIM_MATERIAL_KEY, &scratch);
-    register_registry_elements(REGISTRY_WOLF_VARIANT_KEY, &scratch);
-    register_registry_elements(REGISTRY_PAINTING_VARIANT_KEY, &scratch);
-    register_registry_elements(REGISTRY_DAMAGE_TYPE_KEY, &scratch);
     register_registry_elements(REGISTRY_BANNER_PATTERN_KEY, &scratch);
     register_registry_elements(REGISTRY_ENCHANTMENT_KEY, &scratch);
     register_registry_elements(REGISTRY_JUKEBOX_SONG_KEY, &scratch);
     */
 
+    register_registry_elements(REGISTRY_PAINTING_VARIANT_KEY, &scratch);
+    register_registry_elements(REGISTRY_DAMAGE_TYPE_KEY, &scratch);
     register_registry_elements(REGISTRY_DIMENSION_TYPE_KEY, &scratch);
+    register_registry_elements(REGISTRY_WOLF_VARIANT_KEY, &scratch);
 
     arena_clear(&scratch);
     arena_destroy(&scratch);

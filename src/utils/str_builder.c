@@ -31,9 +31,9 @@ i32 strbuild_appends(StringBuilder* builder, const char* cstr) {
     }
     return i;
 }
-void strbuild_append(StringBuilder* builder, const string* str) {
-    for (u32 i = 0; i < str->length; i++) {
-        char c = str->base[i];
+void strbuild_append(StringBuilder* builder, const string str) {
+    for (u32 i = 0; i < str.length; i++) {
+        char c = str.base[i];
         vect_add(&builder->chars, &c);
     }
 }
@@ -70,9 +70,9 @@ void strbuild_inserts(StringBuilder* builder, u64 index, const char* cstr) {
         vect_insert(&builder->chars, &c, index + i);
     }
 }
-void strbuild_insert(StringBuilder* builder, u64 index, const string* str) {
-    for (u32 i = 0; i < str->length; i++) {
-        char c = str->base[i];
+void strbuild_insert(StringBuilder* builder, u64 index, const string str) {
+    for (u32 i = 0; i < str.length; i++) {
+        char c = str.base[i];
         vect_insert(&builder->chars, &c, index + i);
     }
 }

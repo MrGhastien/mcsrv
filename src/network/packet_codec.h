@@ -119,4 +119,13 @@ enum IOCode receive_packet(Connection* conn);
  */
 void send_packet(const Packet* pkt, Connection* conn);
 
+static inline void create_send_packet(enum PacketType type, void* packet_payload, Connection* conn) {
+    Packet to_send = {
+        .payload = packet_payload,
+        .id = type,
+    };
+    send_packet(&to_send, conn);
+}
+
+
 #endif /* ! PACKET_CODEC_H */

@@ -5,7 +5,6 @@
 #include "utils/string.h"
 #include "platform/platform.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 void increment_parent_total_lengths(JSON* json) {
@@ -96,7 +95,7 @@ void append_token(JSON* json, JSONToken* new_token) {
 }
 
 enum JSONStatus json_push_simple(JSON* json, enum JSONType type, union JSONSimpleValue value) {
-    if (type != JSON_BOOL || type != JSON_INT || type != JSON_FLOAT)
+    if (type != JSON_BOOL && type != JSON_INT && type != JSON_FLOAT)
         return JSONE_INCOMPATIBLE_TYPE;
     enum JSONStatus status = check_parent_type(json, JSON_ARRAY);
     if (status != JSONE_OK)
@@ -109,7 +108,7 @@ enum JSONStatus json_push_simple(JSON* json, enum JSONType type, union JSONSimpl
 
     return JSONE_OK;
 }
-enum JSONStatus json_push_str(JSON* json, const string* str) {
+enum JSONStatus json_push_str(JSON* json, const string str) {
     enum JSONStatus status = check_parent_type(json, JSON_ARRAY);
     if (status != JSONE_OK)
         return status;
@@ -133,7 +132,7 @@ enum JSONStatus json_push(JSON* json, enum JSONType type) {
 }
 
 enum JSONStatus
-json_put_simple(JSON* json, const string* name, enum JSONType type, union JSONSimpleValue value) {
+json_put_simple(JSON* json, const string name, enum JSONType type, union JSONSimpleValue value) {
     enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
     if (status != JSONE_OK)
         return status;
@@ -145,7 +144,7 @@ json_put_simple(JSON* json, const string* name, enum JSONType type, union JSONSi
     append_token(json, &new_token);
     return JSONE_OK;
 }
-enum JSONStatus json_put_str(JSON* json, const string* name, const string* str) {
+enum JSONStatus json_put_str(JSON* json, const string name, const string str) {
     enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
     if (status != JSONE_OK)
         return status;
@@ -157,7 +156,7 @@ enum JSONStatus json_put_str(JSON* json, const string* name, const string* str) 
     append_token(json, &new_token);
     return JSONE_OK;
 }
-enum JSONStatus json_put(JSON* json, const string* name, enum JSONType type) {
+enum JSONStatus json_put(JSON* json, const string name, enum JSONType type) {
     enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
     if (status != JSONE_OK)
         return status;
@@ -174,15 +173,15 @@ enum JSONStatus json_cstr_put_simple(JSON* json,
                                      enum JSONType type,
                                      union JSONSimpleValue value) {
     string str = str_view(name);
-    return json_put_simple(json, &str, type, value);
+    return json_put_simple(json, str, type, value);
 }
-enum JSONStatus json_cstr_put_str(JSON* json, const char* name, const string* str) {
+enum JSONStatus json_cstr_put_str(JSON* json, const char* name, const string str) {
     string name_str = str_view(name);
-    return json_put_str(json, &name_str, str);
+    return json_put_str(json, name_str, str);
 }
 enum JSONStatus json_cstr_put(JSON* json, const char* name, enum JSONType type) {
     string str = str_view(name);
-    return json_put(json, &str, type);
+    return json_put(json, str, type);
 }
 
 enum JSONStatus json_set_bool(JSON* json, bool value) {
@@ -212,7 +211,7 @@ enum JSONStatus json_set_float(JSON* json, f64 value) {
     return JSONE_OK;
 }
 
-enum JSONStatus json_write_file(const JSON* json, const string* path);
+enum JSONStatus json_write_file(const JSON* json, const string path);
 enum JSONStatus json_write(const JSON* json, IOMux multiplexer);
 
 enum JSONStatus json_to_string(const JSON* json, Arena* arena, string* out_str);
@@ -238,18 +237,18 @@ enum JSONStatus json_move(JSON* json, string path) {
         vect_add_imm(&json->stack, (i64)0);
     }
 
-    while ((idx = str_find_char(&path, '/')) >= 0) {
+    while ((idx = str_find_char(path, '/')) >= 0) {
         if (idx == 0) {
             path.base++;
             path.length--;
             continue;
         }
 
-        view = str_substring(&path, 0, idx);
-        if (str_compare_cstr(&view, "..") == 0)
+        view = str_substring(path, 0, idx);
+        if (str_compare_cstr(view, "..") == 0)
             status = json_move_to_parent(json);
-        else if (str_compare_cstr(&view, ".") != 0) {
-            status = json_move_to_name(json, &view);
+        else if (str_compare_cstr(view, ".") != 0) {
+            status = json_move_to_name(json, view);
         }
         if (status != JSONE_OK)
             return status;
@@ -262,12 +261,12 @@ enum JSONStatus json_move(JSON* json, string path) {
         }
     }
     if (path.length > 0)
-        return json_move_to_name(json, &path);
+        return json_move_to_name(json, path);
 
     return JSONE_OK;
 }
 
-enum JSONStatus json_move_to_name(JSON* json, const string* name) {
+enum JSONStatus json_move_to_name(JSON* json, const string name) {
     enum JSONStatus status = check_parent_type(json, JSON_OBJECT);
     if (status != JSONE_OK)
         return status;
@@ -278,7 +277,7 @@ enum JSONStatus json_move_to_name(JSON* json, const string* name) {
     idx++;
     for (i32 i = 0; i < token->data.compound.size; i++) {
         JSONToken* child_token = vect_ref(&json->tokens, idx);
-        if (str_compare(&child_token->name, name) == 0) {
+        if (str_compare(child_token->name, name) == 0) {
             vect_add(&json->stack, &idx);
             return JSONE_OK;
         }
@@ -286,12 +285,12 @@ enum JSONStatus json_move_to_name(JSON* json, const string* name) {
         idx += get_total_length(child_token);
     }
 
-    log_errorf("[JSON] Could not find a JSON token with name '%s'.", name->base);
+    log_errorf("[JSON] Could not find a JSON token with name '%s'.", name.base);
     return JSONE_NOT_FOUND;
 }
 enum JSONStatus json_move_to_cstr(JSON* json, const char* name) {
     string str = str_view(name);
-    return json_move_to_name(json, &str);
+    return json_move_to_name(json, str);
 }
 
 enum JSONStatus json_move_to_index(JSON* json, i32 index) {

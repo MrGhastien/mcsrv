@@ -3,37 +3,24 @@
 #include "connection.h"
 #include "containers/bytebuffer.h"
 #include "memory/allocators/arena.h"
-#include "network.h"
 #include "packet.h"
 #include "packet_codec.h"
-#include "registry/codec.h"
-#include "registry/registries.h"
-#include "registry/registry.h"
 #include "resource/resource_id.h"
 #include "security.h"
 #include "utils.h"
+#include "registry_data.h"
 
 #include "containers/vector.h"
 #include "data/json.h"
 #include "logger.h"
 #include "memory/mem_tags.h"
-#include "memory/memory.h"
 #include "platform/platform.h"
 #include "platform/time.h"
 #include "utils/hash.h"
 #include "utils/string.h"
-#include "world/data/dimension_type.h"
 
 #include <string.h>
 #include <zlib.h>
-
-static inline void create_send_packet(enum PacketType type, void* packet_payload, Connection* conn) {
-    Packet to_send = {
-        .payload = packet_payload,
-        .id = type,
-    };
-    send_packet(&to_send, conn);
-}
 
 DEF_PKT_HANDLER(dummy) {
     UNUSED(pkt);
@@ -70,13 +57,11 @@ DEF_PKT_HANDLER(status) {
     Arena arena = conn->scratch_arena;
     JSON json   = json_create(&arena, 1024);
 
-    string tmp;
     json_set_root(&json, JSON_OBJECT);
     json_cstr_put(&json, "version", JSON_OBJECT);
     json_move_to_cstr(&json, "version");
 
-    tmp = str_view("1.21");
-    json_cstr_put_str(&json, "name", &tmp);
+    json_cstr_put_str(&json, "name", STR_LITERAL("1.21"));
     json_cstr_put_simple(&json, "protocol", JSON_INT, (union JSONSimpleValue) {.number = 767});
     json_move_to_parent(&json);
     json_cstr_put(&json, "players", JSON_OBJECT);
@@ -93,8 +78,7 @@ DEF_PKT_HANDLER(status) {
 
     json_cstr_put(&json, "description", JSON_OBJECT);
     json_move_to_cstr(&json, "description");
-    tmp = str_view("Hello gamerz!");
-    json_cstr_put_str(&json, "text", &tmp);
+    json_cstr_put_str(&json, "text", STR_LITERAL("Hello gamerz!"));
 
     enum JSONStatus json_status = json_to_string(&json, &arena, &response.data);
     if (json_status != JSONE_OK) {
@@ -116,7 +100,7 @@ DEF_PKT_HANDLER(ping) {
 DEF_PKT_HANDLER(login_start) {
     PacketLoginStart* payload = pkt->payload;
 
-    conn->player_name = str_create_copy(&payload->player_name, &conn->persistent_arena);
+    conn->player_name = str_create_copy(payload->player_name, &conn->persistent_arena);
 
     log_infof("Player '%s' is attempting to connect.", payload->player_name.base);
     log_infof("Has UUID: %016x-%016x.", payload->uuid[0], payload->uuid[1]);
@@ -171,7 +155,7 @@ static bool send_login_success(Connection* conn, JSON* json) {
     string* name = json_get_string(json);
 
     PacketLoginSuccess login_success = {
-        .username      = str_create_copy(name, &conn->scratch_arena),
+        .username      = str_create_copy(*name, &conn->scratch_arena),
         .strict_errors = true,
     };
     json_move_to_parent(json);
@@ -195,11 +179,11 @@ static bool send_login_success(Connection* conn, JSON* json) {
 
         json_move_to_cstr(json, "name");
         string* prop_name = json_get_string(json);
-        property->name    = str_create_copy(prop_name, &conn->scratch_arena);
+        property->name    = str_create_copy(*prop_name, &conn->scratch_arena);
 
         json_move_to_cstr(json, "value");
         string* prop_value = json_get_string(json);
-        property->value    = str_create_copy(prop_value, &conn->scratch_arena);
+        property->value    = str_create_copy(*prop_value, &conn->scratch_arena);
 
         if (json_move_to_cstr(json, "signature") == JSONE_OK) {
             string* prop_sig    = json_get_string(json);
@@ -333,25 +317,6 @@ DEF_PKT_HANDLER(cfg_client_info) {
     return true;
 }
 
-struct registry_data_serialize_data {
-    RegistryDataEntry* entries;
-    Arena scratch_arena;
-    Arena* persistent_arena;
-    i32 idx;
-};
-
-static void dimension_type_action(ResourceID* id, const void* entry, void* user_data) {
-
-    struct registry_data_serialize_data* ctx = user_data;
-
-    ctx->entries[ctx->idx] = (RegistryDataEntry) {
-        .id = *id,
-    };
-
-    dimension_type_to_nbt(entry, ctx->scratch_arena, ctx->persistent_arena, &ctx->entries[ctx->idx].data);
-    ctx->idx++;
-}
-
 DEF_PKT_HANDLER(cfg_known_datapacks) {
     UNUSED(conn);
     PacketKnownDatapacks* payload = pkt->payload;
@@ -370,20 +335,7 @@ DEF_PKT_HANDLER(cfg_known_datapacks) {
         log_debug("None.");
 #endif
 
-    PacketRegistryData reg_data_pkt = {
-        .registry_id = REGISTRY_DIMENSION_TYPE_KEY,
-        .entry_count = registry_count(REGISTRY_DIMENSION_TYPE_KEY),
-    };
-    reg_data_pkt.entries = arena_allocate(&conn->scratch_arena, sizeof *reg_data_pkt.entries * reg_data_pkt.entry_count);
-
-    struct registry_data_serialize_data ctx = {
-        .entries       = reg_data_pkt.entries,
-        .scratch_arena = conn->scratch_arena,
-        .persistent_arena = &conn->persistent_arena,
-    };
-
-    registry_foreach(REGISTRY_DIMENSION_TYPE_KEY, &dimension_type_action, &ctx);
-    create_send_packet(PKT_CFG_REGISTRY_DATA, &reg_data_pkt, conn);
+    send_all_registry_data(conn);
 
     // TODO: Work with registry data
     create_send_packet(PKT_CFG_FINISH, NULL, conn);

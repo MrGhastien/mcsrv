@@ -23,7 +23,7 @@ static void* zlib_alloc(void* arena, u32 item_count, u32 size) {
 static void zlib_free(void* arena, void* addr) {
     (void) arena;
     (void) addr;
-    arena_free_ptr(arena, addr);
+    //arena_free_ptr(arena, addr);
 }
 
 bool compression_init(CompressionContext* ctx, Arena* arena) {
